@@ -4,6 +4,7 @@ varying vWorld: vec3f;
 uniform cameraPosition: vec3f;
 uniform visualization: f32;
 uniform lodKind: f32;
+uniform colorScale: f32;
 @fragment
 fn main(input: FragmentInputs)->FragmentOutputs {
   let root=vec3f(.055,.16,.035);
@@ -13,7 +14,7 @@ fn main(input: FragmentInputs)->FragmentOutputs {
   color*=variation;
   let sun=normalize(vec3f(-.45,1.0,-.28));
   let lighting=.34+.74*abs(dot(normalize(input.vNormal),sun));
-  color*=lighting;
+  color*=lighting*uniforms.colorScale;
   if(uniforms.visualization>.5&&uniforms.visualization<1.5){color=select(vec3f(.2,.55,1.0),vec3f(1.0,.48,.08),uniforms.lodKind<.5);}
   if(uniforms.visualization>1.5&&uniforms.visualization<2.5){color=vec3f(.12,.8,.25);}
   if(uniforms.visualization>2.5){

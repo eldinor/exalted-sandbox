@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Flight, FLIGHT_HEIGHT, FLIGHT_DURATION, FLIGHT_COOLDOWN } from '../src/character/flight.ts';
+import { Flight, FLIGHT_DURATION, FLIGHT_COOLDOWN } from '../src/character/flight.ts';
 import { PropCollisions } from '../src/world/propCollisions.ts';
 
 function setup() {
     const flight=new Flight();
     const ch={position:{x:0,y:0,z:0},velocity:{x:0,y:0,z:0},terrain:{heightAt:()=>0,obstacles:new PropCollisions()}};
-    const input={flyPressed:false,flyUp:false,flyDown:false,moveX:0,moveZ:0};
+    const input={flyPressed:false,flyUp:false,flyDown:false,sprint:false,moveX:0,moveZ:0};
     const tick=(seconds)=>{for(let t=0;t<seconds-1e-8;t+=1/60){flight.update(1/60,ch,input,{x:0,z:1},{x:1,z:0});input.flyPressed=false;}};
     return {flight,ch,input,tick};
 }
@@ -23,10 +23,12 @@ test('Space starts a lift, release hovers, expiry lands and cooldown blocks reca
     i.flyPressed=true;tick(.1);assert.equal(f.active,false);
     tick(FLIGHT_COOLDOWN); i.flyPressed=true;tick(.1);assert.equal(f.active,true);
 });
-test('held rise respects height ceiling; freeze preserves timers; descent can land early',()=>{
+test('held Space keeps gaining altitude; freeze preserves timers; descent can land early',()=>{
     const {flight:f,ch,input:i,tick}=setup();
-    i.flyPressed=i.flyUp=true;tick(4);
-    assert.ok(ch.position.y>7 && ch.position.y<FLIGHT_HEIGHT+.15);
+    i.flyPressed=i.flyUp=true;tick(2);
+    const altitude=ch.position.y;
+    tick(2);
+    assert.ok(altitude>4 && ch.position.y>altitude+5);
     const remaining=f.remaining;
     f.update(0,ch,i,{x:0,z:1},{x:1,z:0});assert.equal(f.remaining,remaining);
     i.flyUp=false;i.flyDown=true;tick(5);
@@ -49,4 +51,14 @@ test('vertical sweep blocks undersides; steep terrain faces block horizontal fli
     ch.terrain.heightAt=(_x,z)=>z>1?20:0;
     i.flyUp=false;i.moveZ=1;tick(1);
     assert.ok(ch.position.z<=1);assert.ok(ch.position.y<4);
+});
+test('Ctrl+Shift descends much faster and still lands on terrain',()=>{
+    const {flight:f,ch,input:i,tick}=setup();
+    i.flyPressed=true;tick(.1);
+    ch.position.y=28;ch.velocity.y=0;
+    i.flyDown=true;i.sprint=true;tick(1);
+    assert.ok(ch.position.y<17);
+    tick(2);
+    assert.equal(f.active,false);
+    assert.equal(ch.position.y,0);
 });

@@ -42,7 +42,9 @@ export class ScreenshotGallery {
     private readonly root = document.createElement("section");
     private readonly strip = document.createElement("div");
     private readonly status = document.createElement("div");
+    private readonly collectionActions = document.createElement("div");
     private readonly downloadAllButton = document.createElement("button");
+    private readonly deleteAllButton = document.createElement("button");
     private readonly lightbox = document.createElement("div");
     private readonly lightboxImage = document.createElement("img");
     private readonly lightboxPosition = document.createElement("span");
@@ -65,12 +67,19 @@ export class ScreenshotGallery {
         this.status.className = "screenshot-status";
         this.status.setAttribute("role", "status");
         this.status.setAttribute("aria-live", "polite");
+        this.collectionActions.className = "screenshot-collection-actions";
         this.downloadAllButton.type = "button";
         this.downloadAllButton.className = "screenshot-download-all";
         this.downloadAllButton.hidden = true;
         this.downloadAllButton.append(icon("M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3"), "Download all");
         this.downloadAllButton.addEventListener("click", () => void this.downloadAll());
-        this.root.append(this.strip, this.downloadAllButton, this.status);
+        this.deleteAllButton.type = "button";
+        this.deleteAllButton.className = "screenshot-delete-all";
+        this.deleteAllButton.hidden = true;
+        this.deleteAllButton.append(icon("M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6m4-6v6"), "Delete all");
+        this.deleteAllButton.addEventListener("click", () => this.clear());
+        this.collectionActions.append(this.downloadAllButton, this.deleteAllButton);
+        this.root.append(this.strip, this.collectionActions, this.status);
         document.body.append(this.root);
 
         this.lightbox.className = "screenshot-lightbox";
@@ -166,6 +175,7 @@ export class ScreenshotGallery {
         this.strip.replaceChildren(...this.collection.entries.map((entry) => this.card(entry)));
         this.root.hidden = this.collection.entries.length === 0 && !this.capturing;
         this.downloadAllButton.hidden = this.collection.entries.length === 0;
+        this.deleteAllButton.hidden = this.collection.entries.length === 0;
         this.renderPreview();
     }
 

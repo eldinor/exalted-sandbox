@@ -5,7 +5,8 @@
 
 import type { MovementCharacter, MovementVector2, SwimmingInput } from './movementTypes.ts';
 
-export const SWIM_DRAFT = .95;
+/** Depth of the avatar's ground/root point beneath the water while swimming. */
+export const SWIM_DRAFT = 1.18;
 /** Take control in sufficiently deep lake water and release to walking at shallow edges. */
 export class Swimming {
     active = false;

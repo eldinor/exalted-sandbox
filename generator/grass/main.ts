@@ -15,7 +15,7 @@ import { loadBakedHydrologyField } from '../preview/loadHydrologyField.ts';
 import { loadGeneratedRoads } from '../preview/loadRoads.ts';
 import { GrassSystem } from './GrassSystem.ts';
 import { loadImportedGrass } from './ImportedGrass.ts';
-import type { GrassSettings } from './grassTypes.ts';
+import type { GrassImpact, GrassSettings } from './grassTypes.ts';
 
 const CENTRE_X = -250;
 const CENTRE_Z = 60;
@@ -91,9 +91,10 @@ async function boot(): Promise<void> {
     terrain.material = terrainMaterial;
 
     const settings: GrassSettings = {
-        enabled: true, density: 2, nearDistance: 22, farDistance: 70,
+        enabled: true, density: 6, nearDistance: 22, farDistance: 70,
         bladeHeight: 0.85, bladeWidth: 0.045, windStrength: 0.3, windSpeed: 1,
-        interaction: true, freezeWind: false, visualization: 'final',
+        interaction: true, movingImpacts: true, interactionRadius: 2.4, interactionStrength: .55,
+        freezeWind: false, visualization: 'final',
         bladeSource: 'procedural', importedVariant: 'grass_medium_01_tall_a_LOD2',
     };
     const grass = new GrassSystem(scene, {
@@ -126,6 +127,20 @@ async function boot(): Promise<void> {
     proxyMaterial.alpha = 0.65;
     proxy.material = proxyMaterial;
     proxy.isPickable = false;
+    const impactMaterial = new StandardMaterial('moving-impact-material', scene);
+    impactMaterial.emissiveColor = new Color3(1, .43, .08);
+    const movingProxies = Array.from({ length: 3 }, (_, index) => {
+        const sphere = CreateSphere(`moving-impact-${index}`, { diameter: .26, segments: 10 }, scene);
+        sphere.material = impactMaterial;
+        sphere.isPickable = false;
+        return sphere;
+    });
+    const cameraImpact: GrassImpact = { position: proxy.position, radius: settings.interactionRadius, strength: settings.interactionStrength };
+    const movingImpactData: GrassImpact[] = movingProxies.map(sphere => ({
+        position: sphere.position, radius: settings.interactionRadius * .72, strength: settings.interactionStrength * .8,
+    }));
+    const cameraImpacts: readonly GrassImpact[] = [cameraImpact];
+    const allImpacts: readonly GrassImpact[] = [cameraImpact, ...movingImpactData];
 
     const bindRange = (id: string, outputId: string, apply: (value: number) => void, format: (value: number) => string): void => {
         const input = element(id, HTMLInputElement);
@@ -135,6 +150,7 @@ async function boot(): Promise<void> {
     };
     element('enabled', HTMLInputElement).addEventListener('change', event => { settings.enabled = (event.currentTarget as HTMLInputElement).checked; });
     element('interaction', HTMLInputElement).addEventListener('change', event => { settings.interaction = (event.currentTarget as HTMLInputElement).checked; });
+    element('moving-impacts', HTMLInputElement).addEventListener('change', event => { settings.movingImpacts = (event.currentTarget as HTMLInputElement).checked; });
     element('freeze-wind', HTMLInputElement).addEventListener('change', event => { settings.freezeWind = (event.currentTarget as HTMLInputElement).checked; });
     bindRange('density', 'density-value', value => { settings.density = value; }, value => `${value.toFixed(1)}×`);
     bindRange('near', 'near-value', value => { settings.nearDistance = value; }, value => `${value.toFixed(0)} m`);
@@ -143,6 +159,8 @@ async function boot(): Promise<void> {
     bindRange('width', 'width-value', value => { settings.bladeWidth = value; grass.rebuild(); }, value => `${(value * 100).toFixed(1)} cm`);
     bindRange('wind', 'wind-value', value => { settings.windStrength = value; }, value => value.toFixed(2));
     bindRange('wind-speed', 'wind-speed-value', value => { settings.windSpeed = value; }, value => value.toFixed(1));
+    bindRange('interaction-radius', 'interaction-radius-value', value => { settings.interactionRadius = value; }, value => `${value.toFixed(1)} m`);
+    bindRange('interaction-strength', 'interaction-strength-value', value => { settings.interactionStrength = value; }, value => value.toFixed(2));
     element('visualization', HTMLSelectElement).addEventListener('change', event => { settings.visualization = (event.currentTarget as HTMLSelectElement).value as GrassSettings['visualization']; });
     const bladeSource = element('blade-source', HTMLSelectElement);
     const importedVariant = element('imported-variant', HTMLSelectElement);
@@ -186,7 +204,21 @@ async function boot(): Promise<void> {
             proxy.position.set(overviewCamera.target.x, heightField.sample(overviewCamera.target.x, overviewCamera.target.z) + 0.18, overviewCamera.target.z);
         }
         proxy.setEnabled(settings.interaction);
-        grass.update({ cameraPosition: proxy.position, elapsedSeconds: elapsed });
+        cameraImpact.radius = settings.interactionRadius;
+        cameraImpact.strength = settings.interactionStrength;
+        for (let i = 0; i < movingProxies.length; i++) {
+            const angle = elapsed * (.55 + i * .13) + i * Math.PI * .67;
+            const radius = 3.2 + i * 1.35;
+            const sphere = movingProxies[i];
+            sphere.position.x = proxy.position.x + Math.cos(angle) * radius;
+            sphere.position.z = proxy.position.z + Math.sin(angle) * radius;
+            sphere.position.y = heightField.sample(sphere.position.x, sphere.position.z) + .13;
+            sphere.setEnabled(settings.interaction && settings.movingImpacts);
+            movingImpactData[i].radius = settings.interactionRadius * (.58 + i * .08);
+            movingImpactData[i].strength = settings.interactionStrength * (.72 + i * .08);
+        }
+        const activeImpacts = settings.movingImpacts ? allImpacts : cameraImpacts;
+        grass.update({ cameraPosition: proxy.position, elapsedSeconds: elapsed, impacts: activeImpacts });
         frameSamples.push(engine.getDeltaTime());
         if (frameSamples.length > 180) frameSamples.shift();
         if (performance.now() - lastStats > 400) {
@@ -201,6 +233,7 @@ async function boot(): Promise<void> {
             element('draws', HTMLElement).textContent = String(grass.stats.draws);
             const [nearTriangles, midTriangles] = grass.getPrototypeTriangleCounts();
             element('prototype-tris', HTMLElement).textContent = `${nearTriangles.toLocaleString()} / ${midTriangles.toLocaleString()}`;
+            element('impact-count', HTMLElement).textContent = settings.interaction ? String(activeImpacts.length) : '0';
             lastStats = performance.now();
         }
     });

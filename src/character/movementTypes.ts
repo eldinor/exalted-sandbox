@@ -40,4 +40,5 @@ export interface FlightInput extends MovementAxes {
     flyPressed: boolean;
     flyUp: boolean;
     flyDown: boolean;
+    sprint: boolean;
 }

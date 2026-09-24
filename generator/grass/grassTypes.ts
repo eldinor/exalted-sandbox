@@ -10,10 +10,19 @@ export interface GrassSettings {
     windStrength: number;
     windSpeed: number;
     interaction: boolean;
+    movingImpacts: boolean;
+    interactionRadius: number;
+    interactionStrength: number;
     freezeWind: boolean;
     visualization: 'final' | 'lod' | 'biome' | 'patches';
     bladeSource: 'procedural' | 'imported' | 'hybrid';
     importedVariant: string;
+}
+
+export interface GrassImpact {
+    position: Vector3;
+    radius: number;
+    strength: number;
 }
 
 export interface GrassStats {
@@ -34,4 +43,5 @@ export interface GrassSamplers {
 export interface GrassUpdateContext {
     cameraPosition: Vector3;
     elapsedSeconds: number;
+    impacts: readonly GrassImpact[];
 }

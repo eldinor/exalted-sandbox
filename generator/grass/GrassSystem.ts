@@ -23,6 +23,7 @@ interface GrassPatch {
 }
 
 const PATCH_SIZE = 16;
+const MAX_IMPACTS = 8;
 
 function hash(x: number): number {
     let value = x | 0;
@@ -44,6 +45,7 @@ export class GrassSystem {
     private readonly midMaterial: ShaderMaterial;
     private builtDensity = -1;
     private builtGeometryKey = '';
+    private readonly impactData = new Float32Array(MAX_IMPACTS * 4);
 
     public constructor(
         private readonly scene: Scene,
@@ -88,7 +90,7 @@ export class GrassSystem {
         const material = new ShaderMaterial(`grass-${name}`, this.scene, 'exaltedGrass', {
             shaderLanguage: ShaderLanguage.WGSL,
             attributes: ['position', 'normal'],
-            uniforms: ['world', 'viewProjection', 'time', 'wind', 'cameraPosition', 'interactionEnabled', 'visualization', 'lodKind'],
+            uniforms: ['world', 'viewProjection', 'time', 'wind', 'cameraPosition', 'interactionEnabled', 'impactCount', 'impactData', 'visualization', 'lodKind', 'colorScale'],
         });
         material.backFaceCulling = false;
         material.setFloat('lodKind', lodKind);
@@ -96,7 +98,10 @@ export class GrassSystem {
         material.setVector2('wind', Vector2.Zero());
         material.setVector3('cameraPosition', Vector3.Zero());
         material.setFloat('interactionEnabled', 1);
+        material.setFloat('impactCount', 0);
+        material.setArray4('impactData', this.impactData as unknown as number[]);
         material.setFloat('visualization', 0);
+        material.setFloat('colorScale', 1);
         return material;
     }
 
@@ -188,13 +193,30 @@ export class GrassSystem {
         if (this.builtDensity !== this.settings.density || this.builtGeometryKey !== geometryKey) this.rebuild();
         const visualization = { final: 0, lod: 1, biome: 2, patches: 3 }[this.settings.visualization];
         const time = this.settings.freezeWind ? 0 : context.elapsedSeconds * this.settings.windSpeed;
+        this.impactData.fill(0);
+        const impactCount = this.settings.interaction ? Math.min(context.impacts.length, MAX_IMPACTS) : 0;
+        for (let i = 0; i < impactCount; i++) {
+            const impact = context.impacts[i];
+            const offset = i * 4;
+            this.impactData[offset] = impact.position.x;
+            this.impactData[offset + 1] = impact.position.z;
+            this.impactData[offset + 2] = Math.max(.01, impact.radius);
+            this.impactData[offset + 3] = impact.strength;
+        }
         for (const material of [this.nearMaterial, this.midMaterial]) {
             material.setFloat('time', time);
             material.setVector2('wind', new Vector2(this.settings.windStrength, this.settings.windSpeed));
             material.setVector3('cameraPosition', context.cameraPosition);
             material.setFloat('interactionEnabled', this.settings.interaction ? 1 : 0);
+            material.setFloat('impactCount', impactCount);
+            material.setArray4('impactData', this.impactData as unknown as number[]);
             material.setFloat('visualization', visualization);
         }
+        // The imported near prototype has a broader, more upward-facing normal
+        // distribution than the procedural two-triangle mid blade. Compensate
+        // only in hybrid mode so the LOD swap preserves apparent albedo.
+        this.nearMaterial.setFloat('colorScale', 1);
+        this.midMaterial.setFloat('colorScale', this.settings.bladeSource === 'hybrid' ? 1.6 : 1);
         Object.assign(this.stats, { visiblePatches: 0, nearInstances: 0, midInstances: 0, triangles: 0, draws: 0 });
         for (const patch of this.patches) {
             const distance = Math.hypot(patch.x - context.cameraPosition.x, patch.z - context.cameraPosition.z);

@@ -18,8 +18,8 @@
 
     <fieldset><legend>Coverage</legend>
       <label class="toggle"><input id="enabled" type="checkbox" checked> Grass enabled</label>
-      <label>Density <output id="density-value">2.0×</output></label>
-      <input id="density" type="range" min="0.25" max="4" step="0.25" value="2">
+      <label>Density <output id="density-value">6.0×</output></label>
+      <input id="density" type="range" min="0.5" max="10" step="0.5" value="6">
       <label>Near distance <output id="near-value">22 m</output></label>
       <input id="near" type="range" min="8" max="40" step="1" value="22">
       <label>Visible distance <output id="far-value">70 m</output></label>
@@ -51,7 +51,12 @@
       <input id="wind" type="range" min="0" max="1.2" step="0.05" value="0.3">
       <label>Wind speed <output id="wind-speed-value">1.0</output></label>
       <input id="wind-speed" type="range" min="0" max="3" step="0.1" value="1">
-      <label class="toggle"><input id="interaction" type="checkbox" checked> Camera interaction</label>
+      <label class="toggle"><input id="interaction" type="checkbox" checked> Reactive grass</label>
+      <label class="toggle"><input id="moving-impacts" type="checkbox" checked> Moving test impacts</label>
+      <label>Impact radius <output id="interaction-radius-value">2.4 m</output></label>
+      <input id="interaction-radius" type="range" min="0.4" max="5" step="0.1" value="2.4">
+      <label>Impact strength <output id="interaction-strength-value">0.55</output></label>
+      <input id="interaction-strength" type="range" min="0" max="1.5" step="0.05" value="0.55">
       <label class="toggle"><input id="freeze-wind" type="checkbox"> Freeze wind</label>
     </fieldset>
 
@@ -71,8 +76,9 @@
       <div><dt>Visible triangles</dt><dd id="triangles">—</dd></div>
       <div><dt>Draw calls</dt><dd id="draws">—</dd></div>
       <div><dt>Prototype tris</dt><dd id="prototype-tris">—</dd></div>
+      <div><dt>Active impacts</dt><dd id="impact-count">-</dd></div>
     </dl>
-    <p class="help">Click the view, then use WASD and the mouse. Shift moves faster. The pale sphere shows the interaction proxy.</p>
+    <p class="help">Click the view, then use WASD and the mouse. Shift moves faster. The pale sphere follows the camera; orange spheres test simultaneous grass impacts.</p>
   </aside>
   <script type="module" src="./grass/main.ts"></script>
 </body>

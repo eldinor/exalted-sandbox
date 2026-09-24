@@ -249,6 +249,7 @@ export class Figure {
         // A pronounced flight lean grows with forward speed; hovering is upright.
         const flightForward = Math.max(0, ch.velocity.x * Math.sin(ch.facing) + ch.velocity.z * Math.cos(ch.facing));
         const pitchWant = ch.swimming.active ? .3 + .3 * clamp(ch.speed / 3.8,0,1) : ch.flight.active ? 0.65 * clamp(flightForward / 18, 0, 1) :
+            ch.rocketJump.active ? -.12 :
             0.10 * run
             + 0.012 * clamp(fwdAcc, -9, 22)
             + surf * (0.30 + 0.16 * ch.speed01);
@@ -276,7 +277,7 @@ export class Figure {
         // ------------------------------------------------------------- spine
         const gx = ch.position.x;
         const gz = ch.position.z;
-        const groundY = ch.flight.active || ch.swimming.active ? ch.position.y : Math.max(this.terrain.heightAt(gx, gz), ch.groundY);
+        const groundY = ch.flight.active || ch.rocketJump.active || ch.swimming.active ? ch.position.y : Math.max(this.terrain.heightAt(gx, gz), ch.groundY);
 
         const rootY = groundY - this.sink + this.hipY + this.bob;
 
@@ -366,7 +367,7 @@ export class Figure {
      * Advance distance-driven stance/swing transitions and retain planted world positions, so IK follows the body without foot sliding.
      */
     private _updateFeet(h:number, ch:CharacterController):void {
-        if (ch.flight.active || ch.swimming.active) {
+        if (ch.flight.active || ch.rocketJump.active || ch.swimming.active) {
             const rx = Math.cos(ch.facing), rz = -Math.sin(ch.facing);
             for (let f=0; f<2; f++) {
                 const side = f===0 ? -.14 : .14;
@@ -622,7 +623,7 @@ export class Figure {
                 tx=_sh[0]+rX*sgn*.35+fX*(.25+stroke*.23);
                 ty=_sh[1]-.22-Math.cos(ch.swimming.time*3.8+sgn*Math.PI*.5)*.12;
                 tz=_sh[2]+rZ*sgn*.35+fZ*(.25+stroke*.23);
-            } else if (ch.flight.active) {
+            } else if (ch.flight.active || ch.rocketJump.active) {
                 tx = _sh[0] + rX * sgn * .48 + fX * .12;
                 ty = _sh[1] + rY * sgn * .48 - .12;
                 tz = _sh[2] + rZ * sgn * .48 + fZ * .12;

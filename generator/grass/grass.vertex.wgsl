@@ -12,6 +12,8 @@ uniform time: f32;
 uniform wind: vec2f;
 uniform cameraPosition: vec3f;
 uniform interactionEnabled: f32;
+uniform impactCount: f32;
+uniform impactData: array<vec4f, 8>;
 varying vNormal: vec3f;
 varying vHeight: f32;
 varying vWorld: vec3f;
@@ -28,10 +30,16 @@ fn main(input: VertexInputs)->FragmentInputs {
   let gust=.62+.25*sin(uniforms.time*.73+phase*.045)+.13*sin(uniforms.time*1.91+phase*.17);
   var bend=vec2f(.78,.32)*uniforms.wind.x*gust*h*h;
   if(uniforms.interactionEnabled>.5) {
-    let delta=root.xz-uniforms.cameraPosition.xz;
-    let distanceToCamera=length(delta);
-    let influence=1.0-smoothstep(.25,2.4,distanceToCamera);
-    bend+=select(vec2f(0.0),normalize(delta)*influence*.55,distanceToCamera>.001)*h*h;
+    for(var i=0;i<8;i=i+1) {
+      if(f32(i)>=uniforms.impactCount){break;}
+      let impact=uniforms.impactData[i];
+      let delta=root.xz-impact.xy;
+      let distanceToImpact=length(delta);
+      let influence=1.0-smoothstep(impact.z*.12,impact.z,distanceToImpact);
+      let fallback=vec2f(cos(dot(root.xz,vec2f(.71,1.13))),sin(dot(root.xz,vec2f(.71,1.13))));
+      let away=select(fallback,delta/max(distanceToImpact,.001),distanceToImpact>.001);
+      bend+=away*influence*impact.w*h*h;
+    }
   }
   var worldPosition=model*vec4f(input.position,1.0);
   worldPosition.x+=bend.x;

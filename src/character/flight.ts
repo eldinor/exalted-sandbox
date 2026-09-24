@@ -7,7 +7,6 @@ import type { FlightInput, MovementCharacter, MovementVector2 } from './movement
 
 export const FLIGHT_DURATION = 15;
 export const FLIGHT_COOLDOWN = 5;
-export const FLIGHT_HEIGHT = 8;
 
 /** Flight owns its timer and airborne movement; it uses the existing prop grid. */
 export class Flight {
@@ -33,7 +32,9 @@ export class Flight {
             this.active = this.justStarted = true;
             this.remaining = FLIGHT_DURATION;
             this.elapsed = 0;
-            ch.velocity.y = 2.8;
+            // Preserve a rocket jump's remaining ascent when Space takes over in
+            // midair; ordinary ground launches still begin at 2.8 m/s.
+            ch.velocity.y = Math.max(2.8, ch.velocity.y);
         }
         if (!this.active) return false;
         this.remaining = Math.max(0, this.remaining - dt);
@@ -62,11 +63,8 @@ export class Flight {
             // Flight lands on water, then the swim controller takes over.
             const water=ch.terrain.water?.sample(ch.position.x,ch.position.z);
             if(water)ground=Math.max(ground,water.level);
-            const altitude = ch.position.y - ground;
-            let vy = this.remaining === 0 ? -2 : input.flyDown ? -2.5 : input.flyUp ? 3 : 0;
-            if (this.elapsed < .6 && !input.flyDown) vy = 2.8;
-            if (altitude > FLIGHT_HEIGHT) vy = Math.min(vy, -2);
-            else if (vy > 0) vy *= Math.max(0, Math.min(1, (FLIGHT_HEIGHT - altitude) * 2));
+            let vy = this.remaining === 0 ? -2 : input.flyDown ? (input.sprint ? -14 : -2.5) : input.flyUp ? 3 : 0;
+            if (this.elapsed < .6 && !input.flyDown) vy = Math.max(2.8, ch.velocity.y);
             ch.velocity.y += (vy - ch.velocity.y) * (1 - Math.exp(-8 * h));
             let nextY = ch.position.y + ch.velocity.y * h;
             const obstacles = ch.terrain.obstacles;

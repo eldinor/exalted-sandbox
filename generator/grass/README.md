@@ -11,16 +11,27 @@ The current lab implements the first benchmark slice:
 - road and water rejection;
 - four-section near blades and triangle mid blades;
 - thin-instance buffers grouped by patch;
-- distance LOD, procedural wind, and camera interaction;
+- distance LOD, procedural wind, and up to eight simultaneous interaction zones;
 - live CPU, patch, instance, triangle, draw-call, median, and p95 counters.
 - procedural, imported-GLB, and hybrid geometry comparison modes;
 - selected normalized LOD2 prototypes from `grass_medium_01_1k.glb`;
 - imported variant and per-prototype triangle reporting.
 
+The lab starts at `6×` density, roughly three times its previous blade count.
+The density control reaches `10×` for heavier GPU and visibility stress tests.
+
+The interaction benchmark keeps one camera/player proxy and three optional
+moving impacts in reusable typed uniform storage. Radius and strength are live
+controls. The shader bends blade tips away from each impact while keeping roots
+fixed; this is the portable path for future avatar feet, creatures, vehicles,
+landings, and spell effects.
+
 The imported mode deliberately ignores the duplicated `geonodes` meshes and
 the source GLB's 1x1 texture. It keeps selected regular LOD2 silhouettes while
 using Exalted's common placement, wind, lighting, fog, and color shader. Hybrid
 mode uses an imported near prototype and the two-triangle procedural mid blade.
+The hybrid mid material includes a calibrated brightness correction because its
+simple normals otherwise make distant patches visibly darker at the LOD swap.
 
 Open `/generator/grass-performance.html` through the Vite development server.
 The ground camera uses WASD and mouse look; the overview camera uses orbit

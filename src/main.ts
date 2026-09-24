@@ -41,6 +41,7 @@ import { DesertProps } from './world/desertProps.ts';
 import { FlightWind } from './vfx/flightWind.ts';
 import { WorldWater } from './world/worldWater.ts';
 import { WaterEffects } from './vfx/waterEffects.ts';
+import { RocketJumpVfx } from './vfx/rocketJump.ts';
 import { DepthPass } from "./render/depthPass.ts";
 import { PostChain } from "./post/postChain.ts";
 import { whenReady } from "./core/gpuUtil.ts";
@@ -73,6 +74,7 @@ interface ExaltedRuntime {
     desertProps: DesertProps | null;
     worldWater: WorldWater | null;
     screenshotGallery: ScreenshotGallery;
+    rocketJumpVfx: RocketJumpVfx;
 }
 
 declare global {
@@ -230,6 +232,7 @@ async function boot(): Promise<void> {
     const spray = new SprayField(scene, terrain, sky, shadows);
     const flightWind = new FlightWind(scene, character, spray);
     const waterEffects=worldWater ? new WaterEffects(worldWater,terrain,character,spray) : null;
+    const rocketJumpVfx = new RocketJumpVfx(scene, character, terrain, spray, rig);
 
     // Feet and the surf groove write into the terrain state buffer through here.
     const contact = new SnowContact(character, terrain.deform, figure.figure, spray);
@@ -358,6 +361,9 @@ async function boot(): Promise<void> {
         const tFrame = performance.now();
 
         character.update(dt, rig);
+        // Launch feedback must run before terrain simulation consumes deformation
+        // brushes and before the camera consumes the blast trauma.
+        rocketJumpVfx.update(dt);
         // Pose and simulate before the contact pass: the footprints are stamped
         // at the boot's actual planted position, which only exists once the
         // figure has been solved.
@@ -438,7 +444,7 @@ async function boot(): Promise<void> {
         S, input, perfStats: stats,
         desertProps,
         worldWater,
-        screenshotGallery,
+        screenshotGallery, rocketJumpVfx,
         };
 }
 

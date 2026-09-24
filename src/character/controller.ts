@@ -21,6 +21,7 @@ import { input } from "../core/input.ts";
 import { expDamp } from "../core/camera.ts";
 import { Flight } from './flight.ts';
 import { Swimming } from './swimming.ts';
+import { RocketJump } from './rocketJump.ts';
 import type { MovementTerrain } from './movementTypes.ts';
 
 const _wish = new Vector3();
@@ -59,6 +60,7 @@ export class CharacterController {
     terrain: ControllerTerrain;
     flight: Flight;
     swimming: Swimming;
+    rocketJump: RocketJump;
     position: Vector3;
     velocity: Vector3;
     prevVelocity: Vector3;
@@ -89,6 +91,7 @@ export class CharacterController {
         this.terrain = terrain;
         this.flight = new Flight();
         this.swimming = new Swimming();
+        this.rocketJump = new RocketJump();
 
         this.position = new Vector3(0, 0, 0);
         this.velocity = new Vector3(0, 0, 0);
@@ -176,6 +179,36 @@ export class CharacterController {
         this.prevVelocity.copyFrom(this.velocity);
         rig.getFlatForward(_fwd);
         rig.getFlatRight(_right);
+        // In flight, F layers an explosive impulse onto the existing spell. On
+        // the ground or in water it starts the ballistic rocket-jump mode.
+        if (input.rocketJumpPressed) {
+            if (!this.flight.active) {
+                this.swimming.active = false;
+                this.swimming.justEntered = false;
+            }
+        }
+        // Space may convert a ballistic rocket jump into controlled flight in
+        // the same frame; otherwise the rocket mode would consume the input.
+        if (input.flyPressed && this.rocketJump.active) {
+            this.rocketJump.active = false;
+        }
+        const rocketFrame = this.rocketJump.update(
+            dt, this, input, _fwd, _right, this.flight.active,
+        );
+        if (rocketFrame) {
+            this.surf = 0; this.surfActive = false;
+            this.stepping = this.footfall = false;
+            this.gaitPhase = 0;
+            this.speed = Math.hypot(this.velocity.x, this.velocity.z);
+            this.speed01 = Scalar.Clamp(this.speed / SURF_MAX, 0, 1);
+            this.streak01 = 0;
+            this.acceleration.set(0, 0, 0);
+            this.lean = expDamp(this.lean, 0, 6, h);
+            this.carve = 0;
+            this.groundNormal.set(0, 1, 0);
+            if (this.speed > .1) this.facing = angleDamp(this.facing, Math.atan2(this.velocity.x, this.velocity.z), 6, h);
+            return;
+        }
         const flyingFrame=this.flight.update(dt, this, input, _fwd, _right);
         if(flyingFrame){this.swimming.active=false;this.swimming.justEntered=false;}
         if (flyingFrame || this.swimming.update(dt, this, input, _fwd, _right)) {
