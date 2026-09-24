@@ -1,0 +1,59 @@
+{
+  "name": "exalted",
+  "version": "1.0.0",
+  "description": "Exalted world with deformable snow and sand (Babylon.js / WebGPU)",
+  "homepage": "https://exaltedgaming.gg/",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --import tsx --test tests/avatarRig.test.js tests/meshSurface.test.js tests/propCollisions.test.js tests/flight.test.js tests/waterGeometry.test.js tests/swimming.test.js tests/forest.test.js tests/flyMovement.test.js tests/screenshotCollection.test.ts generator/tests/worldFields.test.ts",
+    "test:generator": "node --import tsx --test generator/tests/worldFields.test.ts",
+    "generator:height": "node --import tsx generator/scripts/generate-height.mts",
+    "generator:inspect-height": "node --import tsx generator/scripts/inspect-height.mts",
+    "generator:biomes": "node --import tsx generator/scripts/generate-biomes.mts",
+    "generator:hydrology": "node --import tsx generator/scripts/generate-hydrology.mts",
+    "generator:landmarks": "node --import tsx generator/scripts/generate-landmarks.mts",
+    "generator:roads": "node --import tsx generator/scripts/generate-roads.mts",
+    "generator:placements": "node --import tsx generator/scripts/generate-placements.mts",
+    "generator:validate-assets": "node --import tsx generator/scripts/validate-assets.mts",
+    "generator:terrain-materials": "node --import tsx generator/scripts/generate-terrain-materials.mts",
+    "generator:inspect-biomes": "node --import tsx generator/scripts/inspect-biomes.mts",
+    "prepare:forest": "node scripts/prepare-forest.mjs",
+    "avatar:export": "node --import tsx scripts/avatar/export-avatar.mts",
+    "avatar:inspect": "node --import tsx scripts/avatar/inspect-avatar.mts",
+    "test:browser": "playwright test",
+    "typecheck": "tsc -p tsconfig.json && tsc -p generator/tsconfig.json"
+  },
+  "keywords": [
+    "webgpu",
+    "babylonjs",
+    "wgsl",
+    "snow",
+    "terrain",
+    "procedural",
+    "graphics"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@babylonjs/addons": "9.18.0",
+    "@babylonjs/core": "9.18.0",
+    "@babylonjs/gui": "9.18.0",
+    "@babylonjs/gui-editor": "9.18.0",
+    "@babylonjs/inspector": "9.18.0",
+    "@babylonjs/loaders": "9.18.0",
+    "@babylonjs/materials": "9.18.0",
+    "@babylonjs/serializers": "9.18.0",
+    "fflate": "^0.8.3",
+    "meshoptimizer": "^1.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.3",
+    "@webgpu/types": "^0.1.72",
+    "tsx": "^4.23.13",
+    "typescript": "~5.9.3",
+    "vite": "^8.1.5"
+  }
+}
