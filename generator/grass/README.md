@@ -37,6 +37,11 @@ Open `/generator/grass-performance.html` through the Vite development server.
 The ground camera uses WASD and mouse look; the overview camera uses orbit
 controls.
 
+Production builds copy `generator/work/generated-world` into `dist` because the
+Grass Lab and generated-world preview fetch that offline bake at runtime. Deploy
+the complete `dist` directory; copying only HTML and JavaScript leaves the field
+metadata and binary maps unavailable.
+
 The next visual pass should add terrain-normal alignment, multiple blade
 profiles, coherent gust bands, dry-tip variation, shadow casting for near
 patches, and a dithered near/mid transition. The next performance pass should
