@@ -8,8 +8,9 @@ import { Vector2 } from '@babylonjs/core/Maths/math.vector';
 import { Scene } from '@babylonjs/core/scene';
 import { Constants } from '@babylonjs/core/Engines/constants';
 import { MeshSurface, type MutableNormal, type MutableWorldPosition } from './meshSurface.ts';
-import { surfaceWeights } from './surfaceTypes.ts';
+import { roadWeight, surfaceWeights } from './surfaceTypes.ts';
 import { DEFAULT_SPAWN } from '../world/spawnPoints.ts';
+import { AUTHORED_WORLD_SCALE } from '../world/worldScale.ts';
 
 /** Vertex buffers guaranteed after a successful Exalted terrain load. */
 export type LoadedTerrainData = VertexData & {
@@ -19,14 +20,19 @@ export type LoadedTerrainData = VertexData & {
     indices: NonNullable<VertexData['indices']>;
 };
 
-export const EXALTED_SPAWN = Object.freeze({ x: -DEFAULT_SPAWN.x, y: 4.8, z: -DEFAULT_SPAWN.y });
+export const EXALTED_SPAWN = Object.freeze({
+    x: -DEFAULT_SPAWN.x * AUTHORED_WORLD_SCALE,
+    y: 4.8,
+    z: -DEFAULT_SPAWN.y * AUTHORED_WORLD_SCALE,
+});
 
 /** Load, retain and query Exalted's authored terrain geometry and biome colors. */
 export class ExaltedWorld {
     readonly scene: Scene;
-    readonly origin = new Vector2(-936, -702);
-    readonly size = 1872;
-    readonly extent = new Vector2(1872, 1404);
+    readonly scale = AUTHORED_WORLD_SCALE;
+    readonly origin = new Vector2(-936 * this.scale, -702 * this.scale);
+    readonly size = 1872 * this.scale;
+    readonly extent = new Vector2(1872 * this.scale, 1404 * this.scale);
     readonly heightTex: RawTexture;
     readonly auxTex: RawTexture;
     readonly _color = new Float32Array(3);
@@ -61,6 +67,9 @@ export class ExaltedWorld {
             if (!data.positions || !data.normals || !data.indices || !data.colors) {
                 throw new Error('Exalted vis_ground must contain positions, normals, indices, and vertex colors.');
             }
+            if (this.scale !== 1) {
+                for (let i = 0; i < data.positions.length; i++) data.positions[i] *= this.scale;
+            }
             data.applyToMesh(target);
             target.sideOrientation = ground.sideOrientation;
             target.useVertexColors = true;
@@ -74,12 +83,41 @@ export class ExaltedWorld {
 
             const width = 469, height = 352;
             const map = new Uint8Array(width * height * 4);
+            const authoredRoad = new Uint8Array(width * height);
             for (let row = 0; row < height; row++) for (let column = 0; column < width; column++) {
-                const weights = this.weightsAt(-936 + column * 4, -702 + row * 4);
+                const x = this.origin.x + column * (this.extent.x / (width - 1));
+                const z = this.origin.y + row * (this.extent.y / (height - 1));
+                const weights = this.weightsAt(x, z);
                 const offset = (row * width + column) * 4;
                 map[offset] = Math.round(weights[0] * 255);
                 map[offset + 1] = Math.round(weights[1] * 255);
+                authoredRoad[row * width + column] = Math.round(roadWeight(this._color) * 255);
                 map[offset + 3] = 255;
+            }
+            // COLOR_0 is discontinuous where Blender split biome boundary
+            // vertices. Preserve full road coverage on its side of that seam,
+            // then feather only outwards by two 4 m cells so the material can
+            // cross-fade into the neighbouring biome without widening its
+            // fully textured centre.
+            const featherRadius = 2;
+            for (let row = 0; row < height; row++) for (let column = 0; column < width; column++) {
+                const index = row * width + column;
+                let coverage = authoredRoad[index] / 255;
+                if (coverage < 1) {
+                    for (let dz = -featherRadius; dz <= featherRadius; dz++) {
+                        const sampleRow = row + dz;
+                        if (sampleRow < 0 || sampleRow >= height) continue;
+                        for (let dx = -featherRadius; dx <= featherRadius; dx++) {
+                            const sampleColumn = column + dx;
+                            if (sampleColumn < 0 || sampleColumn >= width) continue;
+                            const source = authoredRoad[sampleRow * width + sampleColumn] / 255;
+                            if (source <= 0) continue;
+                            const distance = Math.hypot(dx, dz);
+                            coverage = Math.max(coverage, source * Math.max(0, 1 - distance / (featherRadius + 1)));
+                        }
+                    }
+                }
+                map[index * 4 + 2] = Math.round(coverage * 255);
             }
             this.surfaceMap = RawTexture.CreateRGBATexture(
                 map, width, height, this.scene, false, false,

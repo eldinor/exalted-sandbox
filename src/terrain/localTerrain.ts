@@ -9,7 +9,7 @@ import { surfaceWeights } from './surfaceTypes.ts';
 import { ExaltedWorld } from './exaltedWorld.ts';
 
 export const DETAIL_SUBDIVISIONS = 24;
-const CAPACITY = 512;
+const BASE_CAPACITY = 512;
 
 export interface TerrainFocus { x: number; z: number }
 
@@ -19,7 +19,9 @@ export class LocalTerrain {
     readonly coarse: Mesh;
     readonly center = new Vector2(Infinity, Infinity);
     readonly focus = new Vector2();
-    readonly data = new Float32Array(CAPACITY * 9 * 4);
+    readonly capacity: number;
+    readonly subdivisions: number;
+    readonly data: Float32Array;
     readonly texture: RawTexture;
     readonly mesh: Mesh;
     readonly farIndices: Uint32Array;
@@ -31,17 +33,25 @@ export class LocalTerrain {
         if (!world.surface) throw new Error('Local terrain requires a loaded Exalted surface.');
         this.world = world;
         this.coarse = coarse;
+        // A uniformly smaller source packs 1 / scale² more authored triangles
+        // into the same metre-sized interaction patch. Grow only the source
+        // triangle table and reduce per-triangle tessellation proportionally;
+        // the final local-detail vertex/index budget therefore stays close to
+        // the production 1:1 world while the avatar keeps a 44 m work area.
+        this.capacity = Math.ceil(BASE_CAPACITY / (world.scale * world.scale));
+        this.subdivisions = Math.max(1, Math.round(DETAIL_SUBDIVISIONS * world.scale));
+        this.data = new Float32Array(this.capacity * 9 * 4);
         this.texture = RawTexture.CreateRGBATexture(
-            this.data, CAPACITY, 9, scene, false, false,
+            this.data, this.capacity, 9, scene, false, false,
             Constants.TEXTURE_NEAREST_SAMPLINGMODE, Constants.TEXTURETYPE_FLOAT,
         );
-        const subdivisions = DETAIL_SUBDIVISIONS;
+        const subdivisions = this.subdivisions;
         const vertices = (subdivisions + 1) * (subdivisions + 2) / 2;
-        const positions = new Float32Array(CAPACITY * vertices * 3);
-        const indices = new Uint32Array(CAPACITY * subdivisions * subdivisions * 3);
+        const positions = new Float32Array(this.capacity * vertices * 3);
+        const indices = new Uint32Array(this.capacity * subdivisions * subdivisions * 3);
         const rowStart = (row: number): number => row * (subdivisions + 1) - row * (row - 1) / 2;
         let vertexWrite = 0, indexWrite = 0;
-        for (let triangle = 0; triangle < CAPACITY; triangle++) {
+        for (let triangle = 0; triangle < this.capacity; triangle++) {
             for (let row = 0; row <= subdivisions; row++) for (let column = 0; column <= subdivisions - row; column++) {
                 positions[vertexWrite++] = column / subdivisions;
                 positions[vertexWrite++] = row / subdivisions;
@@ -100,7 +110,9 @@ export class LocalTerrain {
                 }
             }
         }
-        if (selected.size > CAPACITY) throw new Error('Local terrain triangle capacity exceeded');
+        if (selected.size > this.capacity) {
+            throw new Error(`Local terrain triangle capacity exceeded (${selected.size} > ${this.capacity})`);
+        }
         const offsets = [...selected].sort((a, b) => a - b);
         let write = 0, from = 0, triangle = 0;
         for (const offset of offsets) {
@@ -110,9 +122,9 @@ export class LocalTerrain {
             for (let vertex = 0; vertex < 3; vertex++) {
                 const index = indices[offset + vertex];
                 for (let component = 0; component < 3; component++) {
-                    this.data[(vertex * CAPACITY + triangle) * 4 + component] = positions[index * 3 + component];
-                    this.data[((3 + vertex) * CAPACITY + triangle) * 4 + component] = normals[index * 3 + component];
-                    this.data[((6 + vertex) * CAPACITY + triangle) * 4 + component] = colors[index * 4 + component];
+                    this.data[(vertex * this.capacity + triangle) * 4 + component] = positions[index * 3 + component];
+                    this.data[((3 + vertex) * this.capacity + triangle) * 4 + component] = normals[index * 3 + component];
+                    this.data[((6 + vertex) * this.capacity + triangle) * 4 + component] = colors[index * 4 + component];
                 }
             }
             triangle++;
@@ -123,7 +135,7 @@ export class LocalTerrain {
         this.coarse.metadata.triangles = write / 3;
         const subMesh = this.mesh.subMeshes[0];
         if (!subMesh) throw new Error('Local terrain detail mesh has no submesh.');
-        subMesh.indexCount = triangle * DETAIL_SUBDIVISIONS ** 2 * 3;
+        subMesh.indexCount = triangle * this.subdivisions ** 2 * 3;
         this.mesh.metadata.triangles = subMesh.indexCount / 3;
         this.mesh.isVisible = triangle > 0;
         this.triangleCount = triangle;

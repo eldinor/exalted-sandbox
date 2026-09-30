@@ -106,6 +106,7 @@ Validation: production build, four unit tests and five WebGPU browser tests pass
 - [x] Apply the regional GLB's `DesertGround` colour/normal textures and roughness to sand on `alpha-map.glb`, retaining deformation and the original UV projection/texture transforms without rendering a second ground mesh.
 - [x] Verify planar UV recovery, shared texture bindings on coarse/detail geometry, footprint deformation and snow/reference-mode compatibility. The source texture is red laterite soil with stones; roads keep their existing firm-surface appearance.
 - [x] Tune deformation shading separately for textured soil and procedural sand: texture-relative trench/rim colours, rough compacted soil, softened normal detail and snow-only blue cavity tint. Dust and sliding wakes inherit the selected ground appearance.
+- [x] Texture the connected authored road colour in `alpha-map.glb` with the 2K `grasspath` albedo, OpenGL normal and roughness maps using stable world-aligned mapping in the unified terrain shader. A GLB-derived world mask feathers across duplicated biome-boundary vertices so the road blends into adjacent terrain instead of ending at a hard triangle seam.
 - [x] Verify texture switching preserves an existing impression's depth and updates both effect materials; inspect sliding screenshots in both modes.
 - [x] Integrate Exalted's geometric deformation into Exalted's snow and loose desert sand; preserve the original `?terrain=procedural` reference mode.
 - [ ] Develop grassland ground cover, forest vegetation/floor, rocky mountain surfaces, and lake/river/ocean surfaces according to the map.
@@ -113,6 +114,14 @@ Validation: production build, four unit tests and five WebGPU browser tests pass
 - [x] Add biome navigation shortcuts using reference place names. These are player inspection destinations; C2/C3/C5/C6 retain their authored meaning as Cube locations.
 
 ## Known limitations to retain in planning
+
+- [ ] Remove the approximately 4.5 MB `babylon.guiEditor-*.js` build chunk.
+  Exalted does not use Babylon GUI; the chunk exists because Babylon Inspector
+  contains an optional dynamic GUI Editor import for `AdvancedDynamicTexture`.
+  Later, alias `@babylonjs/gui-editor` to a small unavailable-feature stub and
+  remove the direct GUI Editor dependency. Preserve the normal Ctrl+I Inspector;
+  only its unused GUI-editing command may be disabled. Validate the production
+  bundle and Inspector after making this change.
 
 - [x] Add isolated `/forest.html` performance demo for all 20,984 forest plants: 32 m thin-instance chunks, medium foliage/wood LOD, distant tree cards, shorter grass/bush visibility, nearby shadows, trunk collisions and GPU wind. HTML tuning controls and ten-second JSON measurements; reusable renderer in `src/forest/ForestSystem.js`.
 - [ ] Compare forest performance and visuals on target devices, especially alpha overdraw, LOD transitions, card orientation, shadow quality and authored versus adjusted plant heights. Port into the main page after this review; adapt benchmark materials to world lighting and HDR output.

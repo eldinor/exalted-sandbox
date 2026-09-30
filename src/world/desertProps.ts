@@ -91,7 +91,8 @@ export class DesertProps {
     readonly materials: ShaderMaterial[] = [];
     readonly passes: PropPassRecord[] = [];
     readonly collisions = new PropCollisions();
-    readonly center = new Vector2(-65, 604);
+    readonly center: Vector2;
+    readonly worldScale: number;
     readonly last = new Vector2(Infinity, Infinity);
     readonly splits = new Vector4();
     triangles = 0;
@@ -103,12 +104,21 @@ export class DesertProps {
     container?: AssetContainer;
     audit?: DesertPropAudit;
 
-    constructor(scene: Scene, terrain: Terrain, sky: Sky, shadows: ShadowSystem, depthPass: DepthPass) {
+    constructor(
+        scene: Scene,
+        terrain: Terrain,
+        sky: Sky,
+        shadows: ShadowSystem,
+        depthPass: DepthPass,
+        worldScale = 1,
+    ) {
         this.scene = scene;
         this.terrain = terrain;
         this.sky = sky;
         this.shadows = shadows;
         this.depthPass = depthPass;
+        this.worldScale = worldScale;
+        this.center = new Vector2(-65 * worldScale, 604 * worldScale);
         terrain.obstacles = this.collisions;
         this.white = RawTexture.CreateRGBATexture(new Uint8Array([255,255,255,255]),1,1,scene,false,false);
         this.flat = RawTexture.CreateRGBATexture(new Uint8Array([128,128,255,255]),1,1,scene,false,false);
@@ -155,13 +165,22 @@ export class DesertProps {
             }
             const authored = node.computeWorldMatrix(true).clone();
             const instance = inverseRoot.multiply(authored);
+            // Compress authored placement coordinates with the test world, but
+            // retain each prop's source rotation and physical model scale.
+            instance.getTranslationToRef(point);
+            instance.setTranslationFromFloats(
+                point.x * this.worldScale,
+                point.y * this.worldScale,
+                point.z * this.worldScale,
+            );
+            const placement = rootMatrix.multiply(instance);
             batch.matrices!.push(...instance.m);
             const bound = source.getBoundingInfo().boundingBox;
-            Vector3.TransformCoordinatesToRef(bound.center, authored, point);
+            Vector3.TransformCoordinatesToRef(bound.center, placement, point);
             (batch.centers as number[]).push(point.x, point.z);
             batch.names.push(node.name);
-            const scale = new Vector3(); authored.decompose(scale);
-            const diameter = batch.size * Math.max(Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z));
+            const objectScale = new Vector3(); placement.decompose(objectScale);
+            const diameter = batch.size * Math.max(Math.abs(objectScale.x), Math.abs(objectScale.y), Math.abs(objectScale.z));
             batch.distance = Math.max(batch.distance, Math.min(220, 35 + diameter * 24));
             // Check the actual transformed vertex chain, not just position metadata.
             const original = source.getVerticesData('position');
@@ -171,7 +190,7 @@ export class DesertProps {
                 const vertices = [];
                 let bottom=Infinity, top=-Infinity;
                 for (let v=0;v<original.length;v+=3) {
-                    Vector3.TransformCoordinatesFromFloatsToRef(original[v],original[v+1],original[v+2],authored,point);
+                    Vector3.TransformCoordinatesFromFloatsToRef(original[v],original[v+1],original[v+2],placement,point);
                     vertices.push(point.x,point.y,point.z);
                     bottom=Math.min(bottom,point.y); top=Math.max(top,point.y);
                 }
@@ -191,15 +210,15 @@ export class DesertProps {
                         maxY:kind==='trunk' ? Math.min(top,Math.max(ground+2.2,bottom+(top-bottom)*.55)) : top});
                 }
                 // Restore the centre used by the existing placement audit.
-                Vector3.TransformCoordinatesToRef(bound.center,authored,point);
+                Vector3.TransformCoordinatesToRef(bound.center,placement,point);
             }
-            const originalPoint = Vector3.TransformCoordinates(Vector3.FromArray(original), authored);
+            const originalPoint = Vector3.TransformCoordinates(Vector3.FromArray(original), placement);
             const instancedPoint = Vector3.TransformCoordinates(Vector3.FromArray(batch.data.positions), instance);
             transformError = Math.max(transformError, Vector3.Distance(originalPoint, instancedPoint));
-            if (Math.hypot(point.x + 65, point.z - 604) < 55) {
+            if (Math.hypot(point.x + 65 * this.worldScale, point.z - 604 * this.worldScale) < 55) {
                 lowest.set(0, Infinity, 0);
                 for (let v = 0; v < original.length; v += 3) {
-                    Vector3.TransformCoordinatesFromFloatsToRef(original[v], original[v+1], original[v+2], authored, point);
+                    Vector3.TransformCoordinatesFromFloatsToRef(original[v], original[v+1], original[v+2], placement, point);
                     if (point.y < lowest.y) lowest.copyFrom(point);
                 }
                 const ground = this.terrain.heightfield.heightAt(lowest.x, lowest.z);

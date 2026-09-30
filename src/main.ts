@@ -42,6 +42,9 @@ import { FlightWind } from './vfx/flightWind.ts';
 import { WorldWater } from './world/worldWater.ts';
 import { WaterEffects } from './vfx/waterEffects.ts';
 import { RocketJumpVfx } from './vfx/rocketJump.ts';
+import { AUTHORED_WORLD_SCALE } from './world/worldScale.ts';
+import { ReflectiveCube } from './world/reflectiveCube.ts';
+import { MagicalCube } from './world/magicalCube.ts';
 import { DepthPass } from "./render/depthPass.ts";
 import { PostChain } from "./post/postChain.ts";
 import { whenReady } from "./core/gpuUtil.ts";
@@ -75,6 +78,8 @@ interface ExaltedRuntime {
     worldWater: WorldWater | null;
     screenshotGallery: ScreenshotGallery;
     rocketJumpVfx: RocketJumpVfx;
+    reflectiveCube: ReflectiveCube | null;
+    magicalCube: MagicalCube | null;
 }
 
 declare global {
@@ -207,7 +212,7 @@ async function boot(): Promise<void> {
     let desertProps: DesertProps | null = null;
     if (exalted) {
         await loading.phase('loading desert vegetation and rocks', 0.50);
-        desertProps = new DesertProps(scene, terrain, sky, shadows, depthPass);
+        desertProps = new DesertProps(scene, terrain, sky, shadows, depthPass, AUTHORED_WORLD_SCALE);
         await desertProps.load();
     }
 
@@ -248,6 +253,10 @@ async function boot(): Promise<void> {
     const spells = new SpellSystem(
         scene, sky, shadows, terrain, character, figure.figure, rig, spray
     );
+    const magicalCube = exalted ? new MagicalCube(scene, terrain, character) : null;
+    // Construct the probe after the magical cube so it is included in the
+    // probe's fixed render list and can appear in the metal cube reflection.
+    const reflectiveCube = exalted ? new ReflectiveCube(scene, terrain, character) : null;
     // Every surface a spell can light.
     spells.addConsumers(
         ...(desertProps?.materials || []),
@@ -292,6 +301,7 @@ async function boot(): Promise<void> {
     await spells.warmUp(
         character.position.x + 3, character.position.y, character.position.z + 3
     );
+    await magicalCube?.warmUp();
     await whenReady(sky.material, "sky material", [sky.mesh, false]);
     await depthPass.warmUp();
     post.update(0, 0, rig.distance);
@@ -343,7 +353,11 @@ async function boot(): Promise<void> {
             resetInput();
             spells.reset();
             terrain.groundProbe?.reset();
-            character.teleport(-point.x, -point.y, point.yaw);
+            character.teleport(
+                -point.x * AUTHORED_WORLD_SCALE,
+                -point.y * AUTHORED_WORLD_SCALE,
+                point.yaw,
+            );
             figure.resetPose();
             contact.reset();
             wake.reset();
@@ -400,6 +414,8 @@ async function boot(): Promise<void> {
         flightWind.update(dt);
         waterEffects?.update(dt,rig.camera.position);
         spray.update(dt, rig.camera.position);
+        magicalCube?.update(dt, rig.camera, character.position, input.interactPressed);
+        reflectiveCube?.update(character.position);
         const tVfx = performance.now();
 
         scene.render();
@@ -425,6 +441,9 @@ async function boot(): Promise<void> {
             (S.showCharacter ? figure.triangles : 0) +
             (wake.mesh.isVisible ? wake.mesh.metadata.triangles : 0) +
             spells.triangles +
+            (reflectiveCube ? 12 : 0) +
+            (magicalCube ? (magicalCube.mesh.isVisible ? 12 : 0) + (magicalCube.ring.isVisible ? 192 : 0) : 0) +
+            (magicalCube?.surface.isVisible ? 192 : 0) +
             spray.liveCount * 2;
 
         sample(dtMs);
@@ -444,7 +463,7 @@ async function boot(): Promise<void> {
         S, input, perfStats: stats,
         desertProps,
         worldWater,
-        screenshotGallery, rocketJumpVfx,
+        screenshotGallery, rocketJumpVfx, reflectiveCube, magicalCube,
         };
 }
 

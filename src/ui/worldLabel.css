@@ -1,0 +1,20 @@
+.world-label {
+    position: fixed;
+    z-index: 47;
+    transform: translate(-50%, -100%);
+    padding: 7px 12px;
+    border: 1px solid rgba(133, 222, 255, 0.38);
+    border-radius: 999px;
+    background: rgba(7, 8, 22, 0.76);
+    box-shadow: 0 0 22px rgba(118, 91, 255, 0.30), inset 0 0 12px rgba(53, 211, 255, 0.09);
+    color: #e9f9ff;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 10px rgba(93, 224, 255, 0.8);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 140ms ease;
+}
+
+.world-label.visible { opacity: 1; }
