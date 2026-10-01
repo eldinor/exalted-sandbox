@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { MeshSurface } from "../src/terrain/meshSurface.ts";
-import { surfaceWeights, SAND_COLORS } from '../src/terrain/surfaceTypes.ts';
+import { biomeMapMaterialWeights, biomeMapRoadWeight, biomeMapSurfaceWeights, roadWeight, surfaceWeights, BIOME_MAP_ROAD_COLORS, BIOME_MAP_SAND_COLORS, ROAD_COLOR, SAND_COLORS } from '../src/terrain/surfaceTypes.ts';
 import { fitPlanarUV } from '../src/terrain/planarUV.ts';
 
 test('planar texture transfer preserves mirrored axes, metre scale and offsets',()=>{
@@ -31,6 +31,26 @@ test('authored sand and snow are soft; roads, grass, forest and rock stay firm',
         surfaceWeights(color, weights);
         assert.deepEqual([...weights], [0, 0]);
     }
+});
+
+test('authored road colour produces a soft, selective texture mask', () => {
+    assert.ok(roadWeight(ROAD_COLOR) > .999);
+    for (const color of BIOME_MAP_ROAD_COLORS) assert.ok(biomeMapRoadWeight(color) > .98);
+    const mapWeights = new Float32Array(2);
+    for (const color of BIOME_MAP_SAND_COLORS) {
+        biomeMapSurfaceWeights(color, mapWeights);
+        assert.ok(mapWeights[0] < .001);
+        assert.ok(mapWeights[1] > .97);
+        assert.ok(biomeMapRoadWeight(color) < .03);
+    }
+    assert.ok(roadWeight([ROAD_COLOR[0] + .04, ROAD_COLOR[1], ROAD_COLOR[2]]) > 0);
+    assert.equal(roadWeight(SAND_COLORS[0]), 0);
+    assert.equal(roadWeight([115 / 255, 157 / 255, 77 / 255]), 0);
+    const edge = BIOME_MAP_SAND_COLORS[0].map((value, i) => (value + BIOME_MAP_ROAD_COLORS[1][i]) * .5);
+    const blend = new Float32Array(3);
+    biomeMapMaterialWeights(edge, blend);
+    assert.ok(blend[1] > .35 && blend[1] < .65);
+    assert.ok(blend[2] > .35 && blend[2] < .65);
 });
 
 test('surface colours interpolate across source triangles for biome boundaries', () => {

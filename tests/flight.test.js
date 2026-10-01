@@ -62,3 +62,11 @@ test('Ctrl+Shift descends much faster and still lands on terrain',()=>{
     assert.equal(f.active,false);
     assert.equal(ch.position.y,0);
 });
+test('expired Fly accelerates a high-altitude fall instead of drifting down',()=>{
+    const {flight:f,ch,input:i,tick}=setup();
+    i.flyPressed=true;tick(.1);
+    ch.position.y=120;ch.velocity.y=0;f.remaining=.01;
+    tick(6);
+    assert.equal(f.active,false);
+    assert.equal(ch.position.y,0);
+});

@@ -45,10 +45,10 @@ test("Exalted GLB renders, grounds the avatar, and preserves the snow reference"
     });
     expect(state.source).toContain("alpha-map.glb");
     expect(state.triangles).toBe(328536);
-    expect(state.min[0]).toBeCloseTo(-936);
-    expect(state.max[0]).toBeCloseTo(936);
-    expect(state.min[2]).toBeCloseTo(-702);
-    expect(state.max[2]).toBeCloseTo(702);
+    expect(state.min[0]).toBeCloseTo(-468);
+    expect(state.max[0]).toBeCloseTo(468);
+    expect(state.min[2]).toBeCloseTo(-351);
+    expect(state.max[2]).toBeCloseTo(351);
     expect(state.position[0]).toBeCloseTo(-65);
     expect(state.position[2]).toBeCloseTo(616);
     expect(state.groundY).toBeCloseTo(5.17, 1);

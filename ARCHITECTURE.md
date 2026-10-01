@@ -42,6 +42,9 @@ flowchart TD
 The default mode loads the authored Exalted world:
 
 - `alpha-map.glb` supplies terrain geometry and biome vertex colours.
+- The original terrain and authored map coordinates use the production 0.5
+  scale, yielding an approximately 936 x 702 metre world while avatars, prop
+  geometry, movement and effects remain metre-sized.
 - `exalted_desert.glb` supplies authored desert vegetation and rocks.
 - Water geometry is derived from retained terrain vertices plus
   `world/waterReference.json`.

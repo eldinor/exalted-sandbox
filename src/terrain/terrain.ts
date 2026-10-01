@@ -16,6 +16,7 @@ import { Constants } from "@babylonjs/core/Engines/constants";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { Scene } from '@babylonjs/core/scene';
 import { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture';
+import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import { ExaltedWorld } from "./exaltedWorld.ts";
 import { LocalTerrain } from './localTerrain.ts';
@@ -118,6 +119,10 @@ export class Terrain {
     readonly heightfield: TerrainHeightfield;
     readonly deform: TerrainDeformation;
     readonly detailTex: ProceduralTexture;
+    readonly roadBaseTex: Texture;
+    readonly roadNormalTex: Texture;
+    readonly roadRoughnessTex: Texture;
+    readonly biomeMapTex: Texture | null;
     readonly mesh: Mesh;
     readonly material: ShaderMaterial;
     readonly materials: ShaderMaterial[];
@@ -162,6 +167,36 @@ export class Terrain {
         this.detailTex.wrapV = Constants.TEXTURE_WRAP_ADDRESSMODE;
         this.detailTex.refreshRate = 0;
 
+        const roadRoot = `${import.meta.env.BASE_URL}assets/textures/grasspath/grass_path_2_`;
+        this.roadBaseTex = new Texture(
+            `${roadRoot}diff_2k.jpg`, scene, false, false,
+            Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
+        );
+        this.roadNormalTex = new Texture(
+            `${roadRoot}nor_gl_2k.jpg`, scene, false, false,
+            Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
+        );
+        this.roadRoughnessTex = new Texture(
+            `${roadRoot}rough_2k.jpg`, scene, false, false,
+            Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
+        );
+        this.biomeMapTex = exalted ? new Texture(
+            `${import.meta.env.BASE_URL}assets/textures/vertex_color_4k%20copy.png`,
+            scene, true, false, Constants.TEXTURE_BILINEAR_SAMPLINGMODE,
+        ) : null;
+        if (this.biomeMapTex) {
+            this.biomeMapTex.gammaSpace = false;
+            this.biomeMapTex.wrapU = this.biomeMapTex.wrapV = Constants.TEXTURE_CLAMP_ADDRESSMODE;
+        }
+
+        this.roadBaseTex.gammaSpace = true;
+        this.roadNormalTex.gammaSpace = false;
+        this.roadRoughnessTex.gammaSpace = false;
+        for (const texture of [this.roadBaseTex, this.roadNormalTex, this.roadRoughnessTex]) {
+            texture.wrapU = texture.wrapV = Constants.TEXTURE_WRAP_ADDRESSMODE;
+            texture.anisotropicFilteringLevel = 8;
+        }
+
         this.mesh = exalted ? new Mesh("exaltedTerrain", scene) : buildClipmapMesh(scene);
 
         this.material = this._makeSnowMaterial();
@@ -186,6 +221,8 @@ export class Terrain {
                 uniforms: [
                     "viewProjection", "cameraPos", "lodCenter", "patchCenter",
                     'desertU','desertV','desertBaseMatrix','desertNormalMatrix','desertColor','desertRoughness','desertNormalScale','desertGamma','useDesertTextures',
+                    'roadTextureScale','roadNormalStrength',
+                    'surfaceOrigin','surfaceExtent','useRoadSurfaceMap',
                     "baseSpacing", "gridHalfN",
                     "worldOrigin", "worldSize", "heightRes",
                     "windAngle", "macroAmp", "sastrugiAmp",
@@ -203,7 +240,7 @@ export class Terrain {
                 samplers: [
                     "heightTex", "auxTex", "detailTex", "skyLUT", "patchTex",
                     "cascade0", "cascade1", "cascade2", "deformTex",
-                    'desertBaseTex','desertNormalTex',
+                    'desertBaseTex','desertNormalTex','roadBaseTex','roadNormalTex','roadRoughnessTex','surfaceMap','biomeMapTex',
                 ],
                 shaderLanguage: ShaderLanguage.WGSL,
             }
@@ -214,6 +251,16 @@ export class Terrain {
         mat.setTexture("auxTex", this.heightfield.auxTex);
         mat.setTexture("detailTex", this.detailTex);
         mat.setTexture("skyLUT", this.sky.lut);
+        mat.setTexture('roadBaseTex', this.roadBaseTex);
+        mat.setTexture('roadNormalTex', this.roadNormalTex);
+        mat.setTexture('roadRoughnessTex', this.roadRoughnessTex);
+        mat.setTexture('biomeMapTex', this.biomeMapTex ?? this.heightfield.heightTex);
+        mat.setFloat('roadTextureScale', 1 / 6);
+        mat.setFloat('roadNormalStrength', 0.72);
+        mat.setTexture('surfaceMap', this.heightfield.heightTex);
+        mat.setVector2('surfaceOrigin', Vector2.Zero());
+        mat.setVector2('surfaceExtent', new Vector2(1, 1));
+        mat.setFloat('useRoadSurfaceMap', 0);
         for (let i = 0; i < CASCADE_COUNT; i++) {
             mat.setTexture("cascade" + i, this.shadows.maps[i]);
         }
@@ -335,11 +382,17 @@ export class Terrain {
             this.localMaterial.setTexture('patchTex', this.local.texture);
             this.local.mesh.material = this.localMaterial;
             this.materials.push(this.localMaterial);
-            this.local.update({ x: -65, z: 604 });
+            this.local.update({ x: -65 * world.scale, z: 604 * world.scale });
             this.shadows.registerCaster(this.local.mesh, (c: number) => this._makeDepthMaterial(c, true));
             this.deform.surfaceWeightsAt = (x: number, z: number) => world.weightsAt(x, z);
             if (!world.surfaceMap) throw new Error('Exalted surface map was not created during terrain load.');
             this.deform.setSurfaceMap(world.surfaceMap, world.origin, world.extent);
+            for (const material of this.materials) {
+                material.setTexture('surfaceMap', world.surfaceMap);
+                material.setVector2('surfaceOrigin', world.origin);
+                material.setVector2('surfaceExtent', world.extent);
+                material.setFloat('useRoadSurfaceMap', 1);
+            }
             this.groundProbe = new GroundProbe(this.scene, { heightfield: { surfaceMap: world.surfaceMap, origin: world.origin, extent: world.extent, weightsAt: (x, z) => world.weightsAt(x, z) }, deform: this.deform, local: this.local });
         }
 
@@ -576,6 +629,10 @@ export class Terrain {
         this.mesh.dispose();
         this.material.dispose();
         this.detailTex.dispose();
+        this.roadBaseTex.dispose();
+        this.roadNormalTex.dispose();
+        this.roadRoughnessTex.dispose();
+        this.biomeMapTex?.dispose();
         this.deform.dispose();
         this.heightfield.dispose();
     }

@@ -68,6 +68,10 @@ import waterFrag from "./water.fragment.wgsl?raw";
 import crystalVert from "./crystal.vertex.wgsl?raw";
 import crystalFrag from "./crystal.fragment.wgsl?raw";
 import crystalDepthVert from "./crystalDepth.vertex.wgsl?raw";
+import magicalCubeVert from './magicalCube.vertex.wgsl?raw';
+import magicalCubeFrag from './magicalCube.fragment.wgsl?raw';
+import portalRingFrag from './portalRing.fragment.wgsl?raw';
+import portalSurfaceFrag from './portalSurface.fragment.wgsl?raw';
 
 import prepassFrag from "./prepass.fragment.wgsl?raw";
 import terrainPrepassVert from "./terrainPrepass.vertex.wgsl?raw";
@@ -138,6 +142,12 @@ const SHADERS = {
     crystalVertexShader: crystalVert,
     crystalPixelShader: crystalFrag,
     crystalDepthVertexShader: crystalDepthVert,
+    magicalCubeVertexShader: magicalCubeVert,
+    magicalCubePixelShader: magicalCubeFrag,
+    portalRingVertexShader: magicalCubeVert,
+    portalRingPixelShader: portalRingFrag,
+    portalSurfaceVertexShader: magicalCubeVert,
+    portalSurfacePixelShader: portalSurfaceFrag,
 
     // The camera-space depth prepass. One fragment stage shared by everything
     // that has nothing to discard; the wake carries its own because it does.

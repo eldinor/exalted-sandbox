@@ -106,11 +106,48 @@ For the authored map, the current working decision is:
 - apply LOD primarily to trees, rocks, bushes, grass, and other props;
 - use image-based masks for smooth terrain material blending independent of
   mesh density;
+- use `public/assets/textures/vertex_color_4k copy.png` as the main shader's higher-resolution authored biome map; retain `alpha-map.glb` vertex colours as the geometry-bound fallback and current CPU deformation classification;
+- use `BIOME_SPLAT_MAP.md` as the delivery contract for the future explicit
+  RGBA material-weight map;
 - keep terrain collision separate when the visual mesh is unsuitable.
+
+The main app currently includes a 3 m reflective test cube ten metres left of
+the default avatar spawn. Its bottom is 0.5 m above the sampled terrain. A
+512-pixel dynamic reflection probe retains its last capture and refreshes only
+while the avatar is within 20 m, at one cubemap update every four frames.
+
+A second 1.5 m shader test cube sits ten metres right of the default spawn with
+the same 0.5 m clearance. Its animated crystalline violet/cyan surface emits HDR
+edges and veins into the existing bloom chain. Within 3 m it offers an E-key
+interaction; activation dissolves the cube and grows a persistent animated
+magical portal ring in its place. The ring contains a blended HDR vortex surface
+with counter-rotating spiral currents, travelling sparks and a feathered edge.
+At activation the complete portal snaps parallel to the nearest vertical cube
+face toward the avatar, then retains that orientation.
+Crossing within 1.5 m of the completed portal shows a world-anchored `Portal
+entered` label and dispatches `exalted:portal-entered` on `window`. The event is
+edge-triggered and fires again only after the avatar leaves and re-enters. Entry
+remains locked until the dissolve and portal-growth animation finishes, followed
+by a 0.45-second settling delay, so an avatar already inside the radius sees the
+complete transition before the label and event appear.
 
 The existing `alpha-map.glb` is approximately 329,000 triangles and is a
 reasonable starting point for a single-level terrain, subject to validation on
 the target laptop and desktop hardware.
+
+The 50% authored-world scale established in `halved.html` is now the production
+scale used by `index.html`. It compresses terrain geometry and authored world
+coordinates to approximately 936 x 702 metres, moves prop placements and water
+with that terrain, and keeps the avatar, prop geometry, movement units, and
+metre-based terrain texture density at their original physical scale.
+
+The reflective and magical portal cube prototypes remain in source for later
+use, but neither demo cube is instantiated in the production world.
+
+Because halving both horizontal axes makes unchanged authored placements four
+times denser per square metre, the runtime deterministically retains 30% of
+large desert boulders. Small stones and vegetation retain their authored counts,
+and collision cylinders are created only for retained boulders.
 
 ## Representative Biome Delivery
 

@@ -19,6 +19,7 @@ export interface InputState {
     sprint: boolean;
     flyPressed: boolean;
     rocketJumpPressed: boolean;
+    interactPressed: boolean;
     flyUp: boolean;
     flyDown: boolean;
     spellPressed: 0 | SpellNumber;
@@ -49,6 +50,7 @@ export const input: InputState = {
     sprint: false, // shift
     flyPressed: false,
     rocketJumpPressed: false,
+    interactPressed: false,
     flyUp: false,
     flyDown: false,
 
@@ -71,7 +73,7 @@ export function resetInput(): void {
     for (const key in keys) keys[key] = false;
     input.moveX = input.moveZ = input.lookX = input.lookY = input.zoomDelta = input.spellPressed = 0;
     input.moving = input.surf = input.sprint = input.spellHeld2 = input.spellHeld7 = false;
-    input.flyPressed = input.rocketJumpPressed = input.flyUp = input.flyDown = false;
+    input.flyPressed = input.rocketJumpPressed = input.interactPressed = input.flyUp = input.flyDown = false;
 }
 
 function isUI(target: EventTarget | null): boolean {
@@ -154,6 +156,14 @@ export function initInput(canvas: HTMLCanvasElement, hooks?: InputHooks): void {
             if (!e.repeat) input.rocketJumpPressed = true;
             return;
         }
+        // World interaction also remains available when a location button has
+        // retained focus, but never consumes typing in an editable control.
+        if (e.code === 'KeyE') {
+            if (isEditable(e.target)) return;
+            e.preventDefault();
+            if (!e.repeat) input.interactPressed = true;
+            return;
+        }
         if (isUI(e.target)) return;
         if (e.code === "KeyP") {
             if (!e.repeat) onScreenshot?.();
@@ -179,7 +189,7 @@ export function initInput(canvas: HTMLCanvasElement, hooks?: InputHooks): void {
     });
 
     window.addEventListener("blur", () => {
-        input.flyPressed = input.rocketJumpPressed = input.flyUp = input.flyDown = false;
+        input.flyPressed = input.rocketJumpPressed = input.interactPressed = input.flyUp = input.flyDown = false;
         for (const k in keys) keys[k] = false;
         input.surf = false;
         input.spellHeld2 = false;
@@ -205,8 +215,10 @@ export function pollInput(): void {
         // One-shot global actions may have been queued while a spawn-bar button
         // retained focus. Preserve them while dropping held movement state.
         const rocketJumpPressed = input.rocketJumpPressed;
+        const interactPressed = input.interactPressed;
         resetInput();
         input.rocketJumpPressed = rocketJumpPressed;
+        input.interactPressed = interactPressed;
         return;
     }
     let x = 0;
@@ -238,6 +250,7 @@ export function endFrame(): void {
     input.spellPressed = 0;
     input.flyPressed = false;
     input.rocketJumpPressed = false;
+    input.interactPressed = false;
 }
 
 /**

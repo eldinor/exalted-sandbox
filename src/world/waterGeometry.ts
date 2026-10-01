@@ -108,12 +108,13 @@ export function buildWaterGeometry(
     data: TerrainWaterSource,
     reference: WaterReference,
     level = 0,
+    worldScale = 1,
 ): BuiltWaterGeometry {
     const lake: WaterMeshData = { positions: [], normals: [], colors: [], indices: [] };
     const river: WaterMeshData = { positions: [], normals: [], colors: [], indices: [] };
     // Chart east/north -> the same Babylon frame used by spawn points.
-    const polygon: Point2[] = reference.lake.map(([x, z]) => [-x, -z]);
-    const line: Point2[] = reference.river.map(([x, z]) => [-x, -z]);
+    const polygon: Point2[] = reference.lake.map(([x, z]) => [-x * worldScale, -z * worldScale]);
+    const line: Point2[] = reference.river.map(([x, z]) => [-x * worldScale, -z * worldScale]);
     const p = data.positions, c = data.colors, ix = data.indices;
 
     function append(target: WaterMeshData, poly: WaterVertex[], flow = false): void {
@@ -148,7 +149,7 @@ export function buildWaterGeometry(
         if (inside(x, z, polygon)) append(lake, clip(wet, v => level - v[1]));
         // Permit the documented warp while excluding blue ocean/mountains
         // outside the authored river corridor. The blue mask supplies its edges.
-        if (riverDistance(x, z, line) < 55) append(river, clip(wet, v => v[1] - level), true);
+        if (riverDistance(x, z, line) < 55 * worldScale) append(river, clip(wet, v => v[1] - level), true);
     }
     return { lake, river, level };
 }

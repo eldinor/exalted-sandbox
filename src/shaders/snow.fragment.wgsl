@@ -29,6 +29,7 @@ varying vViewDist: f32;
 varying vSpacing: f32;
 #ifdef EXALTED_TERRAIN
 #include<surfaceTypes>
+#include<surfaceMap>
 uniform patchCenter: vec2f;
 uniform desertU: vec3f;
 uniform desertV: vec3f;
@@ -39,10 +40,21 @@ uniform desertRoughness: f32;
 uniform desertNormalScale: vec2f;
 uniform desertGamma: f32;
 uniform useDesertTextures: f32;
+uniform roadTextureScale: f32;
+uniform roadNormalStrength: f32;
+uniform useRoadSurfaceMap: f32;
 var desertBaseTex: texture_2d<f32>;
 var desertBaseTexSampler: sampler;
 var desertNormalTex: texture_2d<f32>;
 var desertNormalTexSampler: sampler;
+var roadBaseTex: texture_2d<f32>;
+var roadBaseTexSampler: sampler;
+var roadNormalTex: texture_2d<f32>;
+var roadNormalTexSampler: sampler;
+var roadRoughnessTex: texture_2d<f32>;
+var roadRoughnessTexSampler: sampler;
+var biomeMapTex: texture_2d<f32>;
+var biomeMapTexSampler: sampler;
 varying vTerrainNormal: vec3f;
 varying vBiomeColor: vec3f;
 #endif
@@ -222,10 +234,23 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 
     // ---------------------------------------------------------------- slopes
 #ifdef EXALTED_TERRAIN
-    // Snow is the near-white authored biome. Retain all other region colours.
-    let weights = surfaceWeights(input.vBiomeColor);
-    let snowCover = weights.x;
-    let sandCover = weights.y;
+    // The 4K authored map supersedes sparse COLOR_0 interpolation. Its U axis
+    // is mirrored relative to Babylon X; V follows Babylon Z from north to south.
+    // A sub-metre, low-frequency world-space warp removes the mechanically
+    // smooth edge without changing the authored biome layout or road width.
+    let biomeWarp = vec2f(
+        noise2(world.xz * 0.16),
+        noise2(world.xz * 0.16 + vec2f(31.7, 9.2))
+    ) * 0.75;
+    var biomeUV = clamp((world.xz + biomeWarp - uniforms.surfaceOrigin) / uniforms.surfaceExtent, vec2f(0.0), vec2f(1.0));
+    biomeUV.x = 1.0 - biomeUV.x;
+    let biomeColor = textureSampleLevel(biomeMapTex, biomeMapTexSampler, biomeUV, 0.0).rgb;
+    // A normalized three-way blend keeps detailed snow, desert and road
+    // materials complementary through the softened authored boundaries.
+    let materialWeights = biomeMapMaterialWeights(biomeColor);
+    let snowCover = materialWeights.x;
+    let sandCover = materialWeights.y;
+    let roadCover = materialWeights.z;
     let desertTextureCover = sandCover * uniforms.useDesertTextures;
     let groundUV = vec2f(dot(vec3f(world.xz,1.0),uniforms.desertU),dot(vec3f(world.xz,1.0),uniforms.desertV));
     let groundDx = vec2f(dot(ddxW.xz,uniforms.desertU.xy),dot(ddxW.xz,uniforms.desertV.xy));
@@ -236,6 +261,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     let snowCover = 1.0;
     let sandCover = 0.0;
     let desertTextureCover = 0.0;
+    let roadCover = 0.0;
     let aux = textureSampleLevel(auxTex, auxTexSampler, input.vHeightUV, 0.0);
 #endif
     var grad = aux.xy;
@@ -328,7 +354,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // Three tiling scales, each faded by footprint so the finest only exists
     // when it is actually resolvable, and cross-faded so no scale ever pops in.
     let steep = smoothstep(0.55, 0.9, 1.0 - N.y);
-    if (uniforms.detailStrength > 0.001 && desertTextureCover < 0.999) {
+    if (uniforms.detailStrength > 0.001 && max(desertTextureCover,roadCover) < 0.999) {
         var acc = vec3f(0.0, 0.0, 1.0);
 
         let f0 = 1.0 - smoothstep(0.004, 0.02, footprint);
@@ -351,7 +377,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         let up = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(N.y) > 0.99);
         let T = normalize(cross(up, N));
         let B = cross(N, T);
-        let s = uniforms.detailStrength * mix(1.0, 0.45, compression) * mix(1.0,0.48,sandCover) * (1.0-desertTextureCover);
+        let s = uniforms.detailStrength * mix(1.0, 0.45, compression) * mix(1.0,0.48,sandCover) * (1.0-desertTextureCover) * (1.0-roadCover);
         N = normalize(N + (T * acc.x + B * acc.y) * s);
     }
 
@@ -369,7 +395,8 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     var f0 = vec3f(0.028);
     var thickness = 1.0; // 1 = deep drift, 0 = thin crust
 #ifdef EXALTED_TERRAIN
-    albedo = mix(input.vBiomeColor, albedo, snowCover);
+    // Biomes without dedicated PBR sets use the softened 4K authored color.
+    albedo = mix(biomeColor, albedo, snowCover);
     roughness = mix(0.88, roughness, snowCover);
     thickness *= snowCover;
     if (desertTextureCover > 0.001) {
@@ -391,6 +418,27 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         let scale=inverseSqrt(max(max(dot(T,T),dot(B,B)),1e-12));
         let mapped=normalize(N*max(bump.z,0.1)+(T*bump.x*uniforms.desertNormalScale.x+B*bump.y*uniforms.desertNormalScale.y)*scale);
         N=normalize(mix(N,mapped,sandCover*mix(1.0,0.65,compression)));
+    }
+    if (roadCover > 0.001) {
+        // The road is authored as one connected COLOR_0 region. World mapping
+        // keeps its texel density stable across the coarse terrain and the
+        // moving local-detail patch without requiring another road mesh.
+        let roadUV=world.xz*uniforms.roadTextureScale;
+        let roadDx=ddxW.xz*uniforms.roadTextureScale;
+        let roadDy=ddyW.xz*uniforms.roadTextureScale;
+        var roadBase=textureSampleGrad(roadBaseTex,roadBaseTexSampler,roadUV,roadDx,roadDy).rgb;
+        // Very-low-frequency value variation breaks the kilometre-scale repeat
+        // while leaving stones and embedded grass in the authored texture.
+        roadBase*=.92+.12*(noise2(world.xz*.025)*.5+.5);
+        let roadRough=textureSampleGrad(roadRoughnessTex,roadRoughnessTexSampler,roadUV,roadDx,roadDy).r;
+        albedo=mix(albedo,roadBase,roadCover);
+        roughness=mix(roughness,clamp(roadRough,.58,1.0),roadCover);
+        let bump=textureSampleGrad(roadNormalTex,roadNormalTexSampler,roadUV,roadDx,roadDy).xyz*2.0-1.0;
+        let T=cross(ddyW,N)*roadDx.x+cross(N,ddxW)*roadDy.x;
+        let B=cross(ddyW,N)*roadDx.y+cross(N,ddxW)*roadDy.y;
+        let scale=inverseSqrt(max(max(dot(T,T),dot(B,B)),1e-12));
+        let mapped=normalize(N*max(bump.z,.1)+(T*bump.x+B*bump.y)*scale*uniforms.roadNormalStrength);
+        N=normalize(mix(N,mapped,roadCover));
     }
 #endif
 
@@ -469,7 +517,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // broad, soft darkening keyed to distance from the camera, which slides
     // across the ground when the camera moves and nothing else does.
     thickness *= snowCover;
-    var ao = mix(1.0, cavity, 0.35 * (1.0-desertTextureCover) * (1.0 - smoothstep(0.02, 0.25, footprint)))
+    var ao = mix(1.0, cavity, 0.35 * (1.0-desertTextureCover) * (1.0-roadCover) * (1.0 - smoothstep(0.02, 0.25, footprint)))
            * (1.0 - clamp(deformDepth * 1.9, 0.0, 1.0) * mix(0.38,mix(0.25,0.18,desertTextureCover),sandCover));
 
     // ------------------------------------------------------------- lighting

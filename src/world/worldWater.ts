@@ -78,12 +78,15 @@ export class WorldWater {
         ShaderStore.ShadersStoreWGSL.worldWaterVertexShader = vertex;
         ShaderStore.ShadersStoreWGSL.worldWaterPixelShader = fragment;
 
-        const geometry = buildWaterGeometry(loadedTerrainData(terrain.heightfield), reference, 0);
+        const worldScale = terrain.heightfield instanceof Object && 'scale' in terrain.heightfield
+            ? Number(terrain.heightfield.scale)
+            : 1;
+        const geometry = buildWaterGeometry(loadedTerrainData(terrain.heightfield), reference, 0, worldScale);
         this.level = geometry.level;
         this.surface = new WaterSurface(geometry.lake, this.level);
         this.emitters = waterfallEmitters(geometry.river);
         const mouth = reference.river[reference.river.length - 1];
-        this.riverMouth = new Vector2(-mouth[0], -mouth[1]);
+        this.riverMouth = new Vector2(-mouth[0] * worldScale, -mouth[1] * worldScale);
         terrain.water = this;
 
         const bodies = [
