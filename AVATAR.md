@@ -29,6 +29,8 @@ independently recolor the robe and sleeves, mantle, collar lining, and trim or
 scarf, with coordinated presets and an authored-palette reset. UI colours are
 converted from sRGB to the shader's linear palette, while roughness, sheen,
 weave, shadows, spell lighting, cloth motion, and geometry remain unchanged.
+**Copy Settings** writes the current four-color palette to the clipboard as
+versioned, readable JSON for sharing visual-test choices with the team.
 
 ## Customization difficulty
 

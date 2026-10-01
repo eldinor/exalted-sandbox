@@ -71,6 +71,10 @@
     outline: none;
 }
 
+.avatar-colors .avatar-colors-copy {
+    grid-column: 1 / -1;
+}
+
 @media (max-width: 720px) {
     .avatar-colors { top: 74px; right: 8px; width: 190px; }
 }

@@ -5,14 +5,15 @@ import './avatarColors.css';
 
 interface FabricControl {
     label: string;
+    key: string;
     slot: AvatarPaletteSlot;
 }
 
 const FABRICS: readonly FabricControl[] = [
-    { label: 'Robe & sleeves', slot: 0 },
-    { label: 'Mantle', slot: 1 },
-    { label: 'Collar lining', slot: 2 },
-    { label: 'Trim & scarf', slot: 5 },
+    { label: 'Robe & sleeves', key: 'robeAndSleeves', slot: 0 },
+    { label: 'Mantle', key: 'mantle', slot: 1 },
+    { label: 'Collar lining', key: 'collarLining', slot: 2 },
+    { label: 'Trim & scarf', key: 'trimAndScarf', slot: 5 },
 ];
 
 const PRESETS = {
@@ -93,6 +94,12 @@ export class AvatarColors {
             this.syncInputs();
         });
         presets.append(reset);
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'avatar-colors-copy';
+        copy.textContent = 'Copy Settings';
+        copy.addEventListener('click', () => void this.copySettings(copy));
+        presets.append(copy);
         details.append(presets);
         this.root.append(details);
         document.body.append(this.root);
@@ -110,6 +117,21 @@ export class AvatarColors {
             const input = this.inputs.get(fabric.slot);
             if (input) input.value = linearColorToHex(this.character.getPaletteColor(fabric.slot));
         }
+    }
+
+    private async copySettings(button: HTMLButtonElement): Promise<void> {
+        const colors = Object.fromEntries(FABRICS.map(fabric => [
+            fabric.key,
+            linearColorToHex(this.character.getPaletteColor(fabric.slot)),
+        ]));
+        const json = JSON.stringify({ version: 1, colors }, null, 2);
+        try {
+            await navigator.clipboard.writeText(json);
+            button.textContent = 'Copied';
+        } catch {
+            button.textContent = 'Copy failed';
+        }
+        window.setTimeout(() => { button.textContent = 'Copy Settings'; }, 1400);
     }
 
     dispose(): void { this.root.remove(); }
