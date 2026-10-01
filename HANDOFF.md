@@ -4,7 +4,7 @@
 
 This repository's primary product is the playable **Exalted** world served by
 `index.html`. It is a WebGPU-only Babylon.js application focused on an authored
-1,872 x 1,404 metre world, a procedural animated avatar, biome-specific ground
+936 x 702 metre world, a procedural animated avatar, biome-specific ground
 interaction, spells, water, atmosphere, props, and high-quality rendering.
 
 The procedural generator, editor plans, avatar tools, and performance labs are
@@ -69,8 +69,11 @@ It is the visual terrain from the September 9, 2026 handoff. The unavailable
 collision GLB and analytic height function were explicitly waived; grounding is
 authorised to sample the visible imported triangles.
 
-World scale is one unit per metre. Chart coordinates use east/north and convert
-to Babylon as `(-x, height, -y)`. GLB loader transforms are baked into imported
+Runtime scale remains one unit per metre for the avatar, props, movement, and
+effects. The original authored terrain and map coordinates are uniformly scaled
+to 50%, producing an approximately 936 x 702 metre production world. Chart
+coordinates use east/north, apply the authored-world scale, and convert to
+Babylon as `(-x, height, -y)`. GLB loader transforms are baked into imported
 geometry; never apply this conversion twice.
 
 The terrain currently uses one optimized geometry level. Routine terrain LOD
@@ -118,8 +121,9 @@ paths.
   and fur are production systems.
 - Walking, sprinting, surfing, swimming, collision-aware flight, and timed Fly
   cooldown are implemented.
-- Space casts Fly; Ctrl descends; airborne movement is faster and the avatar
-  leans into forward flight.
+- Space casts Fly; Ctrl descends at 7 m/s, Ctrl+Shift descends at 26 m/s, and
+  expired high-altitude flight accelerates into a capped 24 m/s fall. Airborne
+  movement is faster and the avatar leans into forward flight.
 - Avatar export, inspection, replacement, Mixamo, and editor plans are documented
   separately.
 

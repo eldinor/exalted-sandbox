@@ -1,15 +1,15 @@
 /**
- * Authored-world scale used by the isolated halved-world test page.
+ * Production scale of the authored Exalted world.
  *
- * Scaling happens when authored coordinates enter the runtime. Character and
- * prop geometry remain metre-sized, while terrain, placements and navigation
- * coordinates occupy a smaller world.
+ * The original authored terrain and all map coordinates are reduced to 50%.
+ * Character and prop geometry remain metre-sized; only terrain geometry,
+ * authored placements, water and navigation coordinates use this scale.
+ * `halved.html` is retained as a compatibility entry point for the experiment
+ * that established this production scale.
  */
-export const AUTHORED_WORLD_SCALE = globalThis.location?.pathname.replace(/\\/g, '/').endsWith('/halved.html')
-    ? 0.5
-    : 1;
+export const AUTHORED_WORLD_SCALE: number = 0.5;
 
-/** Scale an authored map coordinate into the active test world's metres. */
+/** Scale an original authored map coordinate into production-world metres. */
 export function scaledWorldCoordinate(value: number, scale = AUTHORED_WORLD_SCALE): number {
     return value * scale;
 }

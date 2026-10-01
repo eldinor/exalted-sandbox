@@ -53,6 +53,10 @@ import * as loading from "./core/loading.ts";
 // ------------------------------------------------------- module-scope scratch
 const _vel = new Vector3();
 
+// Retain the reflection and portal prototypes for later integration without
+// placing their test cubes in the production world.
+const ENABLE_DEMO_CUBES = false;
+
 /** Systems intentionally exposed for live inspection and tuning in the browser console. */
 interface ExaltedRuntime {
     engine: WebGPUEngine;
@@ -253,10 +257,14 @@ async function boot(): Promise<void> {
     const spells = new SpellSystem(
         scene, sky, shadows, terrain, character, figure.figure, rig, spray
     );
-    const magicalCube = exalted ? new MagicalCube(scene, terrain, character) : null;
+    const magicalCube = exalted && ENABLE_DEMO_CUBES
+        ? new MagicalCube(scene, terrain, character)
+        : null;
     // Construct the probe after the magical cube so it is included in the
     // probe's fixed render list and can appear in the metal cube reflection.
-    const reflectiveCube = exalted ? new ReflectiveCube(scene, terrain, character) : null;
+    const reflectiveCube = exalted && ENABLE_DEMO_CUBES
+        ? new ReflectiveCube(scene, terrain, character)
+        : null;
     // Every surface a spell can light.
     spells.addConsumers(
         ...(desertProps?.materials || []),

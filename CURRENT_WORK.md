@@ -135,11 +135,19 @@ The existing `alpha-map.glb` is approximately 329,000 triangles and is a
 reasonable starting point for a single-level terrain, subject to validation on
 the target laptop and desktop hardware.
 
-`halved.html` is an isolated scale experiment for the authored application. It
-compresses terrain geometry and authored world coordinates to 50%, moves prop
-placements and water with that terrain, and keeps the avatar, prop geometry,
-movement units, and metre-based terrain texture density at production scale.
-The production `index.html` remains at the authored 1:1 scale.
+The 50% authored-world scale established in `halved.html` is now the production
+scale used by `index.html`. It compresses terrain geometry and authored world
+coordinates to approximately 936 x 702 metres, moves prop placements and water
+with that terrain, and keeps the avatar, prop geometry, movement units, and
+metre-based terrain texture density at their original physical scale.
+
+The reflective and magical portal cube prototypes remain in source for later
+use, but neither demo cube is instantiated in the production world.
+
+Because halving both horizontal axes makes unchanged authored placements four
+times denser per square metre, the runtime deterministically retains 30% of
+large desert boulders. Small stones and vegetation retain their authored counts,
+and collision cylinders are created only for retained boulders.
 
 ## Representative Biome Delivery
 

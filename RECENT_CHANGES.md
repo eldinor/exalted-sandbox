@@ -57,7 +57,9 @@ because the lab remains a supporting performance utility.
 
 - Flight lasts 15 seconds and has a 5-second cooldown after landing.
 - Holding `Space` now continues gaining altitude.
-- `Ctrl+Shift` provides a much faster controlled descent.
+- `Ctrl` now descends at 7 m/s and `Ctrl+Shift` at 26 m/s during Fly.
+- When Fly expires at high altitude, the avatar accelerates downward under
+  gravity to a 24 m/s terminal speed instead of drifting down slowly.
 - Air movement uses the same fast camera-relative direction controls as the
   rocket-jump airborne phase.
 

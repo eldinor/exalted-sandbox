@@ -7,6 +7,10 @@ import type { FlightInput, MovementCharacter, MovementVector2 } from './movement
 
 export const FLIGHT_DURATION = 15;
 export const FLIGHT_COOLDOWN = 5;
+const CONTROLLED_DESCENT_SPEED = -7;
+const RAPID_DESCENT_SPEED = -26;
+const FALL_GRAVITY = 22;
+const FALL_TERMINAL_SPEED = -24;
 
 /** Flight owns its timer and airborne movement; it uses the existing prop grid. */
 export class Flight {
@@ -63,9 +67,19 @@ export class Flight {
             // Flight lands on water, then the swim controller takes over.
             const water=ch.terrain.water?.sample(ch.position.x,ch.position.z);
             if(water)ground=Math.max(ground,water.level);
-            let vy = this.remaining === 0 ? -2 : input.flyDown ? (input.sprint ? -14 : -2.5) : input.flyUp ? 3 : 0;
-            if (this.elapsed < .6 && !input.flyDown) vy = Math.max(2.8, ch.velocity.y);
-            ch.velocity.y += (vy - ch.velocity.y) * (1 - Math.exp(-8 * h));
+            let vy: number;
+            if (this.remaining === 0) {
+                // Once Fly expires, use an accelerating fall instead of a slow
+                // fixed descent. The cap keeps high-altitude collision sweeps safe.
+                ch.velocity.y = Math.max(FALL_TERMINAL_SPEED, ch.velocity.y - FALL_GRAVITY * h);
+                vy = ch.velocity.y;
+            } else {
+                vy = input.flyDown
+                    ? (input.sprint ? RAPID_DESCENT_SPEED : CONTROLLED_DESCENT_SPEED)
+                    : input.flyUp ? 3 : 0;
+                if (this.elapsed < .6 && !input.flyDown) vy = Math.max(2.8, ch.velocity.y);
+                ch.velocity.y += (vy - ch.velocity.y) * (1 - Math.exp(-8 * h));
+            }
             let nextY = ch.position.y + ch.velocity.y * h;
             const obstacles = ch.terrain.obstacles;
             if (obstacles) {

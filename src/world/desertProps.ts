@@ -80,6 +80,20 @@ interface TextureSrgbState {
     _texture?: { _useSRGBBuffer?: boolean };
 }
 
+const LARGE_BOULDER_DIAMETER = 1.8;
+const HALVED_WORLD_BOULDER_KEEP_RATIO = 0.3;
+
+/** Stable authored-placement thinning; keeps rendering and collision selection identical. */
+function keepLargeBoulder(name: string, x: number, z: number): boolean {
+    let hash = 2166136261;
+    const key = `${name}:${Math.round(x * 100)}:${Math.round(z * 100)}`;
+    for (let i = 0; i < key.length; i++) {
+        hash ^= key.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0) / 0x100000000 < HALVED_WORLD_BOULDER_KEEP_RATIO;
+}
+
 /** Authored placements, compacted into shared geometry/material instance batches. */
 export class DesertProps {
     readonly scene: Scene;
@@ -174,18 +188,21 @@ export class DesertProps {
                 point.z * this.worldScale,
             );
             const placement = rootMatrix.multiply(instance);
-            batch.matrices!.push(...instance.m);
             const bound = source.getBoundingInfo().boundingBox;
+            const objectScale = new Vector3(); placement.decompose(objectScale);
+            const diameter = batch.size * Math.max(Math.abs(objectScale.x), Math.abs(objectScale.y), Math.abs(objectScale.z));
+            const kind = solidPropKind(source.material.name);
+            placement.getTranslationToRef(point);
+            const isLargeBoulder = kind === 'rock' && diameter >= LARGE_BOULDER_DIAMETER;
+            if (this.worldScale < 1 && isLargeBoulder && !keepLargeBoulder(node.name, point.x, point.z)) continue;
+            batch.matrices!.push(...instance.m);
             Vector3.TransformCoordinatesToRef(bound.center, placement, point);
             (batch.centers as number[]).push(point.x, point.z);
             batch.names.push(node.name);
-            const objectScale = new Vector3(); placement.decompose(objectScale);
-            const diameter = batch.size * Math.max(Math.abs(objectScale.x), Math.abs(objectScale.y), Math.abs(objectScale.z));
             batch.distance = Math.max(batch.distance, Math.min(220, 35 + diameter * 24));
             // Check the actual transformed vertex chain, not just position metadata.
             const original = source.getVerticesData('position');
             if (!original || !batch.data.positions) continue;
-            const kind = solidPropKind(source.material.name);
             if (kind) {
                 const vertices = [];
                 let bottom=Infinity, top=-Infinity;
@@ -226,6 +243,10 @@ export class DesertProps {
             }
         }
         for (const batch of groups.values()) {
+            if (batch.names.length === 0) {
+                batch.mesh.dispose();
+                continue;
+            }
             const name = batch.sourceMaterial.name;
             batch.windEnabled = /didelta|leipoldtia|iceplant/.test(name);
             const bounds = batch.mesh.getBoundingInfo().boundingBox;
