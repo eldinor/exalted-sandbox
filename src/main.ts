@@ -32,6 +32,7 @@ import { Overlay } from "./ui/overlay.ts";
 import { SpawnBar } from "./ui/spawnBar.ts";
 import { installInspectorShortcut } from './ui/inspector.ts';
 import { ScreenshotGallery } from './ui/screenshotGallery.ts';
+import { AvatarColors } from './ui/avatarColors.ts';
 import { Sky } from "./render/sky.ts";
 import { ShadowSystem } from "./render/shadows.ts";
 import { Terrain } from "./terrain/terrain.ts";
@@ -81,6 +82,7 @@ interface ExaltedRuntime {
     desertProps: DesertProps | null;
     worldWater: WorldWater | null;
     screenshotGallery: ScreenshotGallery;
+    avatarColors: AvatarColors;
     rocketJumpVfx: RocketJumpVfx;
     reflectiveCube: ReflectiveCube | null;
     magicalCube: MagicalCube | null;
@@ -283,6 +285,7 @@ async function boot(): Promise<void> {
 
     const overlay = new Overlay({ rig, character });
     const screenshotGallery = new ScreenshotGallery(engine, rig.camera);
+    const avatarColors = new AvatarColors(figure);
     initInput(canvas, {
         onToggleOverlay: () => overlay.toggle(),
         onScreenshot: () => void screenshotGallery.capture(),
@@ -471,7 +474,7 @@ async function boot(): Promise<void> {
         S, input, perfStats: stats,
         desertProps,
         worldWater,
-        screenshotGallery, rocketJumpVfx, reflectiveCube, magicalCube,
+        screenshotGallery, avatarColors, rocketJumpVfx, reflectiveCube, magicalCube,
         };
 }
 

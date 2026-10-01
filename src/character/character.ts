@@ -84,6 +84,8 @@ const PALETTE = [
     [0.100, 0.100, 0.100, 0.80], // 7 spare
 ];
 
+export type AvatarPaletteSlot = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
 /**
  * (sheen, anisotropy, transmission, weave depth) per slot.
  *
@@ -137,6 +139,27 @@ export class Character {
     private readonly _splits = new Vector4(0,0,0,0);
     private _needSettle = true;
     private _visible = true;
+
+    /** Change one palette albedo in linear RGB while retaining its material finish. */
+    setPaletteColor(slot: AvatarPaletteSlot, r: number, g: number, b: number): void {
+        const offset = slot * 4;
+        this._matAlbedo[offset] = Math.max(0, r);
+        this._matAlbedo[offset + 1] = Math.max(0, g);
+        this._matAlbedo[offset + 2] = Math.max(0, b);
+    }
+
+    /** Read one palette albedo in linear RGB for appearance tooling. */
+    getPaletteColor(slot: AvatarPaletteSlot): readonly [number, number, number] {
+        const offset = slot * 4;
+        return [this._matAlbedo[offset], this._matAlbedo[offset + 1], this._matAlbedo[offset + 2]];
+    }
+
+    /** Restore the authored palette without rebuilding avatar materials. */
+    resetPalette(): void {
+        for (let i = 0; i < PALETTE.length; i++) {
+            this.setPaletteColor(i as AvatarPaletteSlot, PALETTE[i][0], PALETTE[i][1], PALETTE[i][2]);
+        }
+    }
 
     constructor(scene:Scene, terrain:Terrain, sky:Sky, shadows:ShadowSystem, controller:CharacterController) {
         this.scene = scene;

@@ -24,6 +24,12 @@ carries bone matrices and simulated cloth nodes. The cloth render mesh stores
 `(u, v, panelIndex)` in its position attribute; the shader reconstructs the actual
 surface from the simulation grid. Fur is also shader-based.
 
+The main app includes a collapsible **Avatar colors** visual-test panel. It can
+independently recolor the robe and sleeves, mantle, collar lining, and trim or
+scarf, with coordinated presets and an authored-palette reset. UI colours are
+converted from sRGB to the shader's linear palette, while roughness, sheen,
+weave, shadows, spell lighting, cloth motion, and geometry remain unchanged.
+
 ## Customization difficulty
 
 | Change | Difficulty | Work involved |
