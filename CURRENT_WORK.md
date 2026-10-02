@@ -54,8 +54,9 @@ grass benchmark. It shares the lab controls, loads the production half-scale
 `alpha-map.glb`, and places imported LOD1/LOD2 grass on the authored grassland
 palette with exact triangle grounding and a moving patch window. It remains an
 isolated utility with lab lighting and ground rendering; it does not install
-grass into the production frame loop. See `generator/grass/README.md` for scope
-and current streaming limitations.
+grass into the production frame loop. See [README.md](README.md#grassland-lab)
+for controls and [HISTORY_DOCS.md](HISTORY_DOCS.md#grassland-lab-technical-notes)
+for implementation details and streaming limitations.
 
 ### World editor
 

@@ -193,6 +193,9 @@ review.
 
 ## Documentation map
 
+- [README.md](README.md): main application and authored Grassland lab overview.
+- [HISTORY_DOCS.md](HISTORY_DOCS.md): technical lab notes, supporting pages and archived README.
+
 - [ARCHITECTURE.md](ARCHITECTURE.md): production runtime architecture and order.
 - [CURRENT_WORK.md](CURRENT_WORK.md): product boundaries and current direction.
 - [TODO.md](TODO.md): implementation findings, completed work, and backlog.
