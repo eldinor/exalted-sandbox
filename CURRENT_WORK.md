@@ -49,6 +49,14 @@ deterministic placement, wind, interaction, LOD, and performance measurements.
 Its purpose is to select and tune a grass solution that can later be integrated
 into the authored Exalted world.
 
+`/generator/grassland.html` is the authored-world counterpart to the generated
+grass benchmark. It shares the lab controls, loads the production half-scale
+`alpha-map.glb`, and places imported LOD1/LOD2 grass on the authored grassland
+palette with exact triangle grounding and a moving patch window. It remains an
+isolated utility with lab lighting and ground rendering; it does not install
+grass into the production frame loop. See `generator/grass/README.md` for scope
+and current streaming limitations.
+
 ### World editor
 
 The planned browser world editor supports regional inspection, placement,

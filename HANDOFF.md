@@ -163,6 +163,7 @@ These are intentionally separate from the production app:
 
 - `generator/generated-world.html`: procedural 2 x 2 km world research;
 - `generator/grass-performance.html`: grass blade and performance lab;
+- `generator/grassland.html`: imported grass on the half-scale authored Exalted terrain;
 - `forest.html`: retained forest performance prototype;
 - `forest_road.html`: imported forest-road viewer;
 - `snow_mountain.html`: imported mountain viewer;

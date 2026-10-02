@@ -1,5 +1,6 @@
 :root { color-scheme: dark; font-family: Inter,"Segoe UI",system-ui,sans-serif; background:#091016; color:#e7eff3; }
 * { box-sizing:border-box; }
+[hidden] { display:none !important; }
 html,body { width:100%; height:100%; margin:0; overflow:hidden; }
 #view { display:block; width:100%; height:100%; outline:none; touch-action:none; }
 aside { position:fixed; inset:0 auto 0 0; width:292px; padding:14px 16px; overflow:auto; background:rgb(8 20 27 / 92%); border-right:1px solid rgb(174 211 219 / 16%); backdrop-filter:blur(14px); }
@@ -21,3 +22,15 @@ dt { color:#7f969d; } dd { margin:0; color:#d5e1e4; font-variant-numeric:tabular
 .help { color:#91a4aa; font-size:11px; line-height:1.5; }
 input[type=color] { width:100%; height:32px; padding:2px; background:#14252c; border:1px solid #34515a; border-radius:4px; cursor:pointer; }
 textarea { width:100%; min-height:140px; padding:8px; color:#e8f1f3; background:#14252c; border:1px solid #34515a; border-radius:4px; font:11px/1.5 monospace; resize:vertical; }
+.benchmark-sidebar { inset:0 0 0 auto; width:300px; border-right:0; border-left:1px solid rgb(174 211 219 / 16%); }
+.benchmark-sidebar input[type=text] { width:100%; padding:8px; color:#e8f1f3; background:#14252c; border:1px solid #34515a; border-radius:4px; }
+button:disabled { opacity:.45; cursor:default; }
+.has-grass-mix aside { bottom:176px; }
+.grass-mix-panel { position:fixed; inset:auto 0 0; height:176px; padding:10px 16px; background:rgb(8 20 27 / 96%); border-top:1px solid #34515a; }
+.grass-mix-header { display:flex; align-items:center; gap:24px; }
+.grass-mix-header label,.grass-mix-header p { margin:0 0 8px; }
+.grass-mix-rows { display:flex; gap:12px; overflow-x:auto; padding-bottom:10px; }
+.grass-mix-card { flex:0 0 150px; padding:5px 10px 8px; background:#14252c; border:1px solid #34515a; border-radius:4px; }
+.grass-mix-card label { margin:2px 0 6px; }
+.grass-mix-card input[type=number] { width:65px; padding:3px 6px; color:#e8f1f3; background:#091016; border:1px solid #34515a; border-radius:4px; }
+@media (max-width:850px) { aside { width:230px; padding:12px; } .benchmark-sidebar { width:240px; } }

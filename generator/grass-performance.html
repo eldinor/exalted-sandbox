@@ -10,6 +10,7 @@
   <canvas id="view" tabindex="0" aria-label="Exalted grass performance lab"></canvas>
   <aside>
     <a href="./generated-world.html">← Generated world</a>
+    <a href="./grassland.html">Authored grassland</a>
     <p class="eyebrow">World generator</p>
     <h1>Grass Lab</h1>
     <p id="status">Loading generated fields…</p>
@@ -47,12 +48,20 @@
         <option value="grass_medium_01_small_a_LOD2">Small A</option>
         <option value="grass_medium_01_small_b_LOD2">Small B</option>
       </select>
+      <label class="toggle"><input id="lod-enabled" type="checkbox"> Use distance LOD</label>
+      <div id="single-lod-controls" hidden>
+        <label for="single-lod">Grass detail without LOD</label>
+        <select id="single-lod">
+          <option value="1">LOD1 only</option>
+          <option value="2">LOD2 only</option>
+        </select>
+      </div>
       <label for="imported-near-lod">Imported near LOD</label>
       <select id="imported-near-lod">
         <option value="1">LOD1 · More detail</option>
         <option value="2">LOD2 · Lower cost</option>
       </select>
-      <p class="help">Imported GLB uses LOD2 beyond Near distance. Hybrid uses procedural far blades.</p>
+      <p id="lod-help" class="help">Imported GLB uses LOD2 beyond Near distance. Hybrid uses procedural far blades.</p>
       <label>Reference height <output id="height-value">0.85 m</output></label>
       <input id="height" type="range" min="0.25" max="1.6" step="0.05" value="0.85">
       <p class="help">Imported grass preserves GLB size proportions. This height sets Tall A; Tiny and Small stay proportionally shorter.</p>
