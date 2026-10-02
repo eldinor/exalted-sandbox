@@ -15,6 +15,7 @@ import { loadBakedHydrologyField } from '../preview/loadHydrologyField.ts';
 import { loadGeneratedRoads } from '../preview/loadRoads.ts';
 import { GrassSystem } from './GrassSystem.ts';
 import { loadImportedGrass } from './ImportedGrass.ts';
+import { defaultGrassColors } from './GrassAppearance.ts';
 import type { GrassImpact, GrassSettings } from './grassTypes.ts';
 
 const CENTRE_X = -250;
@@ -96,6 +97,8 @@ async function boot(): Promise<void> {
         interaction: true, movingImpacts: true, interactionRadius: 2.4, interactionStrength: .55,
         freezeWind: false, visualization: 'final',
         bladeSource: 'procedural', importedVariant: 'grass_medium_01_tall_a_LOD2',
+        importedNearLod: 1,
+        ...defaultGrassColors(),
     };
     const grass = new GrassSystem(scene, {
         heightAt: (x, z) => heightField.sample(x, z),
@@ -164,9 +167,11 @@ async function boot(): Promise<void> {
     element('visualization', HTMLSelectElement).addEventListener('change', event => { settings.visualization = (event.currentTarget as HTMLSelectElement).value as GrassSettings['visualization']; });
     const bladeSource = element('blade-source', HTMLSelectElement);
     const importedVariant = element('imported-variant', HTMLSelectElement);
+    const importedNearLod = element('imported-near-lod', HTMLSelectElement);
     bladeSource.addEventListener('change', () => {
         settings.bladeSource = bladeSource.value as GrassSettings['bladeSource'];
         importedVariant.disabled = settings.bladeSource === 'procedural';
+        importedNearLod.disabled = settings.bladeSource === 'procedural';
         grass.rebuild();
     });
     importedVariant.addEventListener('change', () => {
@@ -174,6 +179,50 @@ async function boot(): Promise<void> {
         grass.rebuild();
     });
     importedVariant.disabled = true;
+    importedNearLod.disabled = true;
+    importedNearLod.addEventListener('change', () => {
+        settings.importedNearLod = importedNearLod.value === '1' ? 1 : 2;
+        grass.rebuild();
+    });
+    const bindColor = (id: string, key: 'rootColor' | 'tipColor'): (() => void) => {
+        const input = element(id, HTMLInputElement);
+        const output = element(`${id}-value`, HTMLOutputElement);
+        const sync = (): void => {
+            input.value = Color3.FromArray(settings[key]).toGammaSpace(true).toHexString();
+            output.value = input.value;
+        };
+        input.addEventListener('input', () => {
+            const color = Color3.FromHexString(input.value).toLinearSpace(true);
+            settings[key] = [color.r, color.g, color.b];
+            output.value = input.value;
+        });
+        sync();
+        return sync;
+    };
+    const syncRootColor = bindColor('root-color', 'rootColor');
+    const syncTipColor = bindColor('tip-color', 'tipColor');
+    element('reset-colors', HTMLButtonElement).addEventListener('click', () => {
+        Object.assign(settings, defaultGrassColors());
+        syncRootColor(); syncTipColor();
+    });
+    element('copy-settings', HTMLButtonElement).addEventListener('click', async () => {
+        const json = JSON.stringify({
+            ...settings,
+            rootColorHex: element('root-color', HTMLInputElement).value,
+            tipColorHex: element('tip-color', HTMLInputElement).value,
+        }, null, 2);
+        const output = element('settings-export', HTMLTextAreaElement);
+        const copyStatus = element('copy-status', HTMLElement);
+        output.value = json;
+        output.hidden = false;
+        try {
+            await navigator.clipboard.writeText(json);
+            copyStatus.textContent = 'Settings copied.';
+        } catch {
+            output.focus(); output.select();
+            copyStatus.textContent = 'Select and copy the settings below (Ctrl+C).';
+        }
+    });
 
     let groundMode = true;
     const cameraMode = element('camera-mode', HTMLButtonElement);

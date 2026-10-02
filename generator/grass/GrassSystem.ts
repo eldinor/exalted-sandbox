@@ -5,8 +5,10 @@ import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial';
 import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage';
 import { ShaderStore } from '@babylonjs/core/Engines/shaderStore';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { createGrassBlade } from './GrassGeometry.ts';
+import { grassLightingResponse } from './GrassAppearance.ts';
 import type { GrassSamplers, GrassSettings, GrassStats, GrassUpdateContext } from './grassTypes.ts';
 import type { ImportedGrassPrototype } from './ImportedGrass.ts';
 import vertexShader from './grass.vertex.wgsl?raw';
@@ -46,6 +48,9 @@ export class GrassSystem {
     private builtDensity = -1;
     private builtGeometryKey = '';
     private readonly impactData = new Float32Array(MAX_IMPACTS * 4);
+    private readonly rootColor = Color3.Black();
+    private readonly tipColor = Color3.Black();
+    private midColorScale = 1;
 
     public constructor(
         private readonly scene: Scene,
@@ -80,17 +85,22 @@ export class GrassSystem {
     }
 
     public getPrototypeTriangleCounts(): readonly [number, number] {
-        const imported = this.importedPrototypes.get(this.settings.importedVariant)?.triangles ?? 0;
+        const near = this.importedPrototypes.get(this.importedNearName())?.triangles ?? 8;
+        const mid = this.importedPrototypes.get(this.settings.importedVariant)?.triangles ?? 2;
         if (this.settings.bladeSource === 'procedural') return [8, 2];
-        if (this.settings.bladeSource === 'hybrid') return [imported, 2];
-        return [imported, imported];
+        if (this.settings.bladeSource === 'hybrid') return [near, 2];
+        return [near, mid];
+    }
+
+    private importedNearName(): string {
+        return this.settings.importedVariant.replace(/_LOD2$/, `_LOD${this.settings.importedNearLod}`);
     }
 
     private createMaterial(name: string, lodKind: number): ShaderMaterial {
         const material = new ShaderMaterial(`grass-${name}`, this.scene, 'exaltedGrass', {
             shaderLanguage: ShaderLanguage.WGSL,
             attributes: ['position', 'normal'],
-            uniforms: ['world', 'viewProjection', 'time', 'wind', 'cameraPosition', 'interactionEnabled', 'impactCount', 'impactData', 'visualization', 'lodKind', 'colorScale'],
+            uniforms: ['world', 'viewProjection', 'time', 'wind', 'cameraPosition', 'interactionEnabled', 'impactCount', 'impactData', 'visualization', 'lodKind', 'colorScale', 'rootColor', 'tipColor'],
         });
         material.backFaceCulling = false;
         material.setFloat('lodKind', lodKind);
@@ -102,6 +112,10 @@ export class GrassSystem {
         material.setArray4('impactData', this.impactData as unknown as number[]);
         material.setFloat('visualization', 0);
         material.setFloat('colorScale', 1);
+        this.rootColor.set(...this.settings.rootColor);
+        this.tipColor.set(...this.settings.tipColor);
+        material.setColor3('rootColor', this.rootColor);
+        material.setColor3('tipColor', this.tipColor);
         return material;
     }
 
@@ -113,12 +127,20 @@ export class GrassSystem {
         }
         this.patches.length = 0;
         const imported = this.importedPrototypes.get(this.settings.importedVariant);
-        const useImportedNear = this.settings.bladeSource !== 'procedural' && imported;
+        const importedNear = this.importedPrototypes.get(this.importedNearName());
+        const useImportedNear = this.settings.bladeSource !== 'procedural' && importedNear;
         const useImportedMid = this.settings.bladeSource === 'imported' && imported;
-        const nearGeometry = useImportedNear ? imported.geometry : this.nearGeometry;
+        const nearGeometry = useImportedNear ? importedNear.geometry : this.nearGeometry;
         const midGeometry = useImportedMid ? imported.geometry : this.midGeometry;
-        const nearTriangles = useImportedNear ? imported.triangles : 8;
+        const nearTriangles = useImportedNear ? importedNear.triangles : 8;
         const midTriangles = useImportedMid ? imported.triangles : 2;
+        // Keep unit-height geometry for wind/gradient math, then restore authored
+        // sizes using the same LOD1 ratio for near, far and Hybrid blades.
+        const referenceHeight = this.importedPrototypes.get('grass_medium_01_tall_a_LOD1')?.authoredHeight ?? 1;
+        const variantHeight = this.importedPrototypes.get(this.settings.importedVariant.replace(/_LOD2$/, '_LOD1'))?.authoredHeight ?? referenceHeight;
+        const heightRatio = useImportedNear ? variantHeight / referenceHeight : 1;
+        // Match average diffuse brightness without changing either LOD's tint.
+        this.midColorScale = grassLightingResponse(nearGeometry) / grassLightingResponse(midGeometry);
         const half = this.extent * 0.5;
         const firstX = Math.floor((this.centre.x - half) / PATCH_SIZE);
         const lastX = Math.floor((this.centre.x + half) / PATCH_SIZE);
@@ -144,7 +166,7 @@ export class GrassSystem {
                         const slope = this.samplers.heightAt(x + 1, z) - this.samplers.heightAt(x - 1, z);
                         const slopeZ = this.samplers.heightAt(x, z + 1) - this.samplers.heightAt(x, z - 1);
                         if (Math.hypot(slope, slopeZ) > 0.8) continue;
-                        const height = this.settings.bladeHeight * (0.72 + hash(seed + 31) * 0.52);
+                        const height = this.settings.bladeHeight * heightRatio * (0.72 + hash(seed + 31) * 0.52);
                         const width = this.settings.bladeWidth * (0.78 + hash(seed + 47) * 0.44);
                         const rotation = Quaternion.FromEulerAngles(0, hash(seed + 59) * Math.PI * 2, 0);
                         const translation = new Vector3(x, this.samplers.heightAt(x, z) + 0.015, z);
@@ -183,13 +205,13 @@ export class GrassSystem {
             }
         }
         this.builtDensity = this.settings.density;
-        this.builtGeometryKey = `${this.settings.bladeSource}:${this.settings.importedVariant}:${this.settings.bladeHeight}:${this.settings.bladeWidth}`;
+        this.builtGeometryKey = `${this.settings.bladeSource}:${this.settings.importedVariant}:${this.settings.importedNearLod}:${this.settings.bladeHeight}:${this.settings.bladeWidth}`;
     }
 
     /** Selects patch LODs and updates shared wind/interaction uniforms. */
     public update(context: GrassUpdateContext): void {
         const started = performance.now();
-        const geometryKey = `${this.settings.bladeSource}:${this.settings.importedVariant}:${this.settings.bladeHeight}:${this.settings.bladeWidth}`;
+        const geometryKey = `${this.settings.bladeSource}:${this.settings.importedVariant}:${this.settings.importedNearLod}:${this.settings.bladeHeight}:${this.settings.bladeWidth}`;
         if (this.builtDensity !== this.settings.density || this.builtGeometryKey !== geometryKey) this.rebuild();
         const visualization = { final: 0, lod: 1, biome: 2, patches: 3 }[this.settings.visualization];
         const time = this.settings.freezeWind ? 0 : context.elapsedSeconds * this.settings.windSpeed;
@@ -203,6 +225,8 @@ export class GrassSystem {
             this.impactData[offset + 2] = Math.max(.01, impact.radius);
             this.impactData[offset + 3] = impact.strength;
         }
+        this.rootColor.set(...this.settings.rootColor);
+        this.tipColor.set(...this.settings.tipColor);
         for (const material of [this.nearMaterial, this.midMaterial]) {
             material.setFloat('time', time);
             material.setVector2('wind', new Vector2(this.settings.windStrength, this.settings.windSpeed));
@@ -211,12 +235,11 @@ export class GrassSystem {
             material.setFloat('impactCount', impactCount);
             material.setArray4('impactData', this.impactData as unknown as number[]);
             material.setFloat('visualization', visualization);
+            material.setColor3('rootColor', this.rootColor);
+            material.setColor3('tipColor', this.tipColor);
         }
-        // The imported near prototype has a broader, more upward-facing normal
-        // distribution than the procedural two-triangle mid blade. Compensate
-        // only in hybrid mode so the LOD swap preserves apparent albedo.
         this.nearMaterial.setFloat('colorScale', 1);
-        this.midMaterial.setFloat('colorScale', this.settings.bladeSource === 'hybrid' ? 1.6 : 1);
+        this.midMaterial.setFloat('colorScale', this.midColorScale);
         Object.assign(this.stats, { visiblePatches: 0, nearInstances: 0, midInstances: 0, triangles: 0, draws: 0 });
         for (const patch of this.patches) {
             const distance = Math.hypot(patch.x - context.cameraPosition.x, patch.z - context.cameraPosition.z);

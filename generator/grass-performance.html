@@ -35,15 +35,41 @@
       </select>
       <label>Imported variant</label>
       <select id="imported-variant">
-        <option value="grass_medium_01_tall_a_LOD2">Tall A · LOD2</option>
-        <option value="grass_medium_01_tiny_a_LOD2">Tiny A · LOD2</option>
-        <option value="grass_medium_01_tiny_c_LOD2">Tiny C · LOD2</option>
-        <option value="grass_medium_01_tiny_f_LOD2">Tiny F · LOD2</option>
+        <option value="grass_medium_01_tall_a_LOD2">Tall A</option>
+        <option value="grass_medium_01_tall_b_LOD2">Tall B</option>
+        <option value="grass_medium_01_tall_c_LOD2">Tall C</option>
+        <option value="grass_medium_01_tiny_a_LOD2">Tiny A</option>
+        <option value="grass_medium_01_tiny_b_LOD2">Tiny B</option>
+        <option value="grass_medium_01_tiny_c_LOD2">Tiny C</option>
+        <option value="grass_medium_01_tiny_d_LOD2">Tiny D</option>
+        <option value="grass_medium_01_tiny_e_LOD2">Tiny E</option>
+        <option value="grass_medium_01_tiny_f_LOD2">Tiny F</option>
+        <option value="grass_medium_01_small_a_LOD2">Small A</option>
+        <option value="grass_medium_01_small_b_LOD2">Small B</option>
       </select>
-      <label>Height <output id="height-value">0.85 m</output></label>
+      <label for="imported-near-lod">Imported near LOD</label>
+      <select id="imported-near-lod">
+        <option value="1">LOD1 · More detail</option>
+        <option value="2">LOD2 · Lower cost</option>
+      </select>
+      <p class="help">Imported GLB uses LOD2 beyond Near distance. Hybrid uses procedural far blades.</p>
+      <label>Reference height <output id="height-value">0.85 m</output></label>
       <input id="height" type="range" min="0.25" max="1.6" step="0.05" value="0.85">
+      <p class="help">Imported grass preserves GLB size proportions. This height sets Tall A; Tiny and Small stay proportionally shorter.</p>
       <label>Width <output id="width-value">4.5 cm</output></label>
       <input id="width" type="range" min="0.015" max="0.1" step="0.005" value="0.045">
+    </fieldset>
+
+    <fieldset><legend>Grass color</legend>
+      <label for="root-color">Root color <output id="root-color-value"></output></label>
+      <input id="root-color" type="color">
+      <label for="tip-color">Tip color <output id="tip-color-value"></output></label>
+      <input id="tip-color" type="color">
+      <button id="reset-colors" type="button">Reset colors</button>
+      <p class="help">Colors apply in Final and Patch boundaries views.</p>
+      <button id="copy-settings" type="button">Copy settings</button>
+      <p id="copy-status" class="help" role="status" aria-live="polite"></p>
+      <textarea id="settings-export" aria-label="Grass settings JSON" readonly hidden></textarea>
     </fieldset>
 
     <fieldset><legend>Wind and interaction</legend>

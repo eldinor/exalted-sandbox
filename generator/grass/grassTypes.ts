@@ -17,6 +17,10 @@ export interface GrassSettings {
     visualization: 'final' | 'lod' | 'biome' | 'patches';
     bladeSource: 'procedural' | 'imported' | 'hybrid';
     importedVariant: string;
+    importedNearLod: 1 | 2;
+    /** Linear RGB gradient endpoints, independent of the geometry source. */
+    rootColor: readonly [number, number, number];
+    tipColor: readonly [number, number, number];
 }
 
 export interface GrassImpact {

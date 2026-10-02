@@ -14,21 +14,29 @@ export interface ImportedGrassPrototype {
 
 const VARIANTS = [
     'grass_medium_01_tall_a_LOD2',
+    'grass_medium_01_tall_b_LOD2',
+    'grass_medium_01_tall_c_LOD2',
     'grass_medium_01_tiny_a_LOD2',
+    'grass_medium_01_tiny_b_LOD2',
     'grass_medium_01_tiny_c_LOD2',
+    'grass_medium_01_tiny_d_LOD2',
+    'grass_medium_01_tiny_e_LOD2',
     'grass_medium_01_tiny_f_LOD2',
+    'grass_medium_01_small_a_LOD2',
+    'grass_medium_01_small_b_LOD2',
 ] as const;
 
 function owningNodeName(mesh: AbstractMesh): string {
     let node: AbstractMesh['parent'] | AbstractMesh = mesh;
     while (node) {
-        if (VARIANTS.includes(node.name as typeof VARIANTS[number])) return node.name;
+        const lod2Name = node.name.replace(/_LOD1$/, '_LOD2');
+        if (VARIANTS.includes(lod2Name as typeof VARIANTS[number])) return node.name;
         node = node.parent;
     }
     return '';
 }
 
-/** Extracts only selected regular LOD2 meshes and normalizes each root to a unit-height prototype. */
+/** Normalizes LOD1/LOD2 geometry for the shader; authoredHeight restores variant size at placement. */
 export async function loadImportedGrass(scene: Scene): Promise<Map<string, ImportedGrassPrototype>> {
     const container = await LoadAssetContainerAsync('/terrain/grassland/grass_medium_01_1k.glb', scene);
     const result = new Map<string, ImportedGrassPrototype>();
@@ -57,6 +65,10 @@ export async function loadImportedGrass(scene: Scene): Promise<Map<string, Impor
         result.set(name, { name, geometry, triangles: geometry.indices.length / 3, authoredHeight });
     }
     container.dispose();
-    if (!result.size) throw new Error('No selected LOD2 grass prototypes were found in grass_medium_01_1k.glb.');
+    for (const lod2Name of VARIANTS) {
+        for (const name of [lod2Name, lod2Name.replace(/_LOD2$/, '_LOD1')]) {
+            if (!result.has(name)) throw new Error(`Missing grass prototype ${name} in grass_medium_01_1k.glb.`);
+        }
+    }
     return result;
 }

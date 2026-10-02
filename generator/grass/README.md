@@ -14,7 +14,8 @@ The current lab implements the first benchmark slice:
 - distance LOD, procedural wind, and up to eight simultaneous interaction zones;
 - live CPU, patch, instance, triangle, draw-call, median, and p95 counters.
 - procedural, imported-GLB, and hybrid geometry comparison modes;
-- selected normalized LOD2 prototypes from `grass_medium_01_1k.glb`;
+- 11 selected regular variants at normalized LOD1 and LOD2 from `grass_medium_01_1k.glb`
+  (Tall A–C, Tiny A–F, and Small A–B); Mid and Large variants are excluded;
 - imported variant and per-prototype triangle reporting.
 
 The lab starts at `6×` density, roughly three times its previous blade count.
@@ -27,11 +28,37 @@ fixed; this is the portable path for future avatar feet, creatures, vehicles,
 landings, and spell effects.
 
 The imported mode deliberately ignores the duplicated `geonodes` meshes and
-the source GLB's 1x1 texture. It keeps selected regular LOD2 silhouettes while
+the source GLB's 1x1 texture. It keeps regular LOD1/LOD2 silhouettes while
 using Exalted's common placement, wind, lighting, fog, and color shader. Hybrid
 mode uses an imported near prototype and the two-triangle procedural mid blade.
-The hybrid mid material includes a calibrated brightness correction because its
-simple normals otherwise make distant patches visibly darker at the LOD swap.
+`Imported near LOD` defaults to LOD1 and can switch to LOD2 for comparison.
+Imported GLB mode uses LOD2 beyond `Near distance`; Hybrid keeps its procedural
+mid blades. Both levels share placement, color, wind and interaction settings.
+Normalized geometry retains a separate authored height. Placement restores the
+selected variant's height relative to Tall A using canonical LOD1 heights for
+both LODs, so selecting LOD2 does not change the intended plant height. The
+`Reference height` slider sets Tall A's nominal height; Tiny and Small keep their
+GLB proportions. At 0.85 m, Tiny D is approximately 0.127 m before random scale.
+Hybrid's procedural far blades use the same variant height ratio. Procedural
+mode continues to use the slider as its direct nominal blade height.
+The per-prototype and visible-triangle counters use the active near/mid geometry,
+and `Copy settings` includes the selected near LOD. LOD0 remains unloaded.
+The GLB's regular grass material has a white base-color factor and a pure-white
+1x1 albedo image, so the former GLB tint slider had no visible effect and has
+been replaced with direct root and tip color pickers. These preserve the gradient
+and apply to all geometry sources and both LODs, using linear RGB uniforms.
+Root `#426f35` and tip `#179306` are the defaults; `Reset colors` restores them.
+LOD and biome diagnostic views override these colors deliberately.
+`Copy settings` exports the current lab settings as JSON, including exact linear
+RGB endpoint arrays and sRGB hex colors. It also shows a read-only text area for
+inspection or manual copying if clipboard access is unavailable. Color edits do
+not rebuild geometry or read textures.
+The far material uses an area-weighted diffuse brightness correction calculated
+from the active near/far geometry at rebuild time, averaging the shader's sun
+response over instance yaw. This replaces the fixed Hybrid-only multiplier and
+also matches imported LOD1/LOD2 brightness. Fog keeps the selected grass palette
+instead of adding blue-grey that desaturated far grass. Geometry coverage and
+silhouette still differ across LODs; this correction does not remove LOD popping.
 
 Open `/generator/grass-performance.html` through the Vite development server.
 The ground camera uses WASD and mouse look; the overview camera uses orbit

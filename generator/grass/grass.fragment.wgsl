@@ -5,11 +5,11 @@ uniform cameraPosition: vec3f;
 uniform visualization: f32;
 uniform lodKind: f32;
 uniform colorScale: f32;
+uniform rootColor: vec3f;
+uniform tipColor: vec3f;
 @fragment
 fn main(input: FragmentInputs)->FragmentOutputs {
-  let root=vec3f(.055,.16,.035);
-  let tip=vec3f(.30,.46,.105);
-  var color=mix(root,tip,smoothstep(0.0,1.0,input.vHeight));
+  var color=mix(uniforms.rootColor,uniforms.tipColor,smoothstep(0.0,1.0,input.vHeight));
   let variation=.88+.12*sin(dot(input.vWorld.xz,vec2f(4.17,7.31)));
   color*=variation;
   let sun=normalize(vec3f(-.45,1.0,-.28));
@@ -23,5 +23,7 @@ fn main(input: FragmentInputs)->FragmentOutputs {
     color=mix(color,vec3f(1.0,.72,.08),edge);
   }
   let fog=1.0-exp(-distance(input.vWorld,uniforms.cameraPosition)*.007);
-  fragmentOutputs.color=vec4f(pow(mix(color,vec3f(.36,.46,.50),fog),vec3f(1.0/2.2)),1.0);
+  // Keep distant grass in the selected palette instead of washing it blue-grey.
+  let fogColor=mix(uniforms.rootColor,uniforms.tipColor,.5);
+  fragmentOutputs.color=vec4f(pow(mix(color,fogColor,fog),vec3f(1.0/2.2)),1.0);
 }
