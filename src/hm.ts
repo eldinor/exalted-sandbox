@@ -57,7 +57,7 @@ async function boot(): Promise<void> {
     sun.diffuse = new Color3(1, 0.84, 0.61);
 
     const base = import.meta.env.BASE_URL;
-    const terrain = MeshBuilder.CreateGroundFromHeightMap('heightmap-terrain', `${base}assets/textures/vis_ground_heightmap.png`, {
+    const terrain = MeshBuilder.CreateGroundFromHeightMap('heightmap-terrain', `${base}assets/textures/vis_ground_heightmap-roads.png`, {
         width: WIDTH,
         height: DEPTH,
         subdivisions: SUBDIVISIONS,
@@ -73,7 +73,7 @@ async function boot(): Promise<void> {
     material.metallic = 0;
     material.roughness = 0.94;
     material.albedoColor = new Color3(0.38, 0.42, 0.32);
-    const biomeTexture = new Texture(`${base}assets/textures/vertex_color_4k%20copy.png`, scene, true, false);
+    const biomeTexture = new Texture(`${base}assets/textures/vertex_color_4k-roads.png`, scene, true, false);
     biomeTexture.wrapU = Texture.CLAMP_ADDRESSMODE;
     biomeTexture.wrapV = Texture.CLAMP_ADDRESSMODE;
     // Heightmap rows and authored biome-map rows use opposite V directions.

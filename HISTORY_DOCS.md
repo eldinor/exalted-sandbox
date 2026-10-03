@@ -46,7 +46,7 @@ Exalted world's layout, assets or runtime behavior.
 | Page | Purpose |
 | --- | --- |
 | [/halved.html](halved.html) | Half-scale authored-world reference. |
-| [/hm.html](hm.html) | Heightmap inspection utility. |
+| [/hm.html](hm.html) | Heightmap inspection utility using `vis_ground_heightmap-roads.png` and `vertex_color_4k-roads.png` from `public/assets/textures/`. |
 | [/forest.html](forest.html) | Legacy forest performance lab with chunks, LOD, wind and recordings. |
 | [/forest_road.html](forest_road.html) | Forest-road experiment. |
 | [/snow_mountain.html](snow_mountain.html) | Mountain viewer using world sky, shadows, fog and post-processing. |
