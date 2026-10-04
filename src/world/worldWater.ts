@@ -10,7 +10,8 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Scene } from '@babylonjs/core/scene';
 import { S } from '../core/settings.ts';
 import { whenReady } from '../core/gpuUtil.ts';
-import { buildWaterGeometry, withoutWaterfalls, type WaterReference } from './waterGeometry.ts';
+import { buildWaterGeometry, heightmapLakeLevel, heightmapWaterSource, HEIGHTMAP_LAKE_LEVEL_OFFSET, withoutWaterfalls, type WaterReference } from './waterGeometry.ts';
+import { ExaltedWorld } from '../terrain/exaltedWorld.ts';
 import referenceJson from './waterReference.json';
 import { WaterSurface, waterfallEmitters, type WaterSample, type WaterfallEmitter } from './waterSurface.ts';
 import type { LoadedTerrainData } from '../terrain/exaltedWorld.ts';
@@ -44,7 +45,7 @@ const WS = S as unknown as WaterAtmosphereSettings;
 const reference = referenceJson as unknown as WaterReference;
 const atmosphereUniforms = ['fogDensity', 'fogHeightFalloff', 'fogStart', 'aerialStrength'] as const;
 
-/** Narrow the imported terrain source before consuming its retained GLB vertex data. */
+/** Narrow the selected authored terrain source before consuming its retained triangle data. */
 function loadedTerrainData(heightfield: unknown): LoadedTerrainData {
     if (
         typeof heightfield !== 'object' ||
@@ -81,7 +82,11 @@ export class WorldWater {
         const worldScale = terrain.heightfield instanceof Object && 'scale' in terrain.heightfield
             ? Number(terrain.heightfield.scale)
             : 1;
-        const geometry = buildWaterGeometry(loadedTerrainData(terrain.heightfield), reference, 0, worldScale);
+        const source = loadedTerrainData(terrain.heightfield);
+        const mask = terrain.heightfield instanceof ExaltedWorld ? terrain.heightfield.biomeSurface : null;
+        const waterSource = mask ? heightmapWaterSource(source, mask, reference, worldScale) : source;
+        const lakeLevel = mask ? heightmapLakeLevel(waterSource, reference, worldScale) + HEIGHTMAP_LAKE_LEVEL_OFFSET : 0;
+        const geometry = buildWaterGeometry(waterSource, reference, lakeLevel, worldScale);
         this.level = geometry.level;
         this.surface = new WaterSurface(geometry.lake, this.level);
         this.emitters = waterfallEmitters(geometry.river);
@@ -93,7 +98,10 @@ export class WorldWater {
             { name: 'lake', flow: 0, data: geometry.lake },
             // Steep blue triangles are location markers for the dedicated GPU
             // fall. Leaving them here would retain the old solid waterfall.
-            { name: 'river', flow: 0, data: withoutWaterfalls(geometry.river) },
+            // The dense heightmap river has many slope samples. A 45 m exclusion
+            // around every steep face erased it entirely; retain flow surfaces
+            // and exclude only near-vertical faces with a 2.5 m join margin.
+            { name: 'river', flow: 0, data: mask ? withoutWaterfalls(geometry.river, .85, 5 * worldScale) : withoutWaterfalls(geometry.river) },
         ] as const;
         for (const { name, flow, data } of bodies) {
             if (!data.indices.length) continue;

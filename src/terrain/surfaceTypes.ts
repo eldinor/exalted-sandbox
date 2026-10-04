@@ -53,18 +53,18 @@ export function surfaceWeights<T extends NumericOutput>(color: NumericInput, out
 
 /** Normalized [snow, sand, road] weights from the blended 4K biome map. */
 export function biomeMapMaterialWeights<T extends NumericOutput>(color: NumericInput, out: T): T {
-    const distances = [
-        paletteDistance(color, BIOME_MAP_SNOW_COLORS),
-        paletteDistance(color, BIOME_MAP_SAND_COLORS),
-        paletteDistance(color, BIOME_MAP_ROAD_COLORS),
-    ];
-    const nearest = Math.min(...distances);
+    const snowDistance = paletteDistance(color, BIOME_MAP_SNOW_COLORS);
+    const sandDistance = paletteDistance(color, BIOME_MAP_SAND_COLORS);
+    const roadDistance = paletteDistance(color, BIOME_MAP_ROAD_COLORS);
+    const nearest = Math.min(snowDistance, sandDistance, roadDistance);
     const presence = 1 - smooth(0.06, 0.18, nearest);
     // Preserve more of the authored transition ramp. A steeper classifier made
     // the softly painted 4K borders collapse back into nearly binary regions.
-    const scores = distances.map(distance => Math.exp(-450 * distance * distance));
-    const total = scores[0] + scores[1] + scores[2];
-    for (let i = 0; i < 3; i++) out[i] = scores[i] / Math.max(total, 1e-8) * presence;
+    const snow = Math.exp(-450 * snowDistance * snowDistance);
+    const sand = Math.exp(-450 * sandDistance * sandDistance);
+    const road = Math.exp(-450 * roadDistance * roadDistance);
+    const scale = presence / Math.max(snow + sand + road, 1e-8);
+    out[0] = snow * scale; out[1] = sand * scale; out[2] = road * scale;
     return out;
 }
 

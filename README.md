@@ -26,6 +26,13 @@ Open [/](http://localhost:5173/) to explore the authored Exalted world. The top
 navigation switches between named destinations across its biomes. Walking,
 flight, swimming, spells and soft-ground tracks are available in the main app.
 
+The main ground now uses `vis_ground_heightmap-11.png` and
+`vertex_color_4k-9.png`. Open `/?terrain=glb` to compare the previous terrain,
+or `/?terrain=procedural` for the original snow reference. Desert prop heights
+follow the new ground while retaining their original ground offsets; use
+`/?props=authored` to inspect unchanged authored heights. Integration details and
+remaining visual checks are in [HEIGHTMAP_INTEGRATION.md](HEIGHTMAP_INTEGRATION.md).
+
 | Control | Action |
 | --- | --- |
 | Click the scene / mouse | Capture the pointer and look around. |

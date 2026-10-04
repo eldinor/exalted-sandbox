@@ -2,6 +2,11 @@
 
 #include<snowDeform>
 #include<surfaceTypes>
+#ifdef HEIGHTMAP_TERRAIN
+#ifdef LOCAL_DETAIL
+#include<surfaceMap>
+#endif
+#endif
 
 uniform patchCenter: vec2f;
 uniform deformCenter: vec2f;
@@ -25,7 +30,15 @@ fn resolveExalted(address: vec3f) -> ExaltedPoint {
 }
 #endif
 fn exaltedOffset(world: vec3f, color: vec3f) -> f32 {
+#ifdef HEIGHTMAP_TERRAIN
+#ifdef LOCAL_DETAIL
+    let weights = mappedSurface(world.xz);
+#else
+    let weights = vec2f(0.0);
+#endif
+#else
     let weights = surfaceWeights(color);
+#endif
     return deformHeight(deformTex, deformTexSampler, world.xz, uniforms.deformCenter, uniforms.deformSize, uniforms.deformDepthScale, 0.125)
         * (weights.x + weights.y) * localFade(world.xz, uniforms.patchCenter);
 }

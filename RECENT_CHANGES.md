@@ -44,6 +44,37 @@ because the lab remains a supporting performance utility.
 
 ## Recent main-app changes
 
+### Desert trunk collisions
+
+- Added missing solid classification for `searsia_burchellii_twigs`; its woody
+  stems now block the avatar and camera while the leaf material stays passable.
+- Extracted collider construction into a shared geometry helper so real-asset
+  regression tests exercise the production path. Density selection still runs
+  before both instance batching and collision extraction.
+- Verified actual Searsia, quiver, dead-trunk and cactus geometry against walking,
+  fast surfing and camera sweeps after height transfer. GPU interaction review
+  remains pending; no broad foliage collisions were added.
+
+### Desert density
+
+- Reduced all desert prop categories to approximately 25% of authored placements
+  in the half-size world, replacing the earlier large-boulder-only thinning.
+- Selection is stable across reloads and terrain modes, ignores elevation, and
+  keeps multi-part props together. Removed props have no collision cylinders.
+- A real-asset Node check retained 3,917 of 15,946 material primitives (24.6%);
+  near Desert Start it retained 648 of 2,641 (24.5%). These are placement counts,
+  not measured GPU draw-call reductions. Visual/performance review is pending.
+
+### Surf particles after location changes
+
+- Fixed the shared spray mesh remaining hidden after a world-location teleport.
+  New live particles now restore visibility; the empty pool hides the mesh.
+- This affects snow and sand surf spray, footfalls, and other shared spray
+  emitters with either heightmap or GLB terrain. Biome classification and the
+  custom depth/shadow pass exclusions are unchanged.
+- Added Node regression coverage for emission, expiry, and repeated teleports
+  on elevated snow and sand terrain. GPU appearance still needs visual review.
+
 ### Rocket jump
 
 - Added the `F` rocket-jump action with a short cooldown, ballistic gravity,

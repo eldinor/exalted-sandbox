@@ -46,7 +46,7 @@ Exalted world's layout, assets or runtime behavior.
 | Page | Purpose |
 | --- | --- |
 | [/halved.html](halved.html) | Half-scale authored-world reference. |
-| [/hm.html](hm.html) | Heightmap inspection utility using `vis_ground_heightmap-roads.png` and `vertex_color_4k-roads.png` from `public/assets/textures/`. |
+| [/hm.html](hm.html) | Heightmap inspection utility using `vis_ground_heightmap-11.png` and `vertex_color_4k-9.png`, with local map uploads and independent heightmap/vertex-map opacity sliders. |
 | [/forest.html](forest.html) | Legacy forest performance lab with chunks, LOD, wind and recordings. |
 | [/forest_road.html](forest_road.html) | Forest-road experiment. |
 | [/snow_mountain.html](snow_mountain.html) | Mountain viewer using world sky, shadows, fog and post-processing. |
@@ -54,6 +54,14 @@ Exalted world's layout, assets or runtime behavior.
 | [/generator/generated-world.html](generator/generated-world.html) | Offline generated-world preview. |
 | [/generator/grass-performance.html](generator/grass-performance.html) | Generated-world grass benchmark with procedural, imported and hybrid modes. |
 | [Procedural reference mode](index.html?terrain=procedural) | Original procedural snow terrain in the main entry page. |
+
+The heightmap viewer displays the vertex map at 100% and the heightmap at 0%
+by default. Independent sliders blend the vertex map over the plain surface,
+then the grayscale heightmap above it; surface geometry remains opaque. Local
+heightmap uploads update both geometry and its image layer. Layers use the
+existing lab UV orientation and redraw one shared texture only when controls
+or uploads change. Browser/Canvas preview decoding remains 8-bit; production
+native 16-bit terrain decoding is separate.
 
 In the mountain viewer, click to look, use WASD to move, Space/Ctrl to change
 altitude, and Shift to fly faster. Forest integration waits for replacement

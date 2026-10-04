@@ -289,6 +289,8 @@ export class SprayField {
         }
 
         this.liveCount = live;
+        // Teleports hide the shared mesh; fresh emissions must make it visible again.
+        this.mesh.isVisible = live > 0;
         this.dataTex.update(d);
         this._pushUniforms();
     }

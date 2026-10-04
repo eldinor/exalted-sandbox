@@ -32,7 +32,7 @@ export interface HorizontalVelocity {
 
 /** Classify only recognized solid desert materials; vegetation remains passable. */
 export function solidPropKind(material: string): SolidPropKind | null {
-    if (/quiver|SaguaroSkin/.test(material)) return 'trunk';
+    if (/quiver|SaguaroSkin|^searsia_burchellii_twigs$/.test(material)) return 'trunk';
     if (/boulder|drone_rock|namaqualand_rocks/.test(material)) return 'rock';
     return null;
 }

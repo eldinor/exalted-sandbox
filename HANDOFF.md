@@ -48,6 +48,7 @@ development, then build when a production bundle check is warranted.
 - Composition root: `src/main.ts`
 - Runtime diagnostics: `globalThis.EXALTED`
 - Default mode: authored Exalted world
+- GLB comparison mode: `/?terrain=glb`
 - Reference mode: `/?terrain=procedural`
 - Optional GPU timing: `/?gpuTiming=1`
 - Babylon version: 9.18.0 across Babylon packages
@@ -59,7 +60,20 @@ post-processing chain. Preserve frame ordering and warm-up sequencing in
 
 ## Authored world and coordinates
 
-The production terrain is:
+The default production terrain is generated from the native 16-bit roads
+heightmap, with the roads RGB biome map:
+
+```text
+public/assets/textures/vis_ground_heightmap-11.png
+public/assets/textures/vertex_color_4k-9.png
+```
+
+The 400-by-400 grid has 320,000 base triangles. Grounding samples those rendered
+triangle planes; CPU and GPU softness use the same world-space weight map.
+See [HEIGHTMAP_INTEGRATION.md](HEIGHTMAP_INTEGRATION.md) for the asset contract
+and remaining manual WebGPU checks.
+
+The GLB comparison terrain is:
 
 ```text
 public/assets/exalted/alpha-map.glb
@@ -129,17 +143,27 @@ paths.
 
 ### Props and collision
 
-- `exalted_desert.glb` supplies authored desert prop placement.
+- `exalted_desert.glb` supplies authored desert prop placement. In heightmap mode,
+  prop Y transfers the original ground-relative offset to the new ground;
+  horizontal placement, rotation and physical size are retained. Shared stable
+  density thinning keeps roughly 25% of authored desert placements at half world
+  scale; the same selection removes their collision cylinders.
+  `?props=authored` retains the original Y for diagnostics.
 - Shared geometry and thin instances provide near/far detail levels.
-- Large rocks, trunks, and cacti use approximate static cylinder collision.
-- Bushes, leaves, and small stones remain passable.
+- Large rocks, quiver trunks, cacti and woody Searsia stems use approximate
+  static cylinder collision derived from their placed full-detail geometry.
+- Leaves, soft plants and small stones remain passable.
 - Forest integration is deferred until replacement tree models arrive.
 
 ### Water
 
-- Lake and river geometry derive from blue terrain vertex colours plus the Rev B
+- Lake and river geometry derive from the new map's blue water mask (GLB colours
+  in comparison mode) plus the Rev B
   lake polygon and river route.
 - Swimming, entry splashes, stroke ripples, and water-aware flight landing work.
+- Heightmap-mode lake level is five metres above painted shoreline heights
+  (currently about 41.67 m); GLB comparison keeps Y=0. Swimming shares the rendered lake level and
+  footprint, excluding islands and clipped banks.
 - River rendering currently uses the lake shader mode.
 - The temporary runtime GPU waterfall has been disconnected from the main app.
 - `waterfall.html` remains an isolated GPU waterfall lab.

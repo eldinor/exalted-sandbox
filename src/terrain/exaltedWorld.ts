@@ -1,4 +1,4 @@
-/** September 9 visual terrain and the user-authorised CPU grounding surface. */
+/** Authored roads heightmap and GLB comparison sources, with exact triangle grounding. */
 import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader';
 import '@babylonjs/loaders/glTF';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
@@ -11,6 +11,9 @@ import { MeshSurface, type MutableNormal, type MutableWorldPosition } from './me
 import { roadWeight, surfaceWeights } from './surfaceTypes.ts';
 import { DEFAULT_SPAWN } from '../world/spawnPoints.ts';
 import { AUTHORED_WORLD_SCALE } from '../world/worldScale.ts';
+import { AuthoredSurfaceMap, buildAuthoredHeightmap, decodeAuthoredPng, ROADS_HEIGHTMAP, ROADS_BIOME_MAP } from './authoredHeightmap.ts';
+
+export type AuthoredTerrainSource = 'glb' | 'heightmap';
 
 /** Vertex buffers guaranteed after a successful Exalted terrain load. */
 export type LoadedTerrainData = VertexData & {
@@ -26,7 +29,7 @@ export const EXALTED_SPAWN = Object.freeze({
     z: -DEFAULT_SPAWN.y * AUTHORED_WORLD_SCALE,
 });
 
-/** Load, retain and query Exalted's authored terrain geometry and biome colors. */
+/** Load or generate, retain and query Exalted's authored terrain geometry and biome data. */
 export class ExaltedWorld {
     readonly scene: Scene;
     readonly scale = AUTHORED_WORLD_SCALE;
@@ -42,8 +45,9 @@ export class ExaltedWorld {
     data!: LoadedTerrainData;
     surface: MeshSurface | null = null;
     surfaceMap?: RawTexture;
+    biomeSurface: AuthoredSurfaceMap | null = null;
 
-    constructor(scene: Scene) {
+    constructor(scene: Scene, readonly source: AuthoredTerrainSource = 'glb') {
         this.scene = scene;
         // The common terrain material keeps these bindings, although Exalted's
         // shader reads imported positions, normals, and colors instead.
@@ -55,6 +59,10 @@ export class ExaltedWorld {
 
     /** Bake loader transforms into the target and derive CPU and GPU biome maps. */
     async loadInto(target: Mesh): Promise<void> {
+        if (this.source === 'heightmap') {
+            await this.loadHeightmapInto(target);
+            return;
+        }
         const url = `${import.meta.env.BASE_URL}assets/exalted/alpha-map.glb`;
         const container = await LoadAssetContainerAsync(url, this.scene);
         try {
@@ -128,19 +136,60 @@ export class ExaltedWorld {
         }
     }
 
+    /** Keep the generated triangles authoritative for both rendering and grounding. */
+    private async loadHeightmapInto(target: Mesh): Promise<void> {
+        const base = import.meta.env.BASE_URL;
+        const [height, biome] = await Promise.all([ROADS_HEIGHTMAP, ROADS_BIOME_MAP].map(async path => {
+            const response = await fetch(`${base}${path}`);
+            if (!response.ok) throw new Error(`Failed to load ${path}: ${response.status}`);
+            return decodeAuthoredPng(new Uint8Array(await response.arrayBuffer()));
+        }));
+        const data = buildAuthoredHeightmap(height, biome);
+        if (!data.positions || !data.normals || !data.colors || !data.indices) throw new Error('Incomplete heightmap geometry.');
+        data.applyToMesh(target);
+        // Generated Babylon ground keeps the mesh's left-handed default winding.
+        target.useVertexColors = true; target.hasVertexAlpha = false;
+        target.metadata = { triangles: data.indices.length / 3, source: `${base}${ROADS_HEIGHTMAP}`, precision: 16 };
+        this.data = data as LoadedTerrainData;
+        this.surface = new MeshSurface(data.positions, data.indices, 16, data.colors);
+        this.minHeight = this.surface.minHeight; this.maxHeight = this.surface.maxHeight;
+        // ~0.46 m samples preserve roads without retaining a second full 4K RGBA image.
+        this.biomeSurface = new AuthoredSurfaceMap(2049, 1537, biome);
+        this.surfaceMap = RawTexture.CreateRGBATexture(this.biomeSurface.data,
+            this.biomeSurface.width, this.biomeSurface.height, this.scene, false, false,
+            Constants.TEXTURE_BILINEAR_SAMPLINGMODE);
+        this.surfaceMap.gammaSpace = false;
+        this.surfaceMap.wrapU = this.surfaceMap.wrapV = Constants.TEXTURE_CLAMP_ADDRESSMODE;
+    }
+
+    /** Temporary CPU reference for transferring authored prop ground offsets; never rendered. */
+    async loadGlbReferenceSurface(): Promise<MeshSurface> {
+        const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}assets/exalted/alpha-map.glb`, this.scene);
+        try {
+            const ground = container.meshes.find(mesh => mesh.name === 'vis_ground');
+            if (!(ground instanceof Mesh)) throw new Error('Authored prop grounding reference is missing.');
+            const data = VertexData.ExtractFromMesh(ground);
+            data.transform(ground.computeWorldMatrix(true));
+            if (!data.positions || !data.indices) throw new Error('Authored prop grounding reference has no geometry.');
+            for (let i = 0; i < data.positions.length; i++) data.positions[i] *= this.scale;
+            return new MeshSurface(data.positions, data.indices, 16);
+        } finally { container.dispose(); }
+    }
+
     /** Access the loaded CPU surface while producing a useful lifecycle error. */
     private loadedSurface(): MeshSurface {
         if (!this.surface) throw new Error('Exalted terrain surface is not loaded.');
         return this.surface;
     }
 
-    /** Imported triangle height in world metres, before local GPU deformation. */
+    /** Selected terrain triangle height in world metres, before local GPU deformation. */
     heightAt(x: number, z: number): number {
         return this.loadedSurface().sample(x, z);
     }
 
     /** Reusable [snow, sand] weights; copy the result if it must survive another call. */
     weightsAt(x: number, z: number): Float32Array {
+        if (this.biomeSurface) return this.biomeSurface.sample(x, z, this._weights);
         this.loadedSurface().sample(x, z, null, this._color);
         return surfaceWeights(this._color, this._weights);
     }
@@ -161,5 +210,6 @@ export class ExaltedWorld {
         this.heightTex.dispose();
         this.surfaceMap?.dispose();
         this.surface = null;
+        this.biomeSurface = null;
     }
 }

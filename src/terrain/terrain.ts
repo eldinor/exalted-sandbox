@@ -19,6 +19,8 @@ import { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import { ExaltedWorld } from "./exaltedWorld.ts";
+import type { AuthoredTerrainSource } from './exaltedWorld.ts';
+import { ROADS_BIOME_MAP } from './authoredHeightmap.ts';
 import { LocalTerrain } from './localTerrain.ts';
 import { GroundProbe } from './groundProbe.ts';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
@@ -92,7 +94,7 @@ interface TerrainShadows {
     setHeightBounds(minimum: number, maximum: number): void;
 }
 
-interface TerrainOptions { exalted?: boolean }
+interface TerrainOptions { exalted?: boolean; authoredSource?: AuthoredTerrainSource }
 interface TerrainFocus { x: number; z: number }
 interface TerrainPrepass { registerCaster(mesh: Mesh, material: ShaderMaterial): void }
 type TerrainHeightfield = ExaltedWorld | Heightfield;
@@ -137,13 +139,13 @@ export class Terrain {
     water?: WorldWater;
     obstacles?: PropCollisions;
 
-    constructor(scene: Scene, sky: TerrainSky, shadows: TerrainShadows, { exalted = false }: TerrainOptions = {}) {
+    constructor(scene: Scene, sky: TerrainSky, shadows: TerrainShadows, { exalted = false, authoredSource = 'glb' }: TerrainOptions = {}) {
         this.scene = scene;
         this.sky = sky;
         this.shadows = shadows;
 
         this.exalted = exalted;
-        this.heightfield = exalted ? new ExaltedWorld(scene) : new Heightfield(scene);
+        this.heightfield = exalted ? new ExaltedWorld(scene, authoredSource) : new Heightfield(scene);
 
         /** The terrain state buffer. Feet, the surf wake and every spell write here. */
         this.deform = new DeformationField(scene);
@@ -181,7 +183,7 @@ export class Terrain {
             Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
         );
         this.biomeMapTex = exalted ? new Texture(
-            `${import.meta.env.BASE_URL}assets/textures/vertex_color_4k%20copy.png`,
+            `${import.meta.env.BASE_URL}${authoredSource === 'heightmap' ? ROADS_BIOME_MAP : 'assets/textures/vertex_color_4k%20copy.png'}`,
             scene, true, false, Constants.TEXTURE_BILINEAR_SAMPLINGMODE,
         ) : null;
         if (this.biomeMapTex) {
@@ -217,7 +219,7 @@ export class Terrain {
             { vertex: this.exalted ? "exalted" : "snow", fragment: "snow" },
             {
                 attributes: this.exalted && !local ? ["position", "normal", "color"] : ["position"],
-                defines: this.exalted ? ["EXALTED_TERRAIN", ...(local ? ['LOCAL_DETAIL'] : [])] : [],
+                defines: this.exalted ? ["EXALTED_TERRAIN", ...this.sourceDefines(), ...(local ? ['LOCAL_DETAIL'] : [])] : [],
                 uniforms: [
                     "viewProjection", "cameraPos", "lodCenter", "patchCenter",
                     'desertU','desertV','desertBaseMatrix','desertNormalMatrix','desertColor','desertRoughness','desertNormalScale','desertGamma','useDesertTextures',
@@ -267,6 +269,19 @@ export class Terrain {
         return mat;
     }
 
+    private sourceDefines(): string[] {
+        return this.heightfield instanceof ExaltedWorld && this.heightfield.source === 'heightmap'
+            ? ['HEIGHTMAP_TERRAIN'] : [];
+    }
+
+    /** Bind the same world-space softness texture to every displaced terrain pass. */
+    private bindAuthoredSurface(material: ShaderMaterial): void {
+        if (!(this.heightfield instanceof ExaltedWorld) || !this.heightfield.surfaceMap) return;
+        material.setTexture('surfaceMap', this.heightfield.surfaceMap);
+        material.setVector2('surfaceOrigin', this.heightfield.origin);
+        material.setVector2('surfaceExtent', this.heightfield.extent);
+    }
+
     /** Borrow the regional ground textures; its mesh is never added to the scene. */
     setDesertGround(ground: Mesh): void {
         const data=VertexData.ExtractFromMesh(ground,true,true);
@@ -307,15 +322,16 @@ export class Terrain {
             { vertex: this.exalted ? "exaltedPrepass" : "terrainPrepass", fragment: "prepass" },
             {
                 attributes: ["position"],
-                defines: local ? ['LOCAL_DETAIL'] : [],
+                defines: [...this.sourceDefines(), ...(local ? ['LOCAL_DETAIL'] : [])],
                 uniforms: [
                     "viewProjection", "cameraPos", "lodCenter", "patchCenter",
                     "baseSpacing", "gridHalfN",
                     "worldOrigin", "worldSize", "heightRes",
                     "windAngle", "sastrugiAmp",
                     "deformCenter", "deformSize", "deformDepthScale",
+                    'surfaceOrigin', 'surfaceExtent',
                 ],
-                samplers: ["heightTex", "auxTex", "deformTex", "patchTex"],
+                samplers: ["heightTex", "auxTex", "deformTex", "patchTex", 'surfaceMap'],
                 shaderLanguage: ShaderLanguage.WGSL,
             }
         );
@@ -327,6 +343,7 @@ export class Terrain {
             this.localPrepassMat = mat; mat.setTexture('patchTex', this.local.texture);
         }
         else this.prepassMat = mat;
+        this.bindAuthoredSurface(mat);
         return mat;
     }
 
@@ -343,12 +360,13 @@ export class Terrain {
                     "worldOrigin", "worldSize", "heightRes",
                     "windAngle", "sastrugiAmp",
                     "deformCenter", "deformSize", "deformDepthScale",
+                    'surfaceOrigin', 'surfaceExtent',
                 ],
-                samplers: ["heightTex", "auxTex", "deformTex", "patchTex"],
+                samplers: ["heightTex", "auxTex", "deformTex", "patchTex", 'surfaceMap'],
                 shaderLanguage: ShaderLanguage.WGSL,
                 // Forces a distinct Effect per cascade, so each can carry its
                 // own light matrix without mid-frame uniform swapping.
-                defines: ["SNOW_CASCADE " + cascade, ...(local ? ['LOCAL_DETAIL'] : [])],
+                defines: ["SNOW_CASCADE " + cascade, ...this.sourceDefines(), ...(local ? ['LOCAL_DETAIL'] : [])],
             }
         );
         mat.backFaceCulling = false;
@@ -360,6 +378,7 @@ export class Terrain {
             if (!this.local) throw new Error('Local terrain must exist before its depth material.');
             mat.setTexture('patchTex', this.local.texture);
         }
+        this.bindAuthoredSurface(mat);
         return mat;
     }
 
@@ -393,6 +412,7 @@ export class Terrain {
                 material.setVector2('surfaceExtent', world.extent);
                 material.setFloat('useRoadSurfaceMap', 1);
             }
+            for (const material of this._depthMats ?? []) this.bindAuthoredSurface(material);
             this.groundProbe = new GroundProbe(this.scene, { heightfield: { surfaceMap: world.surfaceMap, origin: world.origin, extent: world.extent, weightsAt: (x, z) => world.weightsAt(x, z) }, deform: this.deform, local: this.local });
         }
 

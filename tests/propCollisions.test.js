@@ -38,5 +38,7 @@ test('grid sweep crosses cells; vegetation and small stone materials are exclude
     assert.ok(p.x<77.68 && p.x>77.67);
     for (const name of ['didelta_spinosa','leipoldtia_schultzei','crystalline_iceplant','searsia_burchellii','sand_rocks_small_01','namaqualand_stones_01']) assert.equal(solidPropKind(name),null);
     assert.equal(solidPropKind('quiver_tree_02'),'trunk');
+    assert.equal(solidPropKind('searsia_burchellii_twigs'),'trunk');
+    assert.equal(solidPropKind('SaguaroSkin'),'trunk');
     assert.equal(solidPropKind('boulder_03'),'rock');
 });
