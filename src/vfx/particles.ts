@@ -58,6 +58,9 @@ const CAPACITY = 5120;
 /** Terminal fall speed of a snow grain, m/s. Drag is tuned to land here. */
 const TERMINAL = 1.9;
 
+/** Snow surf curtain settling, shared by grass fragments' vertical motion. */
+export const SNOW_SURF_POWDER_DRAG = 4.5;
+
 const _right = new Vector3();
 const _up = new Vector3();
 const _splits = new Vector4();
@@ -178,7 +181,7 @@ export class SprayField {
      *
      * @param life - Lifetime in seconds.
      *
-     * @param kind - 0 powder, 1 clod, 4 water droplet, 5 water mist.
+     * @param kind - 0 powder, 1 clod, 4 water droplet, 5 water mist, 6 tiny grass blades.
      *
      * @param drag - Linear drag in 1/s. Defaults to the fall-in-place value for a
      *   grain of settling powder; pass something near 1 for anything thrown.
@@ -251,10 +254,11 @@ export class SprayField {
             // A settling grain reaches equilibrium almost at once; anything
             // thrown hard carries its arc. See the note on `drag` above.
             const k = this.drag[i];
+            const verticalDrag = this.kind[i] === 6 ? SNOW_SURF_POWDER_DRAG : k;
             const vy = this.vel[o + 1];
             this.vel[o] += (wx - this.vel[o]) * Math.min(1, k * h);
             this.vel[o + 2] += (wz - this.vel[o + 2]) * Math.min(1, k * h);
-            this.vel[o + 1] = vy + (this.kind[i]===5 ? -.6-k*vy : -9.81-k*(vy+TERMINAL)) * h;
+            this.vel[o + 1] = vy + (this.kind[i]===5 ? -.6-k*vy : -9.81-verticalDrag*(vy+TERMINAL)) * h;
 
             this.pos[o] += this.vel[o] * h;
             this.pos[o + 1] += this.vel[o + 1] * h;

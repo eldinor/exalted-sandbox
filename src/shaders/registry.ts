@@ -10,7 +10,10 @@
  * @module shaders/registry
  */
 
+import { grassBiomeWGSL } from '../grass/GrassBiome.ts';
 import { ShaderStore } from "@babylonjs/core/Engines/shaderStore";
+import grassVertex from '../grass/grass.vertex.wgsl?raw';
+import grassFragment from './grass.fragment.wgsl?raw';
 import desertAppearance from './lib/desertAppearance.wgsl?raw';
 import desertPropVert from './desertProp.vertex.wgsl?raw';
 import desertPropFrag from './desertProp.fragment.wgsl?raw';
@@ -83,6 +86,7 @@ import crystalPrepassVert from "./crystalPrepass.vertex.wgsl?raw";
 
 
 const INCLUDES = {
+    grassBiome: grassBiomeWGSL,
     desertAppearance,
     surfaceTypes: surfaceWGSL,
     exaltedSurface,
@@ -104,6 +108,8 @@ const INCLUDES = {
 } as const satisfies Readonly<Record<string, string>>;
 
 const SHADERS = {
+    worldGrassVertexShader: grassVertex,
+    worldGrassPixelShader: grassFragment,
     groundProbePixelShader: groundProbe,
     heightBakePixelShader: heightBakeFrag,
     auxBakePixelShader: auxBakeFrag,

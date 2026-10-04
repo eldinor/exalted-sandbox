@@ -34,6 +34,7 @@ varying vAge: f32;
 varying vAmp: f32;
 varying vCurl: f32;
 varying vViewDist: f32;
+varying vGrass: f32;
 
 var skyLUT: texture_2d<f32>;
 var skyLUTSampler: sampler;
@@ -143,8 +144,11 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     if (uniforms.useSurfaceMap > 0.5) { sand = mappedSurface(world.xz).y; }
     var soil = vec3f(0.83, 0.66, 0.39);
     if (sand > 0.001 && uniforms.useDesertTextures > 0.5) { soil = desertSoilColor(world.xz,3.0)*1.10; }
-    let albedo = mix(vec3f(0.895, 0.920, 0.965), soil, sand);
-    let roughness = mix(0.80,0.95,sand);
+    let grass = clamp(input.vGrass, 0.0, 1.0);
+    let snow = (1.0 - sand) * (1.0 - grass);
+    let grassColor = mix(vec3f(0.055, 0.16, 0.018), vec3f(0.14, 0.32, 0.035), q);
+    let albedo = mix(mix(vec3f(0.895, 0.920, 0.965), soil, sand), grassColor, grass);
+    let roughness = mix(mix(0.80,0.95,sand), 0.9, grass);
     let f0 = vec3f(0.026);
 
     // Thin at the lip, deep at the base. This is the gradient the whole read
@@ -156,7 +160,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // a 13-degree sun whose beam is roughly 17:13:6, the result was several times
     // brighter than the direct diffuse and unmistakably *warm*. On white snow
     // that reads as dirt — the outer face of the wall came out brown.
-    let thickness = mix(0.92, 0.32, smoothstep(0.15, 0.95, q)) * (1.0-sand);
+    let thickness = mix(0.92, 0.32, smoothstep(0.15, 0.95, q)) * snow;
 
     // ------------------------------------------------------------- lighting
     let NdotL = dot(N, L);
@@ -209,7 +213,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // tint reaches the blue end at a lower thickness. Together those keep the
     // backlit glow reading as light coming *through snow* rather than as the sun
     // reflecting off something tan.
-    let sss = snowSubsurface(N, L, V, sun, thickness, uniforms.sssStrength * 0.45 * (1.0 - sand), 1.5);
+    let sss = snowSubsurface(N, L, V, sun, thickness, uniforms.sssStrength * 0.45 * snow, 1.5);
     let sssTerm = sss * albedo * mix(0.18, 1.0, shadow);
     color += sssTerm;
 
@@ -241,7 +245,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     if (uniforms.spellLightCount > 0.5) {
         color += spellLighting(
             world, N, V, albedo, thickness,
-            uniforms.sssStrength * 0.45, 1.5,
+            uniforms.sssStrength * 0.45 * (1.0-grass), 1.5,
             uniforms.spellLightPos, uniforms.spellLightCol, uniforms.spellLightCount
         );
     }
@@ -266,13 +270,13 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     //     which is why a real snow cave is blue and not grey. Tying the tint to
     //     the darkening rather than to `barrel` directly means the two can never
     //     drift apart.
-    let caveTint = mix(vec3f(1.0), vec3f(0.55, 0.72, 1.0), (1.0 - occ) * 0.95 * (1.0-sand));
+    let caveTint = mix(vec3f(1.0), vec3f(0.55, 0.72, 1.0), (1.0 - occ) * 0.95 * snow);
     color *= occ * caveTint;
 
     if (uniforms.glintIntensity > 0.001) {
         let g = snowGlints(
             world.xz, N, V, L, footprint,
-            uniforms.glintIntensity * (1.0-sand), uniforms.glintGrazing
+            uniforms.glintIntensity * snow, uniforms.glintGrazing
         );
         color += sun * g * shadow * 0.5;
     }

@@ -28,6 +28,7 @@ varying vHeightUV: vec2f;
 varying vViewDist: f32;
 varying vSpacing: f32;
 #ifdef EXALTED_TERRAIN
+#include<grassBiome>
 #include<surfaceTypes>
 #include<surfaceMap>
 uniform patchCenter: vec2f;
@@ -42,6 +43,14 @@ uniform desertGamma: f32;
 uniform useDesertTextures: f32;
 uniform roadTextureScale: f32;
 uniform roadNormalStrength: f32;
+uniform meadowTextureScale: f32;
+uniform meadowGamma: f32;
+var meadowBaseTex: texture_2d<f32>;
+var meadowBaseTexSampler: sampler;
+var meadowNormalTex: texture_2d<f32>;
+var meadowNormalTexSampler: sampler;
+var meadowOrmTex: texture_2d<f32>;
+var meadowOrmTexSampler: sampler;
 uniform useRoadSurfaceMap: f32;
 var desertBaseTex: texture_2d<f32>;
 var desertBaseTexSampler: sampler;
@@ -60,8 +69,11 @@ varying vBiomeColor: vec3f;
 #endif
 
 // ------------------------------------------------------------------ textures
+// Authored terrain uses its triangle normal, freeing one sampled-texture slot.
+#ifndef EXALTED_TERRAIN
 var auxTex: texture_2d<f32>;
 var auxTexSampler: sampler;
+#endif
 var detailTex: texture_2d<f32>;
 var detailTexSampler: sampler;
 var skyLUT: texture_2d<f32>;
@@ -264,6 +276,12 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     let snowCover = materialWeights.x;
     let sandCover = materialWeights.y;
     let roadCover = materialWeights.z;
+#ifdef HEIGHTMAP_TERRAIN
+    let grassWeight = heightmapGrassWeight(biomeColor);
+#else
+    let grassWeight = authoredGrassWeight(input.vBiomeColor);
+#endif
+    let grassCover = grassWeight * (1.0 - clamp(snowCover + sandCover + roadCover, 0.0, 1.0));
     let desertTextureCover = sandCover * uniforms.useDesertTextures;
     let groundUV = vec2f(dot(vec3f(world.xz,1.0),uniforms.desertU),dot(vec3f(world.xz,1.0),uniforms.desertV));
     let groundDx = vec2f(dot(ddxW.xz,uniforms.desertU.xy),dot(ddxW.xz,uniforms.desertV.xy));
@@ -275,6 +293,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     let sandCover = 0.0;
     let desertTextureCover = 0.0;
     let roadCover = 0.0;
+    let grassCover = 0.0;
     let aux = textureSampleLevel(auxTex, auxTexSampler, input.vHeightUV, 0.0);
 #endif
     var grad = aux.xy;
@@ -367,7 +386,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // Three tiling scales, each faded by footprint so the finest only exists
     // when it is actually resolvable, and cross-faded so no scale ever pops in.
     let steep = smoothstep(0.55, 0.9, 1.0 - N.y);
-    if (uniforms.detailStrength > 0.001 && max(desertTextureCover,roadCover) < 0.999) {
+    if (uniforms.detailStrength > 0.001 && max(max(desertTextureCover,roadCover),grassCover) < 0.999) {
         var acc = vec3f(0.0, 0.0, 1.0);
 
         let f0 = 1.0 - smoothstep(0.004, 0.02, footprint);
@@ -390,7 +409,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         let up = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(N.y) > 0.99);
         let T = normalize(cross(up, N));
         let B = cross(N, T);
-        let s = uniforms.detailStrength * mix(1.0, 0.45, compression) * mix(1.0,0.48,sandCover) * (1.0-desertTextureCover) * (1.0-roadCover);
+        let s = uniforms.detailStrength * mix(1.0, 0.45, compression) * mix(1.0,0.48,sandCover) * (1.0-desertTextureCover) * (1.0-roadCover) * (1.0-grassCover);
         N = normalize(N + (T * acc.x + B * acc.y) * s);
     }
 
@@ -406,6 +425,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     var albedo = vec3f(0.855, 0.885, 0.945);
     var roughness = 0.62;
     var f0 = vec3f(0.028);
+    var meadowAO = 1.0;
     var thickness = 1.0; // 1 = deep drift, 0 = thin crust
 #ifdef EXALTED_TERRAIN
     // Biomes without dedicated PBR sets use the softened 4K authored color.
@@ -431,6 +451,26 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         let scale=inverseSqrt(max(max(dot(T,T),dot(B,B)),1e-12));
         let mapped=normalize(N*max(bump.z,0.1)+(T*bump.x*uniforms.desertNormalScale.x+B*bump.y*uniforms.desertNormalScale.y)*scale);
         N=normalize(mix(N,mapped,sandCover*mix(1.0,0.65,compression)));
+    }
+    if (grassCover > 0.001) {
+        // Match Grassland UV2 exactly: one repeat per 4 m, mirrored world X.
+        let meadowUV = vec2f(-world.x, world.z) * uniforms.meadowTextureScale;
+        let meadowDx = vec2f(-ddxW.x, ddxW.z) * uniforms.meadowTextureScale;
+        let meadowDy = vec2f(-ddyW.x, ddyW.z) * uniforms.meadowTextureScale;
+        let base = textureSampleGrad(meadowBaseTex, meadowBaseTexSampler, meadowUV, meadowDx, meadowDy).rgb;
+        let decoded = select(base / 12.92, pow((base + vec3f(.055)) / 1.055, vec3f(2.4)), base > vec3f(.04045));
+        let orm = textureSampleGrad(meadowOrmTex, meadowOrmTexSampler, meadowUV, meadowDx, meadowDy).rgb;
+        let meadowAlbedo = mix(base, decoded, uniforms.meadowGamma);
+        albedo = mix(albedo, meadowAlbedo, grassCover);
+        roughness = mix(roughness, clamp(orm.g, .045, 1.0), grassCover);
+        f0 = mix(f0, mix(vec3f(.04), meadowAlbedo, orm.b), grassCover);
+        meadowAO = mix(1.0, orm.r, grassCover);
+        let bump = textureSampleGrad(meadowNormalTex, meadowNormalTexSampler, meadowUV, meadowDx, meadowDy).xyz * 2.0 - 1.0;
+        let T = cross(ddyW, N) * meadowDx.x + cross(N, ddxW) * meadowDy.x;
+        let B = cross(ddyW, N) * meadowDx.y + cross(N, ddxW) * meadowDy.y;
+        let scale = inverseSqrt(max(max(dot(T,T), dot(B,B)), 1e-12));
+        let mapped = normalize(N * max(bump.z, .1) + (T * bump.x + B * bump.y) * scale);
+        N = normalize(mix(N, mapped, grassCover));
     }
     if (roadCover > 0.001) {
         // The road is authored as one connected COLOR_0 region. World mapping
@@ -533,6 +573,8 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     var ao = mix(1.0, cavity, 0.35 * (1.0-desertTextureCover) * (1.0-roadCover) * (1.0 - smoothstep(0.02, 0.25, footprint)))
            * (1.0 - clamp(deformDepth * 1.9, 0.0, 1.0) * mix(0.38,mix(0.25,0.18,desertTextureCover),sandCover));
 
+    ao *= meadowAO;
+
     // ------------------------------------------------------------- lighting
     let NdotL = dot(N, L);
     let NdotV = clamp(dot(N, V), 1e-4, 1.0);
@@ -622,12 +664,12 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // Last, and added as radiance rather than modulated into the BRDF, because
     // a glint is a specular highlight from a crystal facet that the shading
     // normal does not represent.
-    if (uniforms.glintIntensity > 0.001 && rockExposed < 0.5) {
+    if (uniforms.glintIntensity > 0.001 && rockExposed < 0.5 && grassCover < .999) {
         let g = snowGlints(
             world.xz, N, V, L, footprint,
             uniforms.glintIntensity, uniforms.glintGrazing
         );
-        color += sunRadiance * g * shadow * (1.0 - iceAmount * 0.6) * 0.55;
+        color += sunRadiance * g * shadow * (1.0 - iceAmount * 0.6) * 0.55 * (1.0 - grassCover);
     }
 
     // ---- occlusion, applied last and to everything -------------------------

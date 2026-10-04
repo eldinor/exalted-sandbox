@@ -27,6 +27,7 @@ import { CharacterController } from "./character/controller.ts";
 import { Character } from "./character/character.ts";
 import { SnowContact } from "./character/snowContact.ts";
 import { SprayField } from "./vfx/particles.ts";
+import { WorldGrass } from './world/worldGrass.ts';
 import { SurfWake } from "./vfx/surfWake.ts";
 import { SpellSystem } from "./spells/spellSystem.ts";
 import { Overlay } from "./ui/overlay.ts";
@@ -81,6 +82,7 @@ interface ExaltedRuntime {
     S: typeof S;
     input: typeof input;
     perfStats: typeof stats;
+    grass: WorldGrass | null;
     desertProps: DesertProps | null;
     worldWater: WorldWater | null;
     screenshotGallery: ScreenshotGallery;
@@ -255,6 +257,12 @@ async function boot(): Promise<void> {
     const wake = new SurfWake(scene, sky, shadows, character, spray, terrain);
     onChange("showWake", (v) => wake.setEnabled(v));
     wake.registerPrepass(depthPass);
+    const grass = exalted ? new WorldGrass(scene, terrain, sky, shadows, depthPass) : null;
+    if (grass) {
+        wake.grassWeightAt = grass.grassWeightAt;
+        await loading.phase('loading grassland models', .66);
+        await grass.load();
+    }
 
     // The nine spells, the water body they bend and the ice they leave. Every
     // one of them writes into the same terrain state buffer the feet and the
@@ -312,6 +320,7 @@ async function boot(): Promise<void> {
     spray.update(0, rig.camera.position);
     await spray.warmUp();
     await wake.warmUp();
+    await grass?.warmUp();
     await spells.warmUp(
         character.position.x + 3, character.position.y, character.position.z + 3
     );
@@ -375,6 +384,7 @@ async function boot(): Promise<void> {
             figure.resetPose();
             contact.reset();
             wake.reset();
+            grass?.reset();
             spray.reset();
             rig.teleport(character.position, point.yaw);
             post.resetHistory();
@@ -425,6 +435,7 @@ async function boot(): Promise<void> {
         // Before the spray: the wake decides where its own lip is, and the
         // grains it sheds have to be in the pool before the pool is uploaded.
         wake.update(dt, rig.camera.position);
+        grass?.update(dt, rig.camera.position, character, wake, spells.lights);
         flightWind.update(dt);
         waterEffects?.update(dt,rig.camera.position);
         spray.update(dt, rig.camera.position);
@@ -449,7 +460,7 @@ async function boot(): Promise<void> {
 
         endFrameDraws();
         stats.triangles =
-            (desertProps?.triangles || 0) + (worldWater?.triangles || 0) +
+            (grass?.stats.triangles || 0) + (desertProps?.triangles || 0) + (worldWater?.triangles || 0) +
             (terrain.mesh.metadata ? terrain.mesh.metadata.triangles : 0) +
             (terrain.local?.mesh.metadata.triangles || 0) +
             (S.showCharacter ? figure.triangles : 0) +
@@ -476,7 +487,7 @@ async function boot(): Promise<void> {
         engine, scene, rig, character, figure, contact, spray, wake, spells,
         overlay, terrain, sky, shadows, post, depthPass, spawnBar,
         S, input, perfStats: stats,
-        desertProps,
+        grass, desertProps,
         worldWater,
         screenshotGallery, avatarColors, rocketJumpVfx, reflectiveCube, magicalCube,
         };

@@ -1,4 +1,6 @@
 /** Lossless authored PNG decoding and world-aligned heightmap/biome data. */
+import { roadsGrassWeight } from '../grass/GrassBiome.ts';
+export { roadsGrassWeight } from '../grass/GrassBiome.ts';
 import { unzlibSync } from 'fflate';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { biomeMapMaterialWeights } from './surfaceTypes.ts';
@@ -109,14 +111,18 @@ export function sampleBiomeRgb<T extends Output>(image: AuthoredPng, x: number, 
 /** Linear weight texture in increasing world X/Z order, also sampled by CPU consumers. */
 export class AuthoredSurfaceMap {
     readonly data: Uint8Array;
+    /** Separate from the four terrain deformation/material channels. */
+    readonly grassData: Uint8Array;
     constructor(readonly width: number, readonly height: number, image: AuthoredPng) {
         this.data = new Uint8Array(width * height * 4);
+        this.grassData = new Uint8Array(width * height);
         const rgb = new Float32Array(3), weights = new Float32Array(3);
         for (let row = 0; row < height; row++) for (let column = 0; column < width; column++) {
             sampleBiomeRgb(image, column / (width - 1) * HEIGHTMAP_WIDTH - HEIGHTMAP_WIDTH / 2,
                 row / (height - 1) * HEIGHTMAP_DEPTH - HEIGHTMAP_DEPTH / 2, rgb);
             biomeMapMaterialWeights(rgb, weights);
             const offset = (row * width + column) * 4;
+            this.grassData[row * width + column] = Math.round(roadsGrassWeight(rgb) * 255);
             for (let channel = 0; channel < 3; channel++) this.data[offset + channel] = Math.round(weights[channel] * 255);
             this.data[offset + 3] = Math.round(roadsWaterWeight(rgb) * 255);
         }
@@ -127,6 +133,12 @@ export class AuthoredSurfaceMap {
         return out;
     }
 
+    grassAt(x: number, z: number): number { return this.sampleChannel(x, z, 4); }
+
+    hasGrassArea(minX: number, maxX: number, minZ: number, maxZ: number): boolean {
+        return this.hasArea(minX, maxX, minZ, maxZ, 'grass');
+    }
+
     waterAt(x: number, z: number): number { return this.sampleChannel(x, z, 3); }
 
     private sampleChannel(x: number, z: number, channel: number): number {
@@ -134,10 +146,12 @@ export class AuthoredSurfaceMap {
         const fy = clamp01(z / HEIGHTMAP_DEPTH + 0.5) * (this.height - 1);
         const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
         const nextX = Math.min(ix + 1, this.width - 1), nextY = Math.min(iy + 1, this.height - 1);
-        const a = this.data[(iy * this.width + ix) * 4 + channel];
-        const b = this.data[(iy * this.width + nextX) * 4 + channel];
-        const c = this.data[(nextY * this.width + ix) * 4 + channel];
-        const d = this.data[(nextY * this.width + nextX) * 4 + channel];
+        const pixels = channel === 4 ? this.grassData : this.data;
+        const stride = channel === 4 ? 1 : 4, component = channel === 4 ? 0 : channel;
+        const a = pixels[(iy * this.width + ix) * stride + component];
+        const b = pixels[(iy * this.width + nextX) * stride + component];
+        const c = pixels[(nextY * this.width + ix) * stride + component];
+        const d = pixels[(nextY * this.width + nextX) * stride + component];
         return ((a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty) / 255;
     }
 
@@ -154,14 +168,14 @@ export class AuthoredSurfaceMap {
         return this.hasArea(minX, maxX, minZ, maxZ, 'land');
     }
 
-    private hasArea(minX: number, maxX: number, minZ: number, maxZ: number, kind: 'soft' | 'water' | 'land'): boolean {
+    private hasArea(minX: number, maxX: number, minZ: number, maxZ: number, kind: 'soft' | 'water' | 'land' | 'grass'): boolean {
         const x0 = Math.max(0, Math.floor((minX / HEIGHTMAP_WIDTH + .5) * (this.width - 1)));
         const x1 = Math.min(this.width - 1, Math.ceil((maxX / HEIGHTMAP_WIDTH + .5) * (this.width - 1)));
         const z0 = Math.max(0, Math.floor((minZ / HEIGHTMAP_DEPTH + .5) * (this.height - 1)));
         const z1 = Math.min(this.height - 1, Math.ceil((maxZ / HEIGHTMAP_DEPTH + .5) * (this.height - 1)));
         for (let row = z0; row <= z1; row++) for (let column = x0; column <= x1; column++) {
             const offset = (row * this.width + column) * 4;
-            if (kind === 'water' ? this.data[offset + 3] > 127
+            if (kind === 'grass' ? this.grassData[row * this.width + column] > 0 : kind === 'water' ? this.data[offset + 3] > 127
                 : kind === 'land' ? this.data[offset + 3] < 255 : this.data[offset] + this.data[offset + 1] > 0) return true;
         }
         return false;

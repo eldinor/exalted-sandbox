@@ -24,6 +24,9 @@ function generatedWorldPackage() {
 }
 
 export default defineConfig({
+    // SSR test servers use Vite's default cache. Keep their dependency scans
+    // from invalidating the running app's lazy Inspector chunks.
+    cacheDir: 'node_modules/.vite-exalted',
     plugins: [generatedWorldPackage()],
     // Prepare the lazy Inspector before serving so its first use does not
     // invalidate Babylon's already loaded development chunks.

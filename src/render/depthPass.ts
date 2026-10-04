@@ -122,6 +122,16 @@ export class DepthPass {
         this.materials.push(material);
     }
 
+    /** Remove a streamed mesh without disposing a material shared by other patches. */
+    unregisterCaster(mesh: Mesh): void {
+        const list = this.rtt.renderList;
+        const index = list?.indexOf(mesh) ?? -1;
+        if (index < 0 || !list) return;
+        list.splice(index, 1);
+        this.materials.splice(index, 1);
+        this.rtt.setMaterialForRendering(mesh, undefined);
+    }
+
     /** Compile every registered prepass pipeline, behind the loading screen. */
     async warmUp(): Promise<void> {
         const list = this.rtt.renderList || [];

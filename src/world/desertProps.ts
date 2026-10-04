@@ -25,13 +25,14 @@ import type { Terrain } from '../terrain/terrain.ts';
 import { ExaltedWorld } from '../terrain/exaltedWorld.ts';
 import { rebasePropHeight } from './propGrounding.ts';
 import { keepDesertPlacement } from './desertDensity.ts';
+import { DesertPropChunks } from './desertPropChunks.ts';
 import type { Sky } from '../render/sky.ts';
 import type { ShadowSystem } from '../render/shadows.ts';
 import type { DepthPass } from '../render/depthPass.ts';
 
 type PropPass = 'PROP_SHADOW' | 'PROP_PREPASS' | undefined;
 
-interface PropBatch {
+export interface PropBatch {
     mesh: Mesh;
     sourceMaterial: PBRMaterial;
     matrices?: number[];
@@ -51,6 +52,8 @@ interface PropBatch {
     nearCount?: number;
     farCount?: number;
     instanced?: boolean;
+    shadowMats?: ShaderMaterial[];
+    prepass?: ShaderMaterial;
 }
 
 interface PropPassRecord {
@@ -113,6 +116,8 @@ export class DesertProps {
     readonly flat: RawTexture;
     container?: AssetContainer;
     audit?: DesertPropAudit;
+    chunks?: DesertPropChunks;
+    private disposed = false;
 
     constructor(
         scene: Scene,
@@ -132,6 +137,7 @@ export class DesertProps {
         terrain.obstacles = this.collisions;
         this.white = RawTexture.CreateRGBATexture(new Uint8Array([255,255,255,255]),1,1,scene,false,false);
         this.flat = RawTexture.CreateRGBATexture(new Uint8Array([128,128,255,255]),1,1,scene,false,false);
+        scene.onDisposeObservable.addOnce(() => this.dispose());
     }
     /**
      * Extract authored placements into material/geometry batches, build reduced meshes and register collision cylinders independently of visibility. Keep imported materials/textures alive for custom shader bindings.
@@ -257,6 +263,7 @@ export class DesertProps {
             this.materials.push(beauty);
             const shadowMats = Array.from({length:3},()=>this.makeMaterial(batch, 'PROP_SHADOW'));
             const prepass = this.makeMaterial(batch, 'PROP_PREPASS');
+            batch.shadowMats = shadowMats; batch.prepass = prepass;
             this.shadows.registerCaster(batch.mesh, i => shadowMats[i]);
             this.depthPass.registerCaster(batch.mesh, prepass);
             if (!batch.data.indices || !batch.data.positions) continue;
@@ -290,6 +297,13 @@ export class DesertProps {
             minHeightAdjustment: adjustedPrimitives ? minHeightAdjustment : 0,
             maxHeightAdjustment: adjustedPrimitives ? maxHeightAdjustment : 0,
             seats: seats.sort((a,b) => b.clearance-a.clearance) };
+        // Keep the old batching available for actual draw comparisons.
+        const chunkOption = new URLSearchParams(location.search).get('propChunks');
+        if (chunkOption !== 'off') {
+            const requested = Number(chunkOption ?? 64);
+            const size = [32,64,96,128,192].includes(requested) ? requested : 64;
+            this.chunks = new DesertPropChunks(this.scene, this.batches, this.shadows, this.depthPass, size);
+        }
     }
     /**
      * Bind shared desert shading for beauty, shadow or depth passes so alpha cutouts and wind displacement agree. Imported PBR metadata supplies supported texture channels.
@@ -350,7 +364,15 @@ export class DesertProps {
         const angle = S.windDirection * Math.PI / 180;
         this.wind.set(Math.sin(angle), Math.cos(angle), S.windStrength * S.bushWindStrength, 0);
         this.center.set(focus.x, focus.z);
-        if (force || Math.hypot(focus.x-this.last.x,focus.z-this.last.y) > 3) {
+        const rebuild = force || Math.hypot(focus.x-this.last.x,focus.z-this.last.y) > 3;
+        if (this.chunks) {
+            this.chunks.update(focus, rebuild);
+            if (rebuild) {
+                this.last.copyFrom(this.center);
+                this.triangles = this.chunks.triangles;
+                this.visibleInstances = this.chunks.visibleInstances;
+            }
+        } else if (rebuild) {
             this.last.copyFrom(this.center); this.triangles = 0; this.visibleInstances = 0;
             for (const b of this.batches) {
                 let count = 0, farCount = 0;
@@ -391,7 +413,14 @@ export class DesertProps {
     }
     /** Release near/far batches, pass materials, retained import container and fallback textures when the owning system is torn down. */
     dispose(): void {
-        for (const b of this.batches) { b.mesh.dispose(); b.far!.dispose(); }
+        if (this.disposed) return;
+        this.disposed = true;
+        this.chunks?.dispose();
+        for (const b of this.batches) {
+            this.shadows.unregisterCaster(b.mesh); this.depthPass.unregisterCaster(b.mesh);
+            if (b.far) { this.shadows.unregisterCaster(b.far); this.depthPass.unregisterCaster(b.far); b.far.dispose(); }
+            b.mesh.dispose();
+        }
         for (const p of this.passes) p.mat.dispose();
         this.container?.dispose(); this.white.dispose(); this.flat.dispose();
     }

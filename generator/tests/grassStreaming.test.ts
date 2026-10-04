@@ -12,7 +12,7 @@ import type { GrassSettings, GrassUpdateContext } from '../grass/grassTypes.ts';
 import type { ImportedGrassPrototype } from '../grass/ImportedGrass.ts';
 
 test('stream planning does no placement work; frame queue bounds uploads and reuses retained/pooled meshes', async () => {
-    const server = await createServer({ configFile: false, server: { middlewareMode: true }, appType: 'custom', optimizeDeps: { noDiscovery: true } });
+    const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-grass-streaming', server: { middlewareMode: true }, appType: 'custom', optimizeDeps: { noDiscovery: true } });
     const engine = new NullEngine();
     const scene = new Scene(engine);
     try {

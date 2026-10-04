@@ -35,6 +35,11 @@ half-size world scale to reduce crowding. Stable placement selection is shared
 by all material parts, render passes and collision extraction; surviving props
 keep their positions, rotations and sizes. See `world/desertDensity.ts`.
 
+Desert props use 64 m spatial chunks with shared near/far rendering batches per
+camera and shadow cascade. Independent pass culling reduces submitted geometry
+while keeping authored placement, density and collisions unchanged. See
+[DESERT_PROPS.md](DESERT_PROPS.md).
+
 ## Supporting Utilities
 
 The following are side utilities and research environments. They are useful for
@@ -56,15 +61,20 @@ integration decision.
 
 The Grass Lab compares procedural, imported, and hybrid grass blades using
 deterministic placement, wind, interaction, LOD, and performance measurements.
-Its purpose is to select and tune a grass solution that can later be integrated
-into the authored Exalted world.
+Its reusable subsystem now supplies production grass in the authored Exalted
+world; the lab remains available for isolated tuning and comparisons.
 
 `/generator/grassland.html` is the authored-world counterpart to the generated
 grass benchmark. It shares the lab controls, loads the production half-scale
 `alpha-map.glb`, and places imported LOD1/LOD2 grass on the authored grassland
 palette with exact triangle grounding and a moving patch window. It remains an
-isolated utility with lab lighting and ground rendering; it does not install
-grass into the production frame loop. See [README.md](README.md#grassland-lab)
+isolated utility with lab lighting and ground rendering. The main app now uses
+the shared subsystem with heightmap biome classification, a Tiny D / Small A / Small B 10/45/45 model
+mix at density 3, avatar walking/surf interaction and a production depth pass.
+Tall grass is removed. Grass surfing uses green sides and tiny blade-shaped
+particles in the shared spray pool. Grass receives world shadows but does not cast shadows. Its biome ground uses
+the same tiled Material-326-A PBR texture set as Grassland, at a 4 m repeat. See
+[GRASS.md](GRASS.md) for contracts, validation and the measured geometry cost. See [README.md](README.md#grassland-lab)
 for controls and [HISTORY_DOCS.md](HISTORY_DOCS.md#grassland-lab-technical-notes)
 for implementation details and streaming limitations.
 
@@ -182,9 +192,9 @@ The proposed minimum delivery for that biome is:
 
 ```text
 biome_desert/
-├── desert.glb
-├── desert_material_mask.png
-└── README.md
+в”њв”Ђв”Ђ desert.glb
+в”њв”Ђв”Ђ desert_material_mask.png
+в””в”Ђв”Ђ README.md
 ```
 
 - `desert.glb` contains the optimized terrain or biome geometry, reusable props,

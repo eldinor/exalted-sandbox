@@ -106,3 +106,23 @@ test('pooled buffers are reused, Hybrid scales stay distinct and rejected terrai
     while (!rejected.done) rejected.advance(256);
     assert.equal(rejected.count, 0);
 });
+
+test('production slope limit fills grass hills while lab defaults and cliff rejection remain intact', () => {
+    for (const exact of [false,true]) {
+        const hillside = { ...flat, heightAt: (x: number) => x * .65,
+            slopeAt: exact ? () => .65 : undefined };
+        const lab = new GrassPlacementJob(0,0,config,hillside);
+        const production = new GrassPlacementJob(0,0,{...config,maxSlope:1},hillside);
+        while (!lab.done) lab.advance(256);
+        while (!production.done) production.advance(256);
+        assert.equal(lab.count,0);
+        assert.equal(production.count,production.cells * production.cells);
+        for (let i=0;i<production.count;i++) {
+            assert.ok(Math.abs(production.nearBuffer[i*16+13] - (production.nearBuffer[i*16+12] * .65 + .015)) < 1e-5);
+        }
+        const cliff = new GrassPlacementJob(0,0,{...config,maxSlope:1},
+            {...hillside,heightAt:(x:number)=>x*1.1,slopeAt:exact?()=>1.1:undefined});
+        while (!cliff.done) cliff.advance(256);
+        assert.equal(cliff.count,0);
+    }
+});

@@ -12,7 +12,8 @@ supporting utilities. They do not define production world behaviour unless a
 feature is explicitly integrated into the main app.
 
 Start with [CURRENT_WORK.md](CURRENT_WORK.md), [ARCHITECTURE.md](ARCHITECTURE.md),
-and [TODO.md](TODO.md). This file records the minimum context needed when the
+and [TODO.md](TODO.md). Production grass integration is documented in
+[GRASS.md](GRASS.md). This file records the minimum context needed when the
 project is copied into a new repository.
 
 ## Setup and validation
@@ -150,6 +151,8 @@ paths.
   scale; the same selection removes their collision cylinders.
   `?props=authored` retains the original Y for diagnostics.
 - Shared geometry and thin instances provide near/far detail levels.
+- Desert props stream through 64 m chunks and merge visible instances into shared
+  batches per camera/shadow pass. Collision remains independent; see [DESERT_PROPS.md](DESERT_PROPS.md).
 - Large rocks, quiver trunks, cacti and woody Searsia stems use approximate
   static cylinder collision derived from their placed full-detail geometry.
 - Leaves, soft plants and small stones remain passable.

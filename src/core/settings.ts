@@ -15,11 +15,11 @@ export const S = {
     resolutionScale: 1.0,
 
     // ------------------------------------------------------------------- sun
-    sunAzimuth: 118, // degrees, compass bearing of the sun
+    sunAzimuth: 185, // degrees, compass bearing of the sun
     // Low enough for long raking shadows, high enough that the beam still
     // carries real energy — below ~10 degrees the air mass eats so much of it
     // that the scene goes flat and sky-lit.
-    sunElevation: 13.0,
+    sunElevation: 20.0,
     sunIntensity: 4.2,
     sunTempWarm: 1.0, // 0 = neutral white, 1 = full warm low-sun tint
     ambientIntensity: 1.0,
@@ -30,8 +30,8 @@ export const S = {
     fogHeightFalloff: 0.045,
     fogStart: 24,
     aerialStrength: 1.0,
-    // Degrees. Drives sastrugi shear and dune orientation. Held 70-80 degrees
-    // away from `sunAzimuth`: sastrugi ridges run along the wind, so when the
+    // Degrees. Drives sastrugi shear and dune orientation.
+    // Sastrugi ridges run along the wind, so when wind and sun
     // two align the sun rakes down every ridge, lights both flanks identically
     // and the fine structure reads as flat ground.
     windDirection: 42,

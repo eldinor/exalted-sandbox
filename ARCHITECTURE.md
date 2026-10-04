@@ -48,6 +48,9 @@ The default mode loads the authored Exalted world:
   scale, yielding an approximately 936 x 702 metre world while avatars, prop
   geometry, movement and effects remain metre-sized.
 - `exalted_desert.glb` supplies authored desert vegetation and rocks.
+- Shared Grassland geometry streams onto the authored grass biome, with avatar
+  walking/surf bending and a matching production depth pass. Density is 3; grass
+  receives shadows but does not cast them. See [GRASS.md](GRASS.md).
 - Water geometry is derived from the selected terrain triangles and water mask plus
   `world/waterReference.json`.
 - The spawn bar exposes named locations and texture and wind controls.
@@ -86,6 +89,8 @@ The owner that constructs a resource normally disposes it through the scene
 disposal lifecycle. Shared pools remain owned by their top-level system:
 
 - `Terrain` owns deformable terrain state and terrain materials.
+- `WorldGrass` owns streamed grass patches and shared pass materials, unregistering
+  culled/disposed meshes from the depth target. Grass is excluded from shadow targets.
 - `Character` owns procedural figure meshes, materials, skeleton data, and cloth.
 - `SprayField` owns the bounded particle pool used by movement, water, and spells.
 - `SpellSystem` owns spell instances, pooled water strands, crystals, and lights.
@@ -172,6 +177,12 @@ CPU triangle surface rather than a separate collision GLB.
 materials, and renders repeated content with thin instances. Near and far buffers
 provide the current two-level prop LOD system. Wind deformation is applied in the
 prop shaders and shared with relevant depth and shadow passes.
+
+Desert props now stream through 64 m spatial chunks, merging selected placements
+into shared near/far batches per camera and shadow cascade. Conservative individual
+prop bounds cull each pass independently; off-camera shadow casters remain eligible.
+Fixed typed buffers and shared geometry/materials are reused across movement and
+teleports. See [DESERT_PROPS.md](DESERT_PROPS.md) for diagnostics and measured cost.
 
 Desert placement density now follows world area scale: at 0.5 world scale,
 roughly 25% of authored placements survive. A stable hash of horizontal placement
@@ -304,7 +315,9 @@ transitions. `CameraRig` owns the third-person spring arm and obstacle response.
 
 `Overlay` builds tuning and performance controls. `SpawnBar` owns biome
 navigation plus compact texture and wind controls. `Ctrl+I` dynamically imports
-the matching Babylon Inspector version and docks it on the right.
+the matching Babylon Inspector version and docks it on the right. The app uses
+`node_modules/.vite-exalted` for its prepared dependencies; SSR tests use separate
+caches so running tests cannot invalidate lazy Inspector chunks in the dev server.
 
 `core/perf.ts` maintains frame percentiles, CPU subsystem timings, per-frame draw
 counts, triangle estimates, and spike tracking. The frame loop performs the

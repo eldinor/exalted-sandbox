@@ -16,6 +16,7 @@ import { Constants } from "@babylonjs/core/Engines/constants";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { Scene } from '@babylonjs/core/scene';
 import { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture';
+import { loadMeadowTextures, MEADOW_TILE_METRES, type MeadowTextures } from '../grass/MeadowTextures.ts';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import { ExaltedWorld } from "./exaltedWorld.ts";
@@ -125,6 +126,7 @@ export class Terrain {
     readonly roadNormalTex: Texture;
     readonly roadRoughnessTex: Texture;
     readonly biomeMapTex: Texture | null;
+    readonly meadowTextures: MeadowTextures | null;
     readonly mesh: Mesh;
     readonly material: ShaderMaterial;
     readonly materials: ShaderMaterial[];
@@ -199,6 +201,8 @@ export class Terrain {
             texture.anisotropicFilteringLevel = 8;
         }
 
+        this.meadowTextures = exalted ? loadMeadowTextures(scene) : null;
+
         this.mesh = exalted ? new Mesh("exaltedTerrain", scene) : buildClipmapMesh(scene);
 
         this.material = this._makeSnowMaterial();
@@ -223,7 +227,7 @@ export class Terrain {
                 uniforms: [
                     "viewProjection", "cameraPos", "lodCenter", "patchCenter",
                     'desertU','desertV','desertBaseMatrix','desertNormalMatrix','desertColor','desertRoughness','desertNormalScale','desertGamma','useDesertTextures',
-                    'roadTextureScale','roadNormalStrength',
+                    'roadTextureScale','roadNormalStrength','meadowTextureScale','meadowGamma',
                     'surfaceOrigin','surfaceExtent','useRoadSurfaceMap',
                     "baseSpacing", "gridHalfN",
                     "worldOrigin", "worldSize", "heightRes",
@@ -242,7 +246,7 @@ export class Terrain {
                 samplers: [
                     "heightTex", "auxTex", "detailTex", "skyLUT", "patchTex",
                     "cascade0", "cascade1", "cascade2", "deformTex",
-                    'desertBaseTex','desertNormalTex','roadBaseTex','roadNormalTex','roadRoughnessTex','surfaceMap','biomeMapTex',
+                    'meadowBaseTex','meadowNormalTex','meadowOrmTex','desertBaseTex','desertNormalTex','roadBaseTex','roadNormalTex','roadRoughnessTex','surfaceMap','biomeMapTex',
                 ],
                 shaderLanguage: ShaderLanguage.WGSL,
             }
@@ -257,6 +261,13 @@ export class Terrain {
         mat.setTexture('roadNormalTex', this.roadNormalTex);
         mat.setTexture('roadRoughnessTex', this.roadRoughnessTex);
         mat.setTexture('biomeMapTex', this.biomeMapTex ?? this.heightfield.heightTex);
+        if (this.meadowTextures) {
+            mat.setTexture('meadowBaseTex', this.meadowTextures.baseColor);
+            mat.setTexture('meadowNormalTex', this.meadowTextures.normal);
+            mat.setTexture('meadowOrmTex', this.meadowTextures.orm);
+            mat.setFloat('meadowTextureScale', 1 / MEADOW_TILE_METRES);
+            mat.setFloat('meadowGamma', this.meadowTextures.baseColor.gammaSpace && !this.meadowTextures.baseColor._texture?._useSRGBBuffer ? 1 : 0);
+        }
         mat.setFloat('roadTextureScale', 1 / 6);
         mat.setFloat('roadNormalStrength', 0.72);
         mat.setTexture('surfaceMap', this.heightfield.heightTex);
@@ -436,6 +447,9 @@ export class Terrain {
         await this.deform.warmUp();
         this.setDeformTexture(this.deform.texture);
 
+        if (this.meadowTextures) {
+            await Promise.all(Object.values(this.meadowTextures).map(texture => whenReady(texture, texture.name)));
+        }
         await whenReady(this.material, "snow material", [this.mesh, false]);
         if (this.local) {
             if (!this.localMaterial || !this.groundProbe) throw new Error('Local terrain resources are incomplete.');
@@ -653,6 +667,7 @@ export class Terrain {
         this.roadNormalTex.dispose();
         this.roadRoughnessTex.dispose();
         this.biomeMapTex?.dispose();
+        if (this.meadowTextures) for (const texture of Object.values(this.meadowTextures)) texture.dispose();
         this.deform.dispose();
         this.heightfield.dispose();
     }
