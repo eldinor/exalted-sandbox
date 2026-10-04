@@ -7,6 +7,59 @@ export interface TerrainWaterSource {
     positions: ArrayLike<number>;
     colors: ArrayLike<number>;
     indices: ArrayLike<number>;
+    waterWeights?: ArrayLike<number>;
+}
+
+interface ImageWaterMask {
+    waterAt(x: number, z: number): number;
+    hasWaterArea(minX: number, maxX: number, minZ: number, maxZ: number): boolean;
+    hasLandArea?(minX: number, maxX: number, minZ: number, maxZ: number): boolean;
+}
+
+/** Sample narrow painted water regions inside source triangles, retaining their planes. */
+export function heightmapWaterSource(data: TerrainWaterSource, mask: ImageWaterMask,
+    reference?: WaterReference, worldScale = 1): TerrainWaterSource {
+    const positions: number[] = [], indices: number[] = [], waterWeights: number[] = [];
+    const p = data.positions, ix = data.indices;
+    const polygon: Point2[] = reference?.lake.map(([x, z]) => [-x * worldScale, -z * worldScale]) ?? [];
+    const edge = polygon.length ? [...polygon, polygon[0]] : [];
+    const line: Point2[] = reference?.river.map(([x, z]) => [-x * worldScale, -z * worldScale]) ?? [];
+    // Four subdivisions yield ~0.6 m water edges on the 400-by-400 terrain grid.
+    for (let offset = 0; offset < ix.length; offset += 3) {
+        const a = ix[offset] * 3, b = ix[offset + 1] * 3, c = ix[offset + 2] * 3;
+        if (reference) {
+            const x = (p[a] + p[b] + p[c]) / 3, z = (p[a + 2] + p[b + 2] + p[c + 2]) / 3;
+            const padding = Math.max(Math.hypot(p[a] - x, p[a + 2] - z),
+                Math.hypot(p[b] - x, p[b + 2] - z), Math.hypot(p[c] - x, p[c + 2] - z));
+            // Never tessellate the blue northern ocean, which the runtime does not render.
+            if (!inside(x, z, polygon) && riverDistance(x, z, edge) > padding
+                && riverDistance(x, z, line) > 55 * worldScale + padding) continue;
+        }
+        const minX = Math.min(p[a], p[b], p[c]), maxX = Math.max(p[a], p[b], p[c]);
+        const minZ = Math.min(p[a + 2], p[b + 2], p[c + 2]), maxZ = Math.max(p[a + 2], p[b + 2], p[c + 2]);
+        if (!mask.hasWaterArea(minX, maxX, minZ, maxZ)) continue;
+        // Only painted edges need fine tessellation. Lake interiors remain on
+        // the coarse source planes, avoiding hundreds of thousands of flat triangles.
+        const subdivisions = mask.hasLandArea?.(minX, maxX, minZ, maxZ) === false ? 1 : 4;
+        const start = positions.length / 3;
+        const rows: number[] = [];
+        for (let row = 0; row <= subdivisions; row++) {
+            rows.push(positions.length / 3 - start);
+            for (let column = 0; column <= subdivisions - row; column++) {
+                const v = column / subdivisions, w = row / subdivisions, u = 1 - v - w;
+                const x = p[a] * u + p[b] * v + p[c] * w;
+                const y = p[a + 1] * u + p[b + 1] * v + p[c + 1] * w;
+                const z = p[a + 2] * u + p[b + 2] * v + p[c + 2] * w;
+                positions.push(x, y, z); waterWeights.push(mask.waterAt(x, z));
+            }
+        }
+        for (let row = 0; row < subdivisions; row++) for (let column = 0; column < subdivisions - row; column++) {
+            const v = start + rows[row] + column, next = start + rows[row + 1] + column;
+            indices.push(v, v + 1, next);
+            if (column < subdivisions - row - 1) indices.push(next, v + 1, next + 1);
+        }
+    }
+    return { positions, colors: [], indices, waterWeights };
 }
 
 export interface WaterMeshData {
@@ -25,6 +78,38 @@ export interface BuiltWaterGeometry {
     lake: WaterMeshData;
     river: WaterMeshData;
     level: number;
+}
+
+/** Requested lake rise in runtime metres, applied after authored coordinate scaling. */
+export const HEIGHTMAP_LAKE_LEVEL_OFFSET = 5;
+
+/** Infer the heightmap lake surface from painted shoreline crossings, excluding the river/ocean. */
+export function heightmapLakeLevel(data: TerrainWaterSource, reference: WaterReference, worldScale = 1): number {
+    if (!data.waterWeights) throw new Error('Heightmap lake level requires painted water weights.');
+    const polygon: Point2[] = reference.lake.map(([x, z]) => [-x * worldScale, -z * worldScale]);
+    const p = data.positions, ix = data.indices, weights = data.waterWeights;
+    const shoreline: number[] = [], bed: number[] = [];
+    for (let offset = 0; offset < ix.length; offset += 3) {
+        for (let edge = 0; edge < 3; edge++) {
+            const a = ix[offset + edge], b = ix[offset + (edge + 1) % 3];
+            const wa = weights[a], wb = weights[b];
+            if (wa >= .5 && inside(p[a * 3], p[a * 3 + 2], polygon)) bed.push(p[a * 3 + 1]);
+            if ((wa >= .5) === (wb >= .5)) continue;
+            const t = (.5 - wa) / (wb - wa);
+            const x = p[a * 3] + (p[b * 3] - p[a * 3]) * t;
+            const z = p[a * 3 + 2] + (p[b * 3 + 2] - p[a * 3 + 2]) * t;
+            if (inside(x, z, polygon)) shoreline.push(p[a * 3 + 1] + (p[b * 3 + 1] - p[a * 3 + 1]) * t);
+        }
+    }
+    // Median resists steep river-mouth faces and higher island edges. Geometry
+    // still clips to the painted mask and actual terrain at this horizontal level.
+    if (shoreline.length) {
+        shoreline.sort((a, b) => a - b);
+        return shoreline[Math.floor(shoreline.length / 2)];
+    }
+    if (!bed.length) throw new Error('Heightmap contains no painted water in the authored lake region.');
+    bed.sort((a, b) => a - b);
+    return bed[Math.floor((bed.length - 1) * .9)] + .5;
 }
 
 /** Remove steep, near-vertical water triangles that are rendered by the GPU waterfall instead. */
@@ -139,7 +224,7 @@ export function buildWaterGeometry(
 
     for (let i = 0; i < ix.length; i += 3) {
         const tri: WaterVertex[] = [Number(ix[i]), Number(ix[i + 1]), Number(ix[i + 2])].map(k => [
-            p[k * 3], p[k * 3 + 1], p[k * 3 + 2], blueWater(c[k * 4], c[k * 4 + 1], c[k * 4 + 2]),
+            p[k * 3], p[k * 3 + 1], p[k * 3 + 2], data.waterWeights?.[k] ?? blueWater(c[k * 4], c[k * 4 + 1], c[k * 4 + 2]),
         ]);
         if (!tri.some(v => v[3])) continue;
         const wet = clip(tri, v => v[3] - .5);

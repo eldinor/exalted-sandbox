@@ -80,6 +80,18 @@ export class LocalTerrain {
         const source = world.data;
         this.farIndices = new Uint32Array(source.indices.length);
         this.soft = new Uint8Array(source.indices.length / 3);
+        if (world.biomeSurface) {
+            for (let triangle = 0; triangle < this.soft.length; triangle++) {
+                const a = source.indices[triangle * 3] * 3, b = source.indices[triangle * 3 + 1] * 3, c = source.indices[triangle * 3 + 2] * 3;
+                this.soft[triangle] = world.biomeSurface.hasSoftArea(
+                    Math.min(source.positions[a], source.positions[b], source.positions[c]),
+                    Math.max(source.positions[a], source.positions[b], source.positions[c]),
+                    Math.min(source.positions[a + 2], source.positions[b + 2], source.positions[c + 2]),
+                    Math.max(source.positions[a + 2], source.positions[b + 2], source.positions[c + 2]),
+                ) ? 1 : 0;
+            }
+            return;
+        }
         const weights = new Float32Array(2), color = new Float32Array(3);
         for (let triangle = 0; triangle < this.soft.length; triangle++) for (let vertex = 0; vertex < 3; vertex++) {
             const colorIndex = source.indices[triangle * 3 + vertex] * 4;

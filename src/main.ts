@@ -17,6 +17,7 @@ import { Vector3, Color3, Color4 } from "@babylonjs/core/Maths/math";
 
 import { registerShaders } from "./shaders/registry.ts";
 import { S, onChange } from "./core/settings.ts";
+import { captureDraws, type DrawCapture } from './core/drawCapture.ts';
 import {
     sample, checkSpike, stats, mark, installDrawCounter, endFrameDraws,
 } from "./core/perf.ts";
@@ -60,6 +61,7 @@ const ENABLE_DEMO_CUBES = false;
 
 /** Systems intentionally exposed for live inspection and tuning in the browser console. */
 interface ExaltedRuntime {
+    captureDraws(frames?: number): Promise<DrawCapture>;
     engine: WebGPUEngine;
     scene: Scene;
     rig: CameraRig;
@@ -104,6 +106,7 @@ function requiredCanvas(id: string): HTMLCanvasElement {
 /** Initialize world systems in dependency order, warm pipelines and start the ordered simulation/render loop. */
 async function boot(): Promise<void> {
     const exalted = new URLSearchParams(location.search).get("terrain") !== "procedural";
+    const authoredSource = new URLSearchParams(location.search).get('terrain') === 'glb' ? 'glb' : 'heightmap';
     if (exalted) {
         // Exalted's actual mountain silhouettes replace the invented sky range.
         S.showMountains = false;
@@ -207,7 +210,7 @@ async function boot(): Promise<void> {
 
     // -------------------------------------------------------------- terrain
     await loading.phase(exalted ? "loading Exalted terrain" : "baking heightfield", 0.34);
-    const terrain = new Terrain(scene, sky, shadows, { exalted });
+    const terrain = new Terrain(scene, sky, shadows, { exalted, authoredSource });
     terrain.mesh.renderingGroupId = 1;
     await terrain.build();
     onChange("showTerrain", (v) => (terrain.mesh.isVisible = v));
@@ -469,6 +472,7 @@ async function boot(): Promise<void> {
     setTimeout(() => overlay.resetSpikes(), 800);
 
     globalThis.EXALTED = {
+        captureDraws: frames => captureDraws(scene, frames),
         engine, scene, rig, character, figure, contact, spray, wake, spells,
         overlay, terrain, sky, shadows, post, depthPass, spawnBar,
         S, input, perfStats: stats,

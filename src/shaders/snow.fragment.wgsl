@@ -242,12 +242,25 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         noise2(world.xz * 0.16),
         noise2(world.xz * 0.16 + vec2f(31.7, 9.2))
     ) * 0.75;
+#ifdef HEIGHTMAP_TERRAIN
+    // Match CPU endpoint sampling; no visual warp across gameplay road boundaries.
+    var biomeUV = clamp((world.xz - uniforms.surfaceOrigin) / uniforms.surfaceExtent, vec2f(0.0), vec2f(1.0));
+#else
     var biomeUV = clamp((world.xz + biomeWarp - uniforms.surfaceOrigin) / uniforms.surfaceExtent, vec2f(0.0), vec2f(1.0));
+#endif
     biomeUV.x = 1.0 - biomeUV.x;
+#ifdef HEIGHTMAP_TERRAIN
+    let biomeDims = vec2f(textureDimensions(biomeMapTex));
+    biomeUV = (biomeUV * (biomeDims - 1.0) + 0.5) / biomeDims;
+#endif
     let biomeColor = textureSampleLevel(biomeMapTex, biomeMapTexSampler, biomeUV, 0.0).rgb;
     // A normalized three-way blend keeps detailed snow, desert and road
     // materials complementary through the softened authored boundaries.
+#ifdef HEIGHTMAP_TERRAIN
+    let materialWeights = mappedSurfaceData(world.xz).rgb;
+#else
     let materialWeights = biomeMapMaterialWeights(biomeColor);
+#endif
     let snowCover = materialWeights.x;
     let sandCover = materialWeights.y;
     let roadCover = materialWeights.z;

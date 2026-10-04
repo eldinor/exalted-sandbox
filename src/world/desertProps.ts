@@ -17,10 +17,14 @@ import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import { S } from '../core/settings.ts';
 import { bindMatrixArray, whenReady } from '../core/gpuUtil.ts';
 import { MeshoptSimplifier } from 'meshoptimizer/simplifier';
-import { PropCollisions, solidPropKind } from './propCollisions.ts';
+import { PropCollisions } from './propCollisions.ts';
+import { propColliderGeometry } from './propColliderGeometry.ts';
 import type { Scene } from '@babylonjs/core/scene';
 import type { AssetContainer } from '@babylonjs/core/assetContainer';
 import type { Terrain } from '../terrain/terrain.ts';
+import { ExaltedWorld } from '../terrain/exaltedWorld.ts';
+import { rebasePropHeight } from './propGrounding.ts';
+import { keepDesertPlacement } from './desertDensity.ts';
 import type { Sky } from '../render/sky.ts';
 import type { ShadowSystem } from '../render/shadows.ts';
 import type { DepthPass } from '../render/depthPass.ts';
@@ -66,6 +70,8 @@ interface PlacementSeat {
 }
 
 interface DesertPropAudit {
+    densityKeepRatio: number;
+    densityRejectedPrimitives: number;
     loadMs: number;
     batches: number;
     primitiveInstances: number;
@@ -74,24 +80,14 @@ interface DesertPropAudit {
     floatingOver20cm: number;
     buriedOver50cm: number;
     seats: PlacementSeat[];
+    grounding: 'authored' | 'heightmap-offset';
+    adjustedPrimitives: number;
+    minHeightAdjustment: number;
+    maxHeightAdjustment: number;
 }
 
 interface TextureSrgbState {
     _texture?: { _useSRGBBuffer?: boolean };
-}
-
-const LARGE_BOULDER_DIAMETER = 1.8;
-const HALVED_WORLD_BOULDER_KEEP_RATIO = 0.3;
-
-/** Stable authored-placement thinning; keeps rendering and collision selection identical. */
-function keepLargeBoulder(name: string, x: number, z: number): boolean {
-    let hash = 2166136261;
-    const key = `${name}:${Math.round(x * 100)}:${Math.round(z * 100)}`;
-    for (let i = 0; i < key.length; i++) {
-        hash ^= key.charCodeAt(i);
-        hash = Math.imul(hash, 16777619);
-    }
-    return (hash >>> 0) / 0x100000000 < HALVED_WORLD_BOULDER_KEEP_RATIO;
 }
 
 /** Authored placements, compacted into shared geometry/material instance batches. */
@@ -141,6 +137,13 @@ export class DesertProps {
      * Extract authored placements into material/geometry batches, build reduced meshes and register collision cylinders independently of visibility. Keep imported materials/textures alive for custom shader bindings.
      */
     async load(): Promise<void> {
+        const world = this.terrain.heightfield;
+        const rebase = world instanceof ExaltedWorld && world.source === 'heightmap'
+            && new URLSearchParams(location.search).get('props') !== 'authored';
+        const referenceSurface = rebase ? await world.loadGlbReferenceSurface() : null;
+        const referenceGround = referenceSurface ? { heightAt: (x: number, z: number) => referenceSurface.sample(x, z) } : null;
+        let adjustedPrimitives = 0, minHeightAdjustment = Infinity, maxHeightAdjustment = -Infinity;
+        let densityRejectedPrimitives = 0;
         const started = performance.now();
         await MeshoptSimplifier.ready;
         const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}assets/exalted/exalted_desert.glb`, this.scene);
@@ -187,14 +190,25 @@ export class DesertProps {
                 point.y * this.worldScale,
                 point.z * this.worldScale,
             );
-            const placement = rootMatrix.multiply(instance);
+            let placement = rootMatrix.multiply(instance);
+            placement.getTranslationToRef(point);
+            // Apply one selection before both visual batches and collision extraction.
+            if (!keepDesertPlacement(point.x, point.z, this.worldScale)) {
+                densityRejectedPrimitives++;
+                continue;
+            }
+            if (referenceGround) {
+                // Transfer the original ground-relative placement instead of seating each
+                // model at its lowest vertex (which would erase intentional embedding).
+                const delta = rebasePropHeight(instance, rootMatrix, referenceGround, world, point);
+                placement = rootMatrix.multiply(instance);
+                adjustedPrimitives++;
+                minHeightAdjustment = Math.min(minHeightAdjustment, delta);
+                maxHeightAdjustment = Math.max(maxHeightAdjustment, delta);
+            }
             const bound = source.getBoundingInfo().boundingBox;
             const objectScale = new Vector3(); placement.decompose(objectScale);
             const diameter = batch.size * Math.max(Math.abs(objectScale.x), Math.abs(objectScale.y), Math.abs(objectScale.z));
-            const kind = solidPropKind(source.material.name);
-            placement.getTranslationToRef(point);
-            const isLargeBoulder = kind === 'rock' && diameter >= LARGE_BOULDER_DIAMETER;
-            if (this.worldScale < 1 && isLargeBoulder && !keepLargeBoulder(node.name, point.x, point.z)) continue;
             batch.matrices!.push(...instance.m);
             Vector3.TransformCoordinatesToRef(bound.center, placement, point);
             (batch.centers as number[]).push(point.x, point.z);
@@ -203,32 +217,9 @@ export class DesertProps {
             // Check the actual transformed vertex chain, not just position metadata.
             const original = source.getVerticesData('position');
             if (!original || !batch.data.positions) continue;
-            if (kind) {
-                const vertices = [];
-                let bottom=Infinity, top=-Infinity;
-                for (let v=0;v<original.length;v+=3) {
-                    Vector3.TransformCoordinatesFromFloatsToRef(original[v],original[v+1],original[v+2],placement,point);
-                    vertices.push(point.x,point.y,point.z);
-                    bottom=Math.min(bottom,point.y); top=Math.max(top,point.y);
-                }
-                let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
-                // Only the lower trunk defines width; leaves and crowns stay passable.
-                const cutoff=kind==='trunk' ? bottom+Math.min(1.8,(top-bottom)*.2) : top;
-                for (let v=0;v<vertices.length;v+=3) {
-                    if (vertices[v+1]>cutoff) continue;
-                    minX=Math.min(minX,vertices[v]); maxX=Math.max(maxX,vertices[v]);
-                    minZ=Math.min(minZ,vertices[v+2]); maxZ=Math.max(maxZ,vertices[v+2]);
-                }
-                const x=(minX+maxX)/2,z=(minZ+maxZ)/2;
-                const radius=Math.max(maxX-minX,maxZ-minZ)*.5;
-                const ground=this.terrain.heightfield.heightAt(x,z);
-                if (kind==='trunk' || (radius>=.4 && top-ground>=.35)) {
-                    this.collisions.add({name:node.name,kind,x,z,radius:Math.max(.12,radius),minY:bottom,
-                        maxY:kind==='trunk' ? Math.min(top,Math.max(ground+2.2,bottom+(top-bottom)*.55)) : top});
-                }
-                // Restore the centre used by the existing placement audit.
-                Vector3.TransformCoordinatesToRef(bound.center,placement,point);
-            }
+            // Thin-instance LOD and density do not own collision geometry.
+            const collider = propColliderGeometry(node.name, source.material.name, original, placement, this.terrain.heightfield);
+            if (collider) this.collisions.add(collider);
             const originalPoint = Vector3.TransformCoordinates(Vector3.FromArray(original), placement);
             const instancedPoint = Vector3.TransformCoordinates(Vector3.FromArray(batch.data.positions), instance);
             transformError = Math.max(transformError, Vector3.Distance(originalPoint, instancedPoint));
@@ -290,10 +281,14 @@ export class DesertProps {
         for (const mesh of [...container.meshes]) mesh.dispose(false, false);
         for (const node of [...container.transformNodes]) node.dispose();
         container.meshes.length = 0; container.transformNodes.length = 0;
-        this.audit = { loadMs: performance.now() - started, batches: this.batches.length,
+        this.audit = { densityKeepRatio: Math.min(1, this.worldScale * this.worldScale), densityRejectedPrimitives,
+            loadMs: performance.now() - started, batches: this.batches.length,
             primitiveInstances: this.batches.reduce((n,b) => n+b.names.length,0), transformError,
             nearby: seats.length, floatingOver20cm: seats.filter(s => s.clearance > .2).length,
             buriedOver50cm: seats.filter(s => s.clearance < -.5).length,
+            grounding: referenceSurface ? 'heightmap-offset' : 'authored', adjustedPrimitives,
+            minHeightAdjustment: adjustedPrimitives ? minHeightAdjustment : 0,
+            maxHeightAdjustment: adjustedPrimitives ? maxHeightAdjustment : 0,
             seats: seats.sort((a,b) => b.clearance-a.clearance) };
     }
     /**

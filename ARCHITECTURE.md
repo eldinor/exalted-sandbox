@@ -41,12 +41,14 @@ flowchart TD
 
 The default mode loads the authored Exalted world:
 
-- `alpha-map.glb` supplies terrain geometry and biome vertex colours.
+- `vis_ground_heightmap-11.png` supplies native 16-bit heights for a
+  400-by-400 grid; `vertex_color_4k-9.png` supplies biome colour and masks.
+- `?terrain=glb` retains `alpha-map.glb` and its previous biome-map behaviour.
 - The original terrain and authored map coordinates use the production 0.5
   scale, yielding an approximately 936 x 702 metre world while avatars, prop
   geometry, movement and effects remain metre-sized.
 - `exalted_desert.glb` supplies authored desert vegetation and rocks.
-- Water geometry is derived from retained terrain vertices plus
+- Water geometry is derived from the selected terrain triangles and water mask plus
   `world/waterReference.json`.
 - The spawn bar exposes named locations and texture and wind controls.
 
@@ -140,14 +142,19 @@ new UI location.
 `Terrain` is the facade used by movement, rendering, effects, and spells. It
 selects one of two base surfaces:
 
-- `ExaltedWorld` loads the authored GLB, bakes the source hierarchy transform
-  into vertex data, retains a CPU `MeshSurface`, and exposes height, normal, and
-  biome-weight queries.
+- `ExaltedWorld` generates the roads heightmap grid or loads the comparison GLB.
+  Both sources retain a CPU `MeshSurface` and expose triangle height, normal and
+  biome-weight queries. Its constructor defaults to GLB for supporting utilities;
+  `src/main.ts` explicitly selects heightmap unless `?terrain=glb` is requested.
 - `Heightfield` generates the procedural terrain textures and CPU sampling data.
 
-The authored terrain's vertex colours are gameplay data. `surfaceTypes.ts`
-defines their classification and generates matching WGSL, keeping CPU collision,
-water, deformation, and GPU shading thresholds aligned.
+In heightmap mode, `AuthoredSurfaceMap` derives a 2049-by-1537 linear RGBA texture
+from the roads RGB map: snow, sand, road and water. CPU softness queries and GPU
+simulation/beauty/depth/shadow displacement sample the same weights. Local detail
+selection scans conservative map coverage inside each triangle's bounding box.
+The colour map uses the existing measured PNG palettes; it is not an explicit
+artist-authored RGBA splat map. GLB comparison mode retains its vertex-colour
+classification through `surfaceTypes.ts`.
 
 `LocalTerrain` extracts the deformable region near the active world position.
 `DeformationField` owns a persistent, camera-following pair of GPU state buffers.
@@ -166,13 +173,24 @@ materials, and renders repeated content with thin instances. Near and far buffer
 provide the current two-level prop LOD system. Wind deformation is applied in the
 prop shaders and shared with relevant depth and shadow passes.
 
+Desert placement density now follows world area scale: at 0.5 world scale,
+roughly 25% of authored placements survive. A stable hash of horizontal placement
+coordinates gives all material primitives at the same origin one decision and
+keeps selection identical across terrain sources and height rebasing. The
+selection runs before instance batching and collider extraction, preserving
+survivor transforms and removing collisions for omitted props. This supersedes
+the earlier 30% large-boulder-only thinning. Full-size reference worlds retain
+all placements. Visibility distances and LOD remain metre-based.
+
 `PropCollisions` builds inexpensive collision primitives for meaningful solid
-props. Rocks and trunks can block character and camera movement; bushes and small
-vegetation are excluded. The movement solver supports swept horizontal collision,
+props. Rocks, quiver trunks, cacti and woody Searsia stems can block character
+and camera movement; foliage and soft plants are excluded. `propColliderGeometry`
+uses full-detail vertices and the same transferred placement as rendering;
+lower stem geometry determines trunk width. The movement solver supports swept horizontal collision,
 sliding, vertical separation, recovery from overlap, and flat-top support for
 landing.
 
-Terrain itself currently uses the authored model as one mesh. Dedicated terrain
+Terrain itself currently uses a generated grid (or comparison GLB) as one mesh. Dedicated terrain
 LOD is deferred because there is one world terrain asset; biome vegetation and
 future repeated assets are the higher-value LOD targets.
 
@@ -209,6 +227,13 @@ World water is split by responsibility:
   and mist through the shared particle pool.
 
 Water construction validates that the terrain contains loaded Exalted vertex data.
+Heightmap mode samples painted water on finer triangles that preserve the source
+triangle planes, excluding northern ocean geometry before tessellation. It keeps
+the lake five runtime metres above the median painted shoreline height
+(approximately 41.67 m for version 11), shared by rendering and swimming.
+`HEIGHTMAP_LAKE_LEVEL_OFFSET` records the requested rise. GLB mode retains Y=0. Only
+painted water boundaries need finer geometry; wet interiors retain coarse planes.
+Heightmap mode uses a smaller exclusion around near-vertical river faces.
 This keeps procedural mode from accidentally entering an authored-world-only path.
 
 ## Spells and shared effects
@@ -284,6 +309,15 @@ the matching Babylon Inspector version and docks it on the right.
 `core/perf.ts` maintains frame percentiles, CPU subsystem timings, per-frame draw
 counts, triangle estimates, and spike tracking. The frame loop performs the
 triangle estimate because it knows which optional systems and meshes are visible.
+
+`await EXALTED.captureDraws(120)` temporarily profiles actual engine submissions
+by mesh and render pass, prints a console table, and returns the averaged report.
+Indexed counts include instance multiplicity; non-indexed vertex submissions are
+reported separately. Wrappers are removed after capture or scene disposal, so
+normal frames retain the existing draw counter without extra profiling work.
+Compare `/?terrain=glb` and the default source at the same location, camera view,
+and gameplay state. Inspector Total Vertices counts resident geometry, whereas
+Active Indices counts submitted indices across passes and instances.
 
 ## Source layout and dependency direction
 

@@ -25,6 +25,16 @@ The main Exalted application includes:
 The authored world and its Blender-to-Babylon asset pipeline are the production
 priority.
 
+The main app now uses the roads heightmap and biome map by default. Implementation,
+validation and remaining visual checks are recorded in
+[HEIGHTMAP_INTEGRATION.md](HEIGHTMAP_INTEGRATION.md). `?terrain=glb` retains the old
+terrain for comparison; the authored Grassland lab still uses the GLB.
+
+Desert props now retain approximately 25% of authored placements at the current
+half-size world scale to reduce crowding. Stable placement selection is shared
+by all material parts, render passes and collision extraction; surviving props
+keep their positions, rotations and sizes. See `world/desertDensity.ts`.
+
 ## Supporting Utilities
 
 The following are side utilities and research environments. They are useful for
@@ -115,7 +125,10 @@ For the authored map, the current working decision is:
 - apply LOD primarily to trees, rocks, bushes, grass, and other props;
 - use image-based masks for smooth terrain material blending independent of
   mesh density;
-- use `public/assets/textures/vertex_color_4k copy.png` as the main shader's higher-resolution authored biome map; retain `alpha-map.glb` vertex colours as the geometry-bound fallback and current CPU deformation classification;
+- use `public/assets/textures/vis_ground_heightmap-11.png` for the default
+  400-by-400 terrain grid and `vertex_color_4k-9.png` for its biome colour,
+  road and soft-ground masks; retain the GLB source and its original biome-map
+  behaviour in `?terrain=glb`;
 - use `BIOME_SPLAT_MAP.md` as the delivery contract for the future explicit
   RGBA material-weight map;
 - keep terrain collision separate when the visual mesh is unsuitable.
