@@ -2,6 +2,8 @@
 import type { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Matrix, Vector2, Vector3, Vector4 } from '@babylonjs/core/Maths/math.vector';
+import { Frustum } from '@babylonjs/core/Maths/math.frustum';
+import '@babylonjs/core/Culling/ray';
 import { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial';
 import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage';
 import type { Scene } from '@babylonjs/core/scene';
@@ -33,6 +35,10 @@ const UNIFORMS = ['world','viewProjection','lightViewProjection','time','wind','
     'fogHeightFalloff','fogStart','aerialStrength','spellLightPos','spellLightCol','spellLightCount'];
 
 export class WorldGrass {
+    private readonly viewPlanes = Frustum.GetPlanes(Matrix.Identity());
+    private viewReady = false;
+    private readonly tileMinimum = new Vector3();
+    private readonly tileMaximum = new Vector3();
     readonly settings = worldGrassSettings();
     readonly renderer: GrassSystem;
     readonly grassWeightAt: (x: number, z: number) => number;
@@ -53,6 +59,7 @@ export class WorldGrass {
     };
     private disposed = false;
     private warmUpGeometry: VertexData | null = null;
+    private readonly warmUpMeshes: Mesh[] = [];
 
     constructor(private readonly scene: Scene, private readonly terrain: Terrain, private readonly sky: Sky,
         private readonly shadows: ShadowSystem, private readonly depth: DepthPass) {
@@ -65,6 +72,8 @@ export class WorldGrass {
         this.grassWeightAt = samplers.grassWeightAt;
         this.renderer = new GrassSystem(scene, samplers, this.settings, new Vector2(), 320, {
             importedOnly: true, streaming: true,
+            isMeshInView: mesh => !this.viewReady || mesh.getBoundingInfo().isInFrustum(this.viewPlanes),
+            isTileInView: (x, z, size) => this.tileInView(x, z, size),
             createMaterial: (name, lod, staticGrass) => this.makeMaterial(name, lod, staticGrass),
             updateMaterial: (material, context) => this.bindMaterial(material, context),
             syncMesh: (mesh, visible, _distance, staticGrass) => this.syncMesh(mesh, visible, staticGrass),
@@ -166,15 +175,40 @@ export class WorldGrass {
         material.setFloat('fogStart', S.fogStart); material.setFloat('aerialStrength', S.aerialStrength);
     }
 
-    update(dt: number, camera: Vector3, character: CharacterController, wake: SurfWake, lights: SpellLights): void {
-        const allowed = grassInteractionAllowed(character.flight.active, character.rocketJump.active,
+    private tileInView(x: number, z: number, size: number): boolean {
+        if (!this.viewReady) return true;
+        // Unknown placements use the whole terrain's vertical range, avoiding
+        // rejection of grass on hills. Final meshes use their tighter bent bounds.
+        this.tileMinimum.set(x - 4, this.terrain.heightfield.minHeight - 4, z - 4);
+        this.tileMaximum.set(x + size + 4, this.terrain.heightfield.maxHeight + 8, z + size + 4);
+        for (const plane of this.viewPlanes) {
+            const n = plane.normal;
+            const farthest = n.x * (n.x >= 0 ? this.tileMaximum.x : this.tileMinimum.x)
+                + n.y * (n.y >= 0 ? this.tileMaximum.y : this.tileMinimum.y)
+                + n.z * (n.z >= 0 ? this.tileMaximum.z : this.tileMinimum.z) + plane.d;
+            if (farthest < 0) return false;
+        }
+        return true;
+    }
+
+    update(dt: number, camera: Vector3, character: CharacterController, wake: SurfWake, lights: SpellLights, streamingFocus?: Vector3): void {
+        const activeCamera = this.scene.activeCamera;
+        this.viewReady = !!activeCamera;
+        if (activeCamera) {
+            activeCamera.getViewMatrix();
+            activeCamera.getProjectionMatrix();
+            Frustum.GetPlanesToRef(activeCamera.getTransformationMatrix(), this.viewPlanes);
+            // Small view guard covers temporal jitter and changes at patch edges.
+            for (const plane of this.viewPlanes) plane.d += 2;
+        }
+        const allowed = !streamingFocus && grassInteractionAllowed(character.flight.active, character.rocketJump.active,
             character.swimming.active, character.position.y, this.terrain.heightAt(character.position.x, character.position.z));
         const target = allowed ? this.settings.interactionStrength * (1 - character.surf) : 0;
         this.impact.strength = allowed ? this.impact.strength + (target - this.impact.strength) * (1 - Math.exp(-18 * dt)) : 0;
         this.impact.position.copyFrom(character.position);
         this.impact.radius = this.settings.interactionRadius;
         this.context.elapsedSeconds += dt;
-        this.context.cameraPosition.copyFrom(character.position);
+        this.context.cameraPosition.copyFrom(streamingFocus ?? character.position);
         this.context.windCameraPosition.copyFrom(camera);
         const angle = S.windDirection * Math.PI / 180;
         this.context.windDirection.set(Math.sin(angle), Math.cos(angle));
@@ -196,28 +230,47 @@ export class WorldGrass {
     reset(): void { this.impact.strength = 0; this.context.surfSegmentCount = 0; this.surfSegments.fill(0); this.surfBounds.set(0, 0, 0, 0); }
 
     async warmUp(): Promise<void> {
-        // Compile every LOD/static/pass variant even if the initial spawn contains no grass.
+        // isReady compiles shader modules, but WebGPU render pipelines are only
+        // built by actual draws. Leave every variant standing through main's
+        // loading-screen frames, even when the initial spawn contains no grass.
         const geometry = this.warmUpGeometry;
         if (!geometry) throw new Error('Missing grass warm-up prototype.');
-        const probe = new Mesh('grass-warm-up', this.scene);
+        const camera = this.scene.activeCamera;
+        if (!camera) throw new Error('Grass warm-up requires an active camera.');
+        this.finishWarmUp();
+        const position = camera.getForwardRay(3).direction.scale(3).add(camera.globalPosition);
+        const matrix = Matrix.Scaling(.1, .1, .1).setTranslation(position);
         try {
-            geometry.applyToMesh(probe);
-            probe.thinInstanceSetBuffer('matrix', Float32Array.from(Matrix.Identity().m), 16, false);
-            probe.setEnabled(false);
             for (const material of this.renderer.materials) {
+                const probe = new Mesh(`grass-warm-up:${material.name}`, this.scene);
+                this.warmUpMeshes.push(probe);
+                geometry.applyToMesh(probe);
+                probe.thinInstanceSetBuffer('matrix', Float32Array.from(matrix.m), 16, false);
+                probe.material = material;
+                probe.alwaysSelectAsActiveMesh = true;
+                this.syncMesh(probe, true, material.options.defines?.includes('#define GRASS_STATIC') ?? false);
                 this.bindMaterial(material, this.context);
                 await whenReady(material, material.name, [probe, true]);
             }
             for (const material of this.passMaterials) {
                 this.bindMaterial(material, this.context);
-                await whenReady(material, material.name, [probe, true]);
+                const probe = this.warmUpMeshes.find(mesh =>
+                    this.registered.get(mesh)?.staticGrass === material.options.defines?.includes('#define GRASS_STATIC'));
+                if (probe) await whenReady(material, material.name, [probe, true]);
             }
-        } finally { probe.dispose(); }
+        } catch (error) { this.finishWarmUp(); throw error; }
+    }
+
+    /** Remove probes only after the real loading-screen frames have submitted. */
+    finishWarmUp(): void {
+        for (const mesh of this.warmUpMeshes) mesh.dispose();
+        this.warmUpMeshes.length = 0;
     }
 
     dispose(): void {
         if (this.disposed) return;
         this.disposed = true;
+        this.finishWarmUp();
         for (const mesh of this.registered.keys()) this.unregister(mesh);
         this.renderer.dispose();
         for (const material of this.passMaterials) material.dispose();

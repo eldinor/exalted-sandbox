@@ -9,7 +9,10 @@ controls and ground materials. Production never imports generator code.
 
 - Default terrain: `vis_ground_heightmap-11.png` and `vertex_color_4k-9.png`.
 - Grass is the light-green RGB (179, 206, 149) palette, independently classified
-  into a CPU-only 8-bit mask alongside the existing four-channel surface map.
+  into an 8-bit mask alongside the existing four-channel surface map. Heightmap
+  mode now reads the generated `ground-coverage-9.png` R channel for both shading
+  and placement, including gradual thinning at forest/desert boundaries; see
+  [BIOMES_MAPS.md](BIOMES_MAPS.md). The palette remains the generation input.
   It is not snow/sand softness or the complement of another biome.
 - Sample actual terrain triangle heights and normals. Preserve chart conversion
   and reject gaps, non-grass, roads, wet areas beneath the raised lake level,
@@ -33,9 +36,10 @@ between coarse terrain and the moving detail patch. Texture sampling uses
 mipmaps, anisotropic filtering and world-position derivatives.
 
 The existing terrain shader blends this PBR set only onto the grass biome,
-using the same palette constants as CPU placement. Heightmap mode uses the
-unwarped biome PNG; GLB mode uses its authored vertex colours. Roads, desert,
-snow, forest and water retain their existing ground materials. The shader keeps
+using the same coverage as CPU placement. Heightmap mode uses the generated
+packed land coverage; GLB mode uses its authored vertex colours. Roads, desert,
+snow and water retain their existing ground materials. Forest now has a separate
+tiled ground set documented in [FOREST_NOTES.md](FOREST_NOTES.md). The shader keeps
 linear output, the existing world lighting/fog and render passes, and adds no
 meshes or draw calls. Generated snow grain normals and glints are suppressed on textured
 grass. Base colour is decoded from sRGB; normal and ORM remain linear.
@@ -50,15 +54,41 @@ textures are loaded before terrain shader warm-up and disposed by Terrain.
 Production density is 3: approximately 17 candidates per square metre
 before exclusions. Stream 16 m patches around the avatar, with a 2 ms/2,048
 candidate budget and one model-pair upload per frame. Recycle geometry and buffers.
-LOD1 reaches 70 m; LOD2 reaches 120 m and thins to 25% at the edge. Wind fades
+Production now uses LOD2 geometry at every distance for the benchmark comparison;
+distance LOD switching is disabled (`singleLod: 2`). The previous comparison used
+LOD1 through 22 m and LOD2 beyond. Full density now extends through 22 m,
+then thins smoothly to 25% at the 90 m outer edge using the existing smoothstep
+curve and deterministic instance prefixes. `farDistance: 22` controls the end
+of full density; `distantLodDistance: 90` controls the outer visibility distance,
+reduced from 120 m for the next benchmark comparison.
+Both distance bands use LOD2 geometry. Selection uses
+16 m patch-centre distance from the avatar. Density remains 3. Wind fades
 from 40 to 60 m and uses the world's wind direction/strength and simulation clock.
+
+Production additionally gates colour/depth visibility using the actual camera's
+six frustum planes and each patch's padded bending bounds. A 2 m guard avoids
+screen-edge jitter; camera orientation is evaluated every frame, including flight
+and automatic routes. Completed off-screen patches remain cached until normal
+distance eviction, so turning back immediately reuses geometry. New streaming
+jobs prioritize view-intersecting tiles and defer off-screen requests. An already
+started job finishes within the existing budget, avoiding restart churn.
+Unknown tiles use the terrain's full height range for conservative hill/aerial
+rejection. `streamingStats.deferred` records the off-screen queue separately;
+`queued` counts work eligible for preparation so benchmark warm-up does not wait
+on deferred tiles. Shared labs keep their existing visibility unless supplying
+these optional view gates. No terrain occlusion test is performed.
 
 Production materials receive sun, sky irradiance, cascaded shadows, spell lights
 and aerial perspective, then output linear colour into the existing post chain.
 The shared vertex shader supplies identical wind and interaction to beauty,
 camera depth passes. Grass shadow casting is disabled. Grass is opaque geometric vegetation;
 particles are not added to any pass. Static distant material variants and all
-production pass variants compile behind the loading screen.
+production pass variants compile behind the loading screen. Temporary thin-instance
+meshes remain enabled through the three real startup frames, exercising every
+colour variant and both static/dynamic camera-depth variants so WebGPU render
+pipelines are created before gameplay. `finishWarmUp()` removes the probes and
+their depth registrations afterwards. Patch placement and buffer uploads still
+stream incrementally during gameplay.
 
 Walking uses a 2.4 m radial influence with strength 0.55, eased on contact and
 scaled by model height. Surfing exports at most eight segments from the existing
@@ -99,11 +129,17 @@ their existing particle kinds.
 `EXALTED.grass` exposes `settings`, `stats`, `streamingStats`, `renderer` and
 `reset()`. Set `EXALTED.grass.settings.enabled = false` for draw comparisons.
 `EXALTED.captureDraws(120)` counts actual submitted geometry across passes;
-grass statistics count visible-distance batches and are not GPU frustum totals.
+grass statistics count distance/view-selected batches with a conservative guard;
+they are not GPU draw-capture totals.
 
 Type checks, production/lab streaming tests, biome/grounding tests, interaction
 snapshot tests and caster lifecycle tests cover integration contracts. Browser
 checks use native Chromium WebGPU; Playwright is not required.
+
+Startup pipeline instrumentation confirmed all four static/dynamic colour/depth
+pipelines were created behind loading. Entering The Long Green with 34 visible
+patches created no further grass pipelines; temporary probes were fully removed.
+This verifies pipeline coverage, rather than frame-time performance on player hardware.
 
 Before the reduction to density 3 and disabling grass shadow casting, a
 development browser capture at The Long Green of 60 frames during patch fill

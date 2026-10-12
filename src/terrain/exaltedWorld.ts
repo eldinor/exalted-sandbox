@@ -12,6 +12,8 @@ import { roadWeight, surfaceWeights } from './surfaceTypes.ts';
 import { DEFAULT_SPAWN } from '../world/spawnPoints.ts';
 import { AUTHORED_WORLD_SCALE } from '../world/worldScale.ts';
 import { AuthoredSurfaceMap, buildAuthoredHeightmap, decodeAuthoredPng, ROADS_HEIGHTMAP, ROADS_BIOME_MAP } from './authoredHeightmap.ts';
+import { GROUND_COVERAGE_MAP, ROCK_COVERAGE_MAP, BEACH_COVERAGE_MAP } from './groundCoverage.ts';
+import { ROAD_DISPLAY_MAP } from './roadBlending.ts';
 
 export type AuthoredTerrainSource = 'glb' | 'heightmap';
 
@@ -139,7 +141,7 @@ export class ExaltedWorld {
     /** Keep the generated triangles authoritative for both rendering and grounding. */
     private async loadHeightmapInto(target: Mesh): Promise<void> {
         const base = import.meta.env.BASE_URL;
-        const [height, biome] = await Promise.all([ROADS_HEIGHTMAP, ROADS_BIOME_MAP].map(async path => {
+        const [height, biome, groundCoverage, roadDisplay, rockCoverage, beachCoverage] = await Promise.all([ROADS_HEIGHTMAP, ROADS_BIOME_MAP, GROUND_COVERAGE_MAP, ROAD_DISPLAY_MAP, ROCK_COVERAGE_MAP, BEACH_COVERAGE_MAP].map(async path => {
             const response = await fetch(`${base}${path}`);
             if (!response.ok) throw new Error(`Failed to load ${path}: ${response.status}`);
             return decodeAuthoredPng(new Uint8Array(await response.arrayBuffer()));
@@ -154,8 +156,8 @@ export class ExaltedWorld {
         this.surface = new MeshSurface(data.positions, data.indices, 16, data.colors);
         this.minHeight = this.surface.minHeight; this.maxHeight = this.surface.maxHeight;
         // ~0.46 m samples preserve roads without retaining a second full 4K RGBA image.
-        this.biomeSurface = new AuthoredSurfaceMap(2049, 1537, biome);
-        this.surfaceMap = RawTexture.CreateRGBATexture(this.biomeSurface.data,
+        this.biomeSurface = new AuthoredSurfaceMap(2049, 1537, biome, groundCoverage, roadDisplay, rockCoverage, beachCoverage);
+        this.surfaceMap = RawTexture.CreateRGBATexture(this.biomeSurface.visualSurfaceData(),
             this.biomeSurface.width, this.biomeSurface.height, this.scene, false, false,
             Constants.TEXTURE_BILINEAR_SAMPLINGMODE);
         this.surfaceMap.gammaSpace = false;

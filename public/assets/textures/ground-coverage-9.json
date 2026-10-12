@@ -1,0 +1,40 @@
+{
+  "source": "assets/textures/vertex_color_4k-9.png",
+  "sourceSha256": "cbd6e7eb6addaf5dcf5960d84a82a4c92f4b9ca9f826f0a7fba3b6f6f336fa39",
+  "output": "assets/textures/ground-coverage-9.png",
+  "outputSha256": "85528329decc099d5e791a450b7ee1818a9abeee8cd33e0cd2e743473f386bda",
+  "width": 2049,
+  "height": 1537,
+  "channels": [
+    "grass",
+    "forest",
+    "desert"
+  ],
+  "rock": "assets/textures/biome-rock-9.png",
+  "rockSha256": "7355f0f348d4845f39fc83eb2dc95829e55bdf8acd1fdb7873db3f32a06e3c15",
+  "beach": "assets/textures/biome-beach-9.png",
+  "beachSha256": "bac7435eba595bd3a63fcac19bc1a38e18240d6a6f3fd88b0cad50f574385818",
+  "detail": "assets/textures/ground-detail-coverage-9.png",
+  "detailSha256": "bf57ab94a145bba6c545ab4998393ab2b84acbfa06bbed25ed202102085c0287",
+  "beachPaletteRgb": [
+    [
+      129,
+      173,
+      206
+    ],
+    [
+      137,
+      147,
+      128
+    ]
+  ],
+  "detailChannels": [
+    "rock",
+    "beach",
+    "reserved"
+  ],
+  "remainingGround": "1 - sum(RGB) - rock - beach; roads continue nearest land underneath and remain a separate overlay",
+  "sigmaMetres": 1.5,
+  "orientation": "same endpoints and orientation as source biome PNG",
+  "correction": "Forest Overlook stays forest; sandy pixels in northern corridor x[-85,35], z<-70 become rock (Babylon metres)"
+}

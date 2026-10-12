@@ -9,6 +9,98 @@ water, atmosphere, props, collisions, UI, and other player-facing systems.
 Work should be evaluated by how it supports the quality, performance, and
 maintainability of this main application.
 
+## Open forest toward Forest Outlook
+
+Ctrl+Shift+P now saves a full-placement orthographic map at 4096x3072, including
+forest (overhead spruce crowns) and all authored desert props. It bypasses live
+distance/streaming visibility using temporary copies, retains the rig/post chain,
+and saves in the screenshot gallery. Ctrl+P keeps its terrain/water map capture.
+
+The accessible woodland west of the closed strip now extends to and around
+Forest Outlook: 464 new real trees at 8 m spacing, using Medium 1/2, Small 1/2
+and Sapling 1/2 at 25/25/15/15/10/10% target shares. The overlook retains an
+18 m clearing and a southeast sightline; Cube Spawn's corridor stays clear.
+Individual trunk colliders keep this section walkable. Models retain their
+pack size ratios, use LOD2 and share the darker foliage material. Existing
+closed-strip placement/barriers are unchanged. See [FOREST_NOTES.md](FOREST_NOTES.md).
+
+## Spruce cutout and impostor evaluation
+
+Production grass now gates colour/depth draws by the camera frustum and defers
+off-screen placement jobs. Cached patches remain available when turning back;
+density and distance defaults stay the same. See [GRASS.md](GRASS.md).
+
+`/spruceland.html` compares the prepared alpha-cutout blue spruce (11,364
+triangles) with a two-triangle baked impostor. Seventeen ground/elevated/overhead
+albedo and object-normal views are saved under `public/terrain/forest/blue-spruce`.
+Both use production lighting and matching alpha-tested camera depth; the full
+tree also has matching custom shadow passes. Controls support view, height,
+threshold, visibility and depth inspection. The main forest now uses this spruce
+impostor throughout the closed strip, apart from the first 15 m at its accessible
+edge (Babylon X > -367) and a 33 m radius around Cube Spawn. Real trees mix
+Big 1 and Small 1 LOD2, with a deterministic 25% Small 1 selection and the pack's
+relative sizes. Clearing, spacing and barriers stay intact. There are 1,005 cards,
+117 Big 1 and 47 Small 1 trees, batched in 32 m chunks.
+Both representations warm colour/depth pipelines behind the loading screen.
+Main-app real pine foliage now has a darker, cooler albedo tint to approach the
+spruce border colour; bark retains its source colour.
+See [FOREST_NOTES.md](FOREST_NOTES.md) and the
+[asset README](public/terrain/forest/blue-spruce/README.md) for regeneration and
+prototype limits.
+
+## Sandy island shoreline
+
+The island now uses the same 30 m beach sand textures and stochastic mapping.
+A separate lake-only water/beach eligibility channel fills submerged island-bank
+gaps without changing original level inference, river flow or dry island terrain.
+Lake level stays 41.669526 m. Typecheck/148 tests and native ground/map checks
+passed; the island centre stays dry and 768 submerged bank samples have no gaps.
+See [BIOMES_MAPS.md](BIOMES_MAPS.md).
+
+## Lake shoreline correction
+
+Heightmap lake water now follows the largest connected wet basin, using the old
+reference outline for identification rather than a hard centroid cut. A 50 m
+candidate margin fills submerged shore areas beyond the old outline. The rendered
+rim clips at the same +0.025 m offset as the plane, closing thin bank gaps. Lake
+level remains about 41.67 m; island/dry land and disconnected pools are excluded.
+The rendered/depth/map/swimming footprint is shared; GLB comparison retains its
+old boundary behavior. See [HEIGHTMAP_INTEGRATION.md](HEIGHTMAP_INTEGRATION.md).
+
+## Beach ground biome
+
+The light-blue lake/river shore is now Beach, with saved `biome-beach-9.png`
+coverage and `aerial_beach_01` colour/OpenGL normal/ARM maps. Texture width is
+30 m as specified by the user. Three offset/rotated samples suppress regular
+repeats. Runtime packs rock/beach masks into R/G of
+`ground-detail-coverage-9.png`; blending is complementary to adjoining land,
+with roads as the final overlay. Water eligibility, lake level, geometry,
+deformation and the original desert material remain intact. Textures warm
+behind loading and share ground samplers; heightmap requests 27 texture slots.
+Current supplied maps are 2K (~0.68 px/cm at 30 m); the stated 2.7 px/cm refers to
+approximately 8K source resolution. See [BIOMES_MAPS.md](BIOMES_MAPS.md).
+
+## Closed eastern forest trial
+
+The main heightmap world now places **1,169** replacement `Pine_big_1` trees in
+the forest's eastern **116 m** strip (Babylon X <= -352), at 5.5 m spacing and
+about 20 m height. Trees use **LOD2 everywhere**, in 48 independent 32 m chunks;
+LOD1 meshes/materials/buffers are no longer created or warmed. Production
+lighting, alpha-tested depth and loading-screen draw warm-up are retained.
+Tree shadow casting and wind remain off. The spawn keeps its 18 m clearing and
+a 16 m wide exit corridor toward positive X; 1,401 independent flight-height
+barrier cylinders close the rest of the stand. The overlook remains accessible.
+
+The Benchmark camera mode menu offers separate **Automatic forest route** and
+**Automatic grassland route** options. The forest route has a fixed 30-second
+ground-edge pass followed by an aerial canopy sweep, three seconds of preparation,
+and restoration/cancellation behavior shared with the grass route. **Forest trees**
+can be toggled before a run for comparison. Route kind, name, version, height,
+pitch and yaw are exported. Typecheck/all 143 Node tests passed; a native WebGPU
+run completed all 30 seconds, checked ground/aerial views, tree-off recording
+and Escape restoration. No build or Playwright. Full forest integration remains
+deferred; see [FOREST_NOTES.md](FOREST_NOTES.md).
+
 ## Main Application
 
 The main Exalted application includes:
@@ -39,8 +131,26 @@ Desert props use 64 m spatial chunks with shared near/far rendering batches per
 camera and shadow cascade. Independent pass culling reduces submitted geometry
 while keeping authored placement, density and collisions unchanged. See
 [DESERT_PROPS.md](DESERT_PROPS.md).
+Desert ground uses the previous imported GLB floor texture set again. The
+`aerial_beach_01` colour/normal/ARM experiment passed typecheck, 131 tests and a
+native WebGPU visual check, then was reverted at the user's request. Assets and
+results remain documented in [DESERT_PROPS.md](DESERT_PROPS.md). Improved biome
+blending remains active.
+
+The main app now includes a collapsed recording benchmark above Avatar Colors,
+with manual recording and a repeatable automatic grassland camera route.
+See [BENCHMARK.md](BENCHMARK.md) for metrics, comparison guidance, and the flag
+that removes the panel for a future public release.
 
 ## Supporting Utilities
+
+Main-app Ctrl+P now captures the complete authored terrain from a north-up
+orthographic offscreen camera at 2048 × 1536, into the existing Screenshots
+gallery. P retains viewport capture. The map uses current ground material
+textures/coverage and water geometry, with map lighting and flat blue water;
+it excludes streamed vegetation/props, avatar and temporal camera effects.
+The gameplay camera/post chain remain intact and temporary resources are
+disposed after capture. See the controls in [README.md](README.md).
 
 The following are side utilities and research environments. They are useful for
 developing and validating individual systems, but they are not replacements for
@@ -77,6 +187,37 @@ the same tiled Material-326-A PBR texture set as Grassland, at a 4 m repeat. See
 [GRASS.md](GRASS.md) for contracts, validation and the measured geometry cost. See [README.md](README.md#grassland-lab)
 for controls and [HISTORY_DOCS.md](HISTORY_DOCS.md#grassland-lab-technical-notes)
 for implementation details and streaming limitations.
+
+### Forestland Lab
+
+The main app's forest biome ground now uses the supplied `forrest_ground_01`
+colour/normal/ARM textures, tiled at 4 m and blended using the current biome PNG
+until dedicated masks are authored. This ground-only integration does not add
+trees. See [FOREST_NOTES.md](FOREST_NOTES.md) for its contract and asset findings.
+Heightmap grass/forest/desert now blend using the generated packed
+`ground-coverage-9.png`, shared with grass placement. Complementary weights and
+4–6 m transitions remove pale seams; land extends beneath the existing road
+overlay. See [BIOMES_MAPS.md](BIOMES_MAPS.md) for regeneration and channel meanings.
+Heightmap road display edges now use a separate 1.1 m Gaussian feather and a
+single final material overlay. Original gameplay road firmness and deformation
+channels are retained; grass clears the firm road and thins through shoulders.
+The road display mask is now saved and loaded from
+`public/assets/textures/mask-roads-9.png`, with provenance JSON and a regeneration
+script. Different road materials will use a separate selection/weight map.
+Heightmap rock ground now uses `river_small_rocks` colour/normal/ARM from
+`public/terrain/rock/river/` and the saved `biome-rock-9.png` mask. Three randomized
+texture samples suppress the visible regular repeat, with matching normal/ARM
+transforms and stable world-space placement. The previous `rock/03` set is
+retained as a tested reference. The northern
+sandy-painted corridor is corrected to rock in both rendering and sand softness;
+southern desert, snow, roads, water and forest overlook remain intact. Land/rock
+masks regenerate together; see [BIOMES_MAPS.md](BIOMES_MAPS.md).
+
+`/forestland.html` populates the current heightmap's dark-green forest biome with
+12 pine-pack variants with authored LOD1/LOD2 and a bottom percentage mix panel, using deterministic
+32 m chunk batches, exact grounding, camera controls and a 30-second benchmark.
+It remains a supporting lab; production forest integration is unchanged. See
+[generator/forestland/README.md](generator/forestland/README.md).
 
 ### World editor
 

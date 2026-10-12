@@ -17,6 +17,7 @@ import { buildWaterGeometry, heightmapLakeLevel, heightmapWaterSource, HEIGHTMAP
 import { WaterSurface } from '../src/world/waterSurface.ts';
 import { SPAWN_POINTS } from '../src/world/spawnPoints.ts';
 import { rebasePropHeight } from '../src/world/propGrounding.ts';
+import { BEACH_COVERAGE_MAP } from '../src/terrain/groundCoverage.ts';
 
 test('prop transfer preserves horizontal position, rotation, physical size and signed ground clearance', () => {
     const root = Matrix.Scaling(-1, 1, 1);
@@ -35,15 +36,17 @@ const biome = decodeAuthoredPng(readFileSync(`public/${ROADS_BIOME_MAP}`));
 
 test('corrected heightmap lake fills its raised basin, supports swimming and leaves the island dry', () => {
     const data = buildAuthoredHeightmap(height, biome) as LoadedTerrainData;
-    const mask = new AuthoredSurfaceMap(2049, 1537, biome);
+    const beach = decodeAuthoredPng(readFileSync(`public/${BEACH_COVERAGE_MAP}`));
+    const mask = new AuthoredSurfaceMap(2049, 1537, biome, undefined, undefined, undefined, beach);
     const reference = JSON.parse(readFileSync('src/world/waterReference.json', 'utf8')) as WaterReference;
     const source = heightmapWaterSource(data, mask, reference, .5);
     const shorelineLevel = heightmapLakeLevel(source, reference, .5);
     const level = shorelineLevel + HEIGHTMAP_LAKE_LEVEL_OFFSET;
     assert.ok(level > 30 && level < 45);
-    const geometry = buildWaterGeometry(source, reference, level, .5);
+    assert.ok(Math.abs(level - 41.6695262460979) < 1e-6, 'island bank eligibility must not change lake level');
+    const geometry = buildWaterGeometry(source, reference, level, .5, 'connected-basin');
     const lake = new WaterSurface(geometry.lake, level);
-    const previousLake = new WaterSurface(buildWaterGeometry(source, reference, shorelineLevel, .5).lake, shorelineLevel);
+    const previousLake = new WaterSurface(buildWaterGeometry(source, reference, shorelineLevel, .5, 'connected-basin').lake, shorelineLevel);
     for (const [x, z] of [[200, 100], [250, 150], [300, 150]]) {
         const water = lake.sample(x, z);
         assert.ok(water && water.depth > 2, `Expected deep lake water at ${x}, ${z}`);
@@ -55,6 +58,11 @@ test('corrected heightmap lake fills its raised basin, supports swimming and lea
     }
     assert.equal(lake.sample(272.5, 76), null, 'Lake Island must remain dry');
     assert.equal(lake.sample(-32.5, 308), null, 'Desert Start must remain dry');
+    const ground = new MeshSurface(data.positions, data.indices, 16);
+    for (let z = -32; z < 225; z += 4) for (let x = 105; x < 425; x += 4) {
+        if (Math.max(mask.waterAt(x, z), mask.beachAt(x, z)) < .99 || ground.sample(x, z) >= level - .1) continue;
+        assert.ok(lake.sample(x, z), `Submerged shore must not have a water gap at ${x},${z}`);
+    }
     assert.ok(geometry.lake.indices.length / 3 < 60000, 'Interior water should retain coarse geometry');
 });
 
@@ -107,7 +115,7 @@ test('PNG decoder reconstructs all scanline filters and rejects unsupported/trun
     let offset = 0; for (const part of parts) { bytes.set(part, offset); offset += part.length; }
     assert.deepEqual([...decodeAuthoredPng(bytes).pixels], Array.from({ length: 5 }, () => [0x1234, 0xabcd]).flat());
     assert.throws(() => decodeAuthoredPng(bytes.subarray(0, bytes.length - 5)), /Incomplete|Truncated/);
-    bytes[24] = 8; assert.throws(() => decodeAuthoredPng(bytes), /grayscale16/);
+    bytes[24] = 4; assert.throws(() => decodeAuthoredPng(bytes), /grayscale/);
 });
 
 test('roads stay firm and conservative detail selection preserves interior soft areas', () => {

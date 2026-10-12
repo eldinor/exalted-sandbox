@@ -156,7 +156,8 @@ paths.
 - Large rocks, quiver trunks, cacti and woody Searsia stems use approximate
   static cylinder collision derived from their placed full-detail geometry.
 - Leaves, soft plants and small stones remain passable.
-- Forest integration is deferred until replacement tree models arrive.
+- Full forest integration remains deferred. The user authorized a limited closed
+  eastern-strip trial using replacement `Pine_big_1`; see `FOREST_NOTES.md`.
 
 ### Water
 
@@ -180,6 +181,8 @@ paths.
 - Do not insert Babylon `FluidRenderer` ahead of this post chain; it takes the
   first camera postprocess slot and disrupts temporal/history assumptions.
 - Ctrl+I dynamically loads the matching Babylon Inspector.
+- Ctrl+P captures terrain/water from above; Ctrl+Shift+P captures a 4096x3072
+  orthographic whole-map view with all forest/desert prop placements in Screenshots.
 - P captures the final scene canvas into a session-only 12-slot screenshot
   gallery with preview, navigation, deletion, individual download, and ZIP
   download.

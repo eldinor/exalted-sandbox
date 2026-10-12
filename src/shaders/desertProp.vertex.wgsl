@@ -3,6 +3,10 @@
 attribute position: vec3f;
 attribute normal: vec3f;
 attribute uv: vec2f;
+#ifdef PROP_IMPOSTOR_BATCH
+attribute impostorYaw: vec2f;
+varying vImpostorYaw: vec2f;
+#endif
 #ifdef INSTANCES
 attribute world0: vec4f;
 attribute world1: vec4f;
@@ -60,6 +64,9 @@ fn main(input: VertexInputs) -> FragmentInputs {
     }
 #endif
     vertexOutputs.vNormal = worldNormal;
+#ifdef PROP_IMPOSTOR_BATCH
+    vertexOutputs.vImpostorYaw = vertexInputs.impostorYaw;
+#endif
     vertexOutputs.vWorld = worldPos.xyz;
     vertexOutputs.vUV = (uniforms.uvMatrix * vec4f(vertexInputs.uv, 1.0, 0.0)).xy;
     vertexOutputs.vEmissiveUV = (uniforms.emissiveMatrix * vec4f(vertexInputs.uv, 1.0, 0.0)).xy;

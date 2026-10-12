@@ -86,7 +86,8 @@ export class WorldWater {
         const mask = terrain.heightfield instanceof ExaltedWorld ? terrain.heightfield.biomeSurface : null;
         const waterSource = mask ? heightmapWaterSource(source, mask, reference, worldScale) : source;
         const lakeLevel = mask ? heightmapLakeLevel(waterSource, reference, worldScale) + HEIGHTMAP_LAKE_LEVEL_OFFSET : 0;
-        const geometry = buildWaterGeometry(waterSource, reference, lakeLevel, worldScale);
+        const geometry = buildWaterGeometry(waterSource, reference, lakeLevel, worldScale,
+            mask ? 'connected-basin' : 'reference');
         this.level = geometry.level;
         this.surface = new WaterSurface(geometry.lake, this.level);
         this.emitters = waterfallEmitters(geometry.river);

@@ -36,9 +36,16 @@ test('stream planning does no placement work; frame queue bounds uploads and reu
             lodEnabled: false, singleLod: 2, rootColor: [.05, .2, .05], tipColor: [.01, .3, .01],
         };
         let queries = 0;
+        let forward = true;
+        const options: NonNullable<ConstructorParameters<typeof Renderer>[5]> = {
+            importedOnly: true, streaming: true,
+            isTileInView: (_x, z) => forward ? z >= 0 : z < 0,
+            isMeshInView: mesh => forward
+                ? mesh.getBoundingInfo().boundingBox.center.z >= 0 : mesh.getBoundingInfo().boundingBox.center.z < 0,
+        };
         const grass = new Renderer(scene, {
             heightAt: () => 0, grassWeightAt: () => { queries++; return 1; }, excludedAt: () => false, slopeAt: () => 0,
-        }, settings, new Vector2(), 64, { importedOnly: true, streaming: true });
+        }, settings, new Vector2(), 64, options);
         grass.setImportedPrototypes(prototypes);
         assert.equal(queries, 0);
         const context: GrassUpdateContext = { cameraPosition: new Vector3(), elapsedSeconds: 0, impacts: [] };
@@ -51,6 +58,25 @@ test('stream planning does no placement work; frame queue bounds uploads and reu
         }
         const retained = scene.meshes.find(mesh => mesh.name === 'grass:0:0:near');
         assert.ok(retained);
+        // Direction changes gate both enabled meshes and new placement work,
+        // while completed patches retain geometry for an immediate return.
+        grass.update(context);
+        assert.ok(grass.streamingStats.deferred > 0);
+        const cachedGeometry = retained.geometry;
+        const queriesFacingForward = queries;
+        for (let frame = 0; frame < 20; frame++) grass.update(context);
+        assert.equal(queries, queriesFacingForward, 'off-screen queue does not spend placement budget');
+        assert.ok(scene.meshes.filter(mesh => mesh.isEnabled() && mesh.name.startsWith('grass:')).every(mesh => mesh.getBoundingInfo().boundingBox.center.z >= 0));
+        forward = false;
+        grass.update(context);
+        assert.equal(retained.isEnabled(), false, 'turning away disables cached front patch');
+        forward = true;
+        grass.update(context);
+        assert.equal(retained.isEnabled(), true);
+        assert.equal(retained.geometry, cachedGeometry, 'turning back reuses the same buffers');
+        delete options.isTileInView;
+        delete options.isMeshInView;
+        for (let frame = 0; frame < 100; frame++) grass.update(context);
         assert.equal(grass.stats.midInstances, 0);
         context.cameraPosition.x = 16;
         grass.update(context);

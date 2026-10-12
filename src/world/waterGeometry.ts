@@ -8,18 +8,22 @@ export interface TerrainWaterSource {
     colors: ArrayLike<number>;
     indices: ArrayLike<number>;
     waterWeights?: ArrayLike<number>;
+    /** Beach/island bank eligibility, separate from weights used to infer level and river flow. */
+    lakeWeights?: ArrayLike<number>;
 }
 
 interface ImageWaterMask {
     waterAt(x: number, z: number): number;
     hasWaterArea(minX: number, maxX: number, minZ: number, maxZ: number): boolean;
     hasLandArea?(minX: number, maxX: number, minZ: number, maxZ: number): boolean;
+    beachAt?(x: number, z: number): number;
+    hasBeachArea?(minX: number, maxX: number, minZ: number, maxZ: number): boolean;
 }
 
 /** Sample narrow painted water regions inside source triangles, retaining their planes. */
 export function heightmapWaterSource(data: TerrainWaterSource, mask: ImageWaterMask,
-    reference?: WaterReference, worldScale = 1): TerrainWaterSource {
-    const positions: number[] = [], indices: number[] = [], waterWeights: number[] = [];
+    reference?: WaterReference, worldScale = 1, lakeMargin = 50): TerrainWaterSource {
+    const positions: number[] = [], indices: number[] = [], waterWeights: number[] = [], lakeWeights: number[] = [];
     const p = data.positions, ix = data.indices;
     const polygon: Point2[] = reference?.lake.map(([x, z]) => [-x * worldScale, -z * worldScale]) ?? [];
     const edge = polygon.length ? [...polygon, polygon[0]] : [];
@@ -32,12 +36,12 @@ export function heightmapWaterSource(data: TerrainWaterSource, mask: ImageWaterM
             const padding = Math.max(Math.hypot(p[a] - x, p[a + 2] - z),
                 Math.hypot(p[b] - x, p[b + 2] - z), Math.hypot(p[c] - x, p[c + 2] - z));
             // Never tessellate the blue northern ocean, which the runtime does not render.
-            if (!inside(x, z, polygon) && riverDistance(x, z, edge) > padding
+            if (!inside(x, z, polygon) && riverDistance(x, z, edge) > lakeMargin + padding
                 && riverDistance(x, z, line) > 55 * worldScale + padding) continue;
         }
         const minX = Math.min(p[a], p[b], p[c]), maxX = Math.max(p[a], p[b], p[c]);
         const minZ = Math.min(p[a + 2], p[b + 2], p[c + 2]), maxZ = Math.max(p[a + 2], p[b + 2], p[c + 2]);
-        if (!mask.hasWaterArea(minX, maxX, minZ, maxZ)) continue;
+        if (!mask.hasWaterArea(minX, maxX, minZ, maxZ) && !mask.hasBeachArea?.(minX, maxX, minZ, maxZ)) continue;
         // Only painted edges need fine tessellation. Lake interiors remain on
         // the coarse source planes, avoiding hundreds of thousands of flat triangles.
         const subdivisions = mask.hasLandArea?.(minX, maxX, minZ, maxZ) === false ? 1 : 4;
@@ -50,7 +54,9 @@ export function heightmapWaterSource(data: TerrainWaterSource, mask: ImageWaterM
                 const x = p[a] * u + p[b] * v + p[c] * w;
                 const y = p[a + 1] * u + p[b + 1] * v + p[c + 1] * w;
                 const z = p[a + 2] * u + p[b + 2] * v + p[c + 2] * w;
-                positions.push(x, y, z); waterWeights.push(mask.waterAt(x, z));
+                const water = mask.waterAt(x, z);
+                positions.push(x, y, z); waterWeights.push(water);
+                lakeWeights.push(Math.max(water, mask.beachAt?.(x, z) ?? 0));
             }
         }
         for (let row = 0; row < subdivisions; row++) for (let column = 0; column < subdivisions - row; column++) {
@@ -59,7 +65,7 @@ export function heightmapWaterSource(data: TerrainWaterSource, mask: ImageWaterM
             if (column < subdivisions - row - 1) indices.push(next, v + 1, next + 1);
         }
     }
-    return { positions, colors: [], indices, waterWeights };
+    return { positions, colors: [], indices, waterWeights, lakeWeights };
 }
 
 export interface WaterMeshData {
@@ -194,6 +200,7 @@ export function buildWaterGeometry(
     reference: WaterReference,
     level = 0,
     worldScale = 1,
+    lakeBoundary: 'reference' | 'connected-basin' = 'reference',
 ): BuiltWaterGeometry {
     const lake: WaterMeshData = { positions: [], normals: [], colors: [], indices: [] };
     const river: WaterMeshData = { positions: [], normals: [], colors: [], indices: [] };
@@ -201,6 +208,8 @@ export function buildWaterGeometry(
     const polygon: Point2[] = reference.lake.map(([x, z]) => [-x * worldScale, -z * worldScale]);
     const line: Point2[] = reference.river.map(([x, z]) => [-x * worldScale, -z * worldScale]);
     const p = data.positions, c = data.colors, ix = data.indices;
+    // Match the rendered plane's small depth-fighting offset at its shore rim.
+    const lakeClipLevel = lakeBoundary === 'connected-basin' ? level + .025 : level;
 
     function append(target: WaterMeshData, poly: WaterVertex[], flow = false): void {
         if (poly.length < 3) return;
@@ -226,15 +235,66 @@ export function buildWaterGeometry(
         const tri: WaterVertex[] = [Number(ix[i]), Number(ix[i + 1]), Number(ix[i + 2])].map(k => [
             p[k * 3], p[k * 3 + 1], p[k * 3 + 2], data.waterWeights?.[k] ?? blueWater(c[k * 4], c[k * 4 + 1], c[k * 4 + 2]),
         ]);
+        const lakeWeights = data.lakeWeights;
+        if (lakeBoundary === 'connected-basin' && lakeWeights) {
+            const lakeTri: WaterVertex[] = tri.map((v, corner) => [v[0], v[1], v[2], lakeWeights[Number(ix[i + corner])]]);
+            const lakeWet = clip(lakeTri, v => v[3] - .5);
+            append(lake, clip(lakeWet, v => lakeClipLevel - v[1]));
+        }
         if (!tri.some(v => v[3])) continue;
         const wet = clip(tri, v => v[3] - .5);
         if (wet.length < 3) continue;
         const x = wet.reduce((sum, v) => sum + v[0], 0) / wet.length;
         const z = wet.reduce((sum, v) => sum + v[2], 0) / wet.length;
-        if (inside(x, z, polygon)) append(lake, clip(wet, v => level - v[1]));
+        if (!(lakeBoundary === 'connected-basin' && data.lakeWeights)
+            && (lakeBoundary === 'connected-basin' || inside(x, z, polygon))) append(lake, clip(wet, v => lakeClipLevel - v[1]));
         // Permit the documented warp while excluding blue ocean/mountains
         // outside the authored river corridor. The blue mask supplies its edges.
         if (riverDistance(x, z, line) < 55 * worldScale) append(river, clip(wet, v => v[1] - level), true);
     }
-    return { lake, river, level };
+    return { lake: lakeBoundary === 'connected-basin' ? connectedLakeBasin(lake, polygon) : lake, river, level };
+}
+
+/** Retain the largest connected wet basin touching the reference lake.
+ * The old outline identifies the lake, without cutting its current banks into
+ * centroid-selected stair steps. Disconnected pools and the ocean stay excluded.
+ */
+function connectedLakeBasin(data: WaterMeshData, polygon: readonly Point2[]): WaterMeshData {
+    const p = data.positions, ix = data.indices, count = ix.length / 3;
+    const parents = Int32Array.from({ length: count }, (_, i) => i);
+    const find = (index: number): number => {
+        while (parents[index] !== index) { parents[index] = parents[parents[index]]; index = parents[index]; }
+        return index;
+    };
+    const vertices = new Map<string, number>();
+    for (let triangle = 0; triangle < count; triangle++) for (let corner = 0; corner < 3; corner++) {
+        const v = ix[triangle * 3 + corner] * 3;
+        // Source triangles retain independent vertices. Quantize round-off only,
+        // preserving real shoreline gaps and exact terrain-plane intersections.
+        const key = `${Math.round(p[v] * 1e5)},${Math.round(p[v + 2] * 1e5)}`;
+        const previous = vertices.get(key);
+        if (previous === undefined) vertices.set(key, triangle);
+        else parents[find(triangle)] = find(previous);
+    }
+    const areas = new Float64Array(count), eligible = new Uint8Array(count);
+    for (let triangle = 0; triangle < count; triangle++) {
+        const a = ix[triangle * 3] * 3, b = ix[triangle * 3 + 1] * 3, c = ix[triangle * 3 + 2] * 3;
+        const root = find(triangle);
+        areas[root] += Math.abs((p[b] - p[a]) * (p[c + 2] - p[a + 2]) - (p[c] - p[a]) * (p[b + 2] - p[a + 2])) * .5;
+        if (inside((p[a] + p[b] + p[c]) / 3, (p[a + 2] + p[b + 2] + p[c + 2]) / 3, polygon)) eligible[root] = 1;
+    }
+    let largest = -1;
+    for (let i = 0; i < count; i++) if (eligible[i] && (largest < 0 || areas[i] > areas[largest])) largest = i;
+    const result: WaterMeshData = { positions: [], normals: [], colors: [], indices: [] };
+    for (let triangle = 0; triangle < count; triangle++) {
+        if (find(triangle) !== largest) continue;
+        for (let corner = 0; corner < 3; corner++) {
+            const id = ix[triangle * 3 + corner];
+            result.indices.push(result.positions.length / 3);
+            result.positions.push(p[id * 3], p[id * 3 + 1], p[id * 3 + 2]);
+            result.normals.push(data.normals[id * 3], data.normals[id * 3 + 1], data.normals[id * 3 + 2]);
+            result.colors.push(data.colors[id * 4], data.colors[id * 4 + 1], data.colors[id * 4 + 2], data.colors[id * 4 + 3]);
+        }
+    }
+    return result;
 }

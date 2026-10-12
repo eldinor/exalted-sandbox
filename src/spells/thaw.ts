@@ -4,7 +4,7 @@
  * A warm pulse reverses the persistent snow state around an aimed point. The
  * expanding disc fills depressions, collapses berms, loosens compression and
  * melts glaze; nearby crystal geometry sublimates through its normal lifecycle.
- * One short shared-water strand traces a partly buried, snow-laden runoff seam.
+ * The legacy snow-laden runoff strand is hidden in the main application.
  * @module spells/thaw
  */
 
@@ -15,8 +15,9 @@ import type { SpellContext } from "./spellSystem.ts";
 const LIFE = 4.4;
 const RADIUS = 6.4;
 const COLS = 30;
+const SHOW_RUNOFF = false;
 
-/** Reverse persistent terrain disturbance around an aimed point while animating a short runoff strand. */
+/** Reverse persistent terrain disturbance around an aimed point with warm light and mist. */
 export class Thaw {
     readonly ctx: SpellContext;
     active = false;
@@ -37,9 +38,8 @@ export class Thaw {
         this.ctx = ctx;
     }
 
-    /** Restart a thaw pulse at the world target and orient its runoff strand along the horizontal aim. */
+    /** Restart a thaw pulse at the world target; the legacy runoff visual remains disabled. */
     trigger(x: number, y: number, z: number, aimX: number, aimZ: number): void {
-        if (this.strand < 0) this.strand = this.ctx.water.acquire();
         this.x = x;
         this.y = y;
         this.z = z;
@@ -47,7 +47,10 @@ export class Thaw {
         this._pulseOwed = 0.2;
         this._mistOwed = 0;
         this.active = true;
-        this._buildRivulet(aimX, aimZ);
+        if (SHOW_RUNOFF) {
+            if (this.strand < 0) this.strand = this.ctx.water.acquire();
+            this._buildRivulet(aimX, aimZ);
+        }
         this.ctx.rig.addTrauma(0.08);
     }
 
@@ -121,7 +124,7 @@ export class Thaw {
             this.x, this.y + 0.28, this.z,
             radius + 3.0, 1.0, 0.48, 0.18, 17.0 * env
         );
-        this._rivulet(grow, fade);
+        if (SHOW_RUNOFF) this._rivulet(grow, fade);
         this._mist(dt, radius, env);
     }
 

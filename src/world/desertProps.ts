@@ -9,6 +9,7 @@ import { InstancedMesh } from '@babylonjs/core/Meshes/instancedMesh';
 import '@babylonjs/core/Meshes/thinInstanceMesh';
 import '@babylonjs/core/Meshes/instancedMesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import type { MapPropSnapshot } from '../ui/mapPropSnapshot.ts';
 import { Matrix, Vector2, Vector3, Vector4 } from '@babylonjs/core/Maths/math.vector';
 import { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial';
 import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage';
@@ -95,6 +96,12 @@ interface TextureSrgbState {
 
 /** Authored placements, compacted into shared geometry/material instance batches. */
 export class DesertProps {
+    addMapSnapshot(snapshot:MapPropSnapshot):void {
+        for(const batch of this.batches){
+            if(!batch.all?.length||!(batch.mesh.material instanceof ShaderMaterial))continue;
+            snapshot.add(batch.mesh.name,batch.data,batch.mesh.material,batch.all,batch.mesh.sideOrientation);
+        }
+    }
     readonly scene: Scene;
     readonly terrain: Terrain;
     readonly sky: Sky;

@@ -6,6 +6,9 @@ varying vNormal: vec3f;
 varying vUV: vec2f;
 varying vEmissiveUV: vec2f;
 varying vViewZ: f32;
+#ifdef PROP_IMPOSTOR_BATCH
+varying vImpostorYaw: vec2f;
+#endif
 var baseTex: texture_2d<f32>;
 var baseTexSampler: sampler;
 uniform baseColor: vec4f;
@@ -51,6 +54,9 @@ uniform fogStart: f32;
 uniform aerialStrength: f32;
 uniform roughness: f32;
 uniform normalStrength: f32;
+#ifdef PROP_IMPOSTOR
+uniform impostorNormalMatrix: mat4x4f;
+#endif
 uniform spellLightPos: array<vec4f, 4>;
 uniform spellLightCol: array<vec4f, 4>;
 uniform spellLightCount: f32;
@@ -77,15 +83,34 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 #ifdef PROP_UNLIT
     var color = vec3f(0.0);
 #else
-    let albedo = pow(max(texel.rgb, vec3f(0.0)), vec3f(mix(1.0, 2.2, uniforms.gammaDecode))) * uniforms.baseColor.rgb;
+#ifdef PROP_IMPOSTOR
+    let diffuse = texel.rgb / max(texel.a, 1e-5);
+#else
+    let diffuse = texel.rgb;
+#endif
+    let albedo = pow(max(diffuse, vec3f(0.0)), vec3f(mix(1.0, 2.2, uniforms.gammaDecode))) * uniforms.baseColor.rgb;
     var N = normalize(input.vNormal);
     if (dot(N, V) < 0.0) { N = -N; }
-    let geoN = N;
+    var geoN = N;
     let T = cross(dy, N) * du.x + cross(N, dx) * dv.x;
     let B = cross(dy, N) * du.y + cross(N, dx) * dv.y;
     let inv = inverseSqrt(max(max(dot(T,T), dot(B,B)), 1e-12));
+#ifdef PROP_IMPOSTOR
+    let normalSample = textureSampleGrad(normalTex, normalTexSampler, input.vUV, du, dv);
+    let bump = normalSample.xyz / max(normalSample.a, 1e-5) * 2.0 - 1.0;
+    // Baked object-space normals preserve lighting as the billboard turns.
+#ifdef PROP_IMPOSTOR_BATCH
+    let c = input.vImpostorYaw.x; let s = input.vImpostorYaw.y;
+    N = normalize(vec3f(c * bump.x + s * bump.z, bump.y, -s * bump.x + c * bump.z));
+#else
+    N = normalize((uniforms.impostorNormalMatrix * vec4f(bump, 0.0)).xyz);
+#endif
+    if (dot(N, V) < 0.0) { N = -N; }
+    geoN = N;
+#else
     let bump = textureSampleGrad(normalTex, normalTexSampler, input.vUV, du, dv).xyz * 2.0 - 1.0;
     N = normalize(N * max(bump.z, 0.1) + (T * bump.x - B * bump.y) * inv * uniforms.normalStrength);
+#endif
     let rough = clamp(textureSampleGrad(roughTex, roughTexSampler, input.vUV, du, dv).g * uniforms.roughness, 0.25, 1.0);
     let H = normalize(L + V);
     let nl = max(dot(N,L), 0.0); let nv = max(dot(N,V), 0.001);
@@ -98,7 +123,17 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     let emission=textureSampleGrad(emissiveTex,emissiveTexSampler,input.vEmissiveUV,dpdx(input.vEmissiveUV),dpdy(input.vEmissiveUV)).rgb;
     // Emission is independent of sun/shadow lighting, but still receives fog.
     color += pow(max(emission,vec3f(0.0)),vec3f(mix(1.0,2.2,uniforms.emissiveGamma))) * uniforms.emissiveColor;
+#ifdef MAP_SCREENSHOT
+    var mapTexel = texel.rgb;
+#ifdef PROP_IMPOSTOR
+    mapTexel /= max(texel.a, 1e-5);
+#endif
+    let mapAlbedo = pow(max(mapTexel,vec3f(0.0)),vec3f(mix(1.0,2.2,uniforms.gammaDecode))) * uniforms.baseColor.rgb;
+    let mapLight = .65 + .35 * max(dot(normalize(input.vNormal),L),0.0);
+    color = pow(clamp(mapAlbedo * mapLight,vec3f(0.0),vec3f(1.0)),vec3f(1.0/2.2));
+#else
     color = applyAerial(color, uniforms.cameraPos, input.vWorld, -V, L, skyLUT, skyLUTSampler, uniforms.sunRadiance, uniforms.fogDensity, uniforms.fogHeightFalloff, uniforms.fogStart, uniforms.aerialStrength);
+#endif
     fragmentOutputs.color = vec4f(color, 1.0);
 #endif
 #endif

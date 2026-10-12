@@ -51,6 +51,16 @@ The default mode loads the authored Exalted world:
 - Shared Grassland geometry streams onto the authored grass biome, with avatar
   walking/surf bending and a matching production depth pass. Density is 3; grass
   receives shadows but does not cast them. See [GRASS.md](GRASS.md).
+- Heightmap textured ground blends grass, forest and desert using the generated
+  linear RGB `ground-coverage-9.png`, also read by CPU grass placement. Existing
+  snow, road, water and deformation masks remain separate. See
+  A saved `biome-rock-9.png` supplies rock ground and removes sand softness in
+  the corrected northern corridor. See [BIOMES_MAPS.md](BIOMES_MAPS.md) for
+  preparation and the 27-texture device limit. Beach coverage is saved separately
+  and packed with rock into `ground-detail-coverage-9.png` (R rock, G beach),
+  retaining water eligibility independently. `BeachGround.ts` owns the supplied
+  aerial beach colour/normal/ARM maps at 30 m physical width; stochastic sampling
+  shares the rock implementation and existing repeat samplers.
 - Water geometry is derived from the selected terrain triangles and water mask plus
   `world/waterReference.json`.
 - The spawn bar exposes named locations and texture and wind controls.
@@ -264,6 +274,10 @@ Shared resources keep spell cost bounded:
 This means active spell count changes buffer contents and visibility rather than
 creating an unbounded number of render resources.
 
+Melt (`Thaw`, spell 9) keeps its terrain recovery, crystal melting, warm light
+and mist. Its legacy snow/slush runoff curve is disabled (`SHOW_RUNOFF = false`)
+and acquires no shared-water strand, so the ice-like trace is no longer drawn.
+
 ## Rendering pipeline
 
 The custom renderer has four connected layers:
@@ -372,7 +386,32 @@ New spells should implement the coordinator lifecycle, reuse pooled strands,
 crystals, lights, and spray where suitable, register animated geometry with depth
 and shadow systems, and release all handles on reset.
 
-The future forest implementation must follow [FOREST_SPEC.md](FOREST_SPEC.md):
+The eastern forest sections live in `src/world/worldForest.ts`, with shared
+TypeScript pine asset, placement, grounding and material adapters in `src/forest`.
+It uses 32 m independent thin-instance batches per Big 1/Small 1 LOD2 model
+at the accessible 15 m edge and around Cube Spawn, plus CPU-expanded sprite
+batches for the remaining closed strip (X <= -367 outside the 33 m spawn ring),
+sharing two spruce
+atlas textures and colour/prepass materials. `ImpostorBatchGeometry.ts` handles
+height, yaw-relative view selection and camera-facing geometry without temporary
+allocations; `ForestImpostorBatch.ts` owns typed buffers, conservative fixed
+chunk bounds, distance compaction and depth-registration cleanup. It uses the
+registered production prop shaders and matching alpha-tested depth. Frame updates
+follow desert props; pine and card colour/depth pipelines draw during loading. An
+independent overlapping-cylinder area barrier shares the existing collision grid
+and is removed by ownership on disposal. A benchmark toggle changes rendering,
+not access. The 116 m strip reserves the spawn clearing and exit corridor; its
+versioned automatic benchmark combines a ground-edge pass and aerial sweep using
+the same camera lifecycle as the independent grass route. Tree casting/wind and
+full-biome integration remain deferred. `OpenForestPlacement.ts` adds the
+walkable section toward Forest Outlook with six medium/small/sapling variants,
+8 m spacing, per-model root grounding and individual trunk cylinders. It leaves
+the overlook centre and grassland sightline clear, preserves the original closed
+stand and batches each model independently with shared pack materials. The
+existing forest toggle and route include this extension; per-variant pipelines
+warm during loading.
+
+The future complete forest implementation must follow [FOREST_SPEC.md](FOREST_SPEC.md):
 32 m chunks, thin instances, two geometry LOD levels, stable shadows, root-anchored
 wind, trunk-only collision, and separation between asset preparation and runtime
 rendering.
@@ -383,7 +422,7 @@ These pages are intentionally outside the production TypeScript migration:
 
 - `snow_mountain.html` and `src/mountain/demo.js`
 - `forest_road.html` and its mountain helper modules
-- `forest.html` and `src/forest`
+- `forest.html` and its retained JavaScript modules under `src/forest`
 
 They may import production TypeScript modules through Vite, but production code
 must not depend on them. The old forest implementation is a performance and
@@ -403,3 +442,23 @@ classification, water geometry and swimming, and retained forest preparation
 algorithms. GPU appearance and performance still require manual checks at fixed
 camera positions and resolution. Production builds are reserved for explicit
 release validation rather than every reversible edit.
+
+
+The standalone `spruceland.html` evaluates a prepared cutout spruce and a baked
+17-view impostor. Shared `ImpostorViews.ts`/`SpruceImpostor.ts` supply view selection,
+validated atlas metadata and two-triangle card placement. `ForestMaterials`
+optionally enables object-normal atlas shading in the existing prop WGSL; default
+prop shading remains unchanged. Camera-depth alpha is shared with the visible
+card, and detailed tree alpha agrees with its shadow passes. Offline WebGPU
+baking lives under `generator/spruce` and writes attributed runtime assets under
+`public/terrain/forest/blue-spruce`. Production does not import baking code.
+
+
+Whole-map inspection uses an isolated orthographic camera/render target, leaving
+the gameplay camera and temporal chain intact. Ctrl+P renders authoritative
+terrain/water; Ctrl+Shift+P also asks forest/desert subsystems for complete
+placement snapshots via `MapPropSnapshot`, ignoring gameplay stream/distance
+visibility. Forest snapshots use all matrices and overhead impostor views.
+Temporary geometry/materials use an exclusive layer and the depth-tested group
+0, then dispose after readback. The prop shader's MAP_SCREENSHOT branch retains
+alpha cutout and emits readable sRGB map colours without distance fade/fog/wind.

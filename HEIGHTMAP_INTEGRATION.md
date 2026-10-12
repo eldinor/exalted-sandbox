@@ -298,3 +298,46 @@ mistaken for current behaviour. Record visual checks separately from Node tests.
 - Prop placement issues and precision/performance limitations are documented.
 - Automated checks pass and manual GPU results are recorded.
 - GLB/procedural comparison paths and supporting utilities remain usable.
+
+
+## Shore gaps: connected heightmap lake basin
+
+The beach material exposed gaps between the raised water plane and the current
+heightmap banks. The old Rev B lake polygon was still a hard centroid-based cut:
+submerged, water-eligible terrain beyond it was omitted, and triangles crossing
+that outline left stair steps. A one-metre CPU audit found 9,000 uncovered wet
+samples in the checked lake area (104 inside and 8,896 outside the old outline).
+
+Heightmap water extraction now includes a **50 m candidate margin** around that
+reference. After clipping eligible terrain triangles to the lake plane, a shared-
+vertex component pass retains the largest connected basin touching the reference
+lake. The outline identifies the lake rather than trimming its current banks;
+disconnected ponds/ocean components are excluded. Painted water eligibility and
+actual terrain triangles still bound coverage, keeping the island and dry land
+out of the water. Rendering, camera depth, Ctrl+P and swimming share this geometry.
+The retained small rendered offset (+0.025 m) is also included in rim clipping,
+so the edge meets the bank at the drawn plane rather than floating 2.5 cm above it.
+Physical level/depth remain referenced to the existing lake level, approximately
+**41.669526 m**, including the previously requested five-metre rise.
+
+GLB comparison retains its reference-boundary path. River slope rendering and
+its waterfall exclusions remain unchanged. Geometry/component generation happens
+at startup, without frame-loop allocations or additional render passes.
+
+Validation: the audit now finds zero uncovered submerged samples in the checked
+lake area. Node regressions cover connected shore extension, disconnected pool
+rejection, exact rim/terrain intersection, unchanged physical level, real-map wet
+shore samples, dry island/desert, and swimming. Native WebGPU ground and Ctrl+P
+views show the lake reaching its current terrain banks. Typecheck/full Node suite
+passed; no production build or Playwright. The baseline headless float32-filterable
+warning remains.
+
+
+Island follow-up: water extraction now carries `lakeWeights` separately from
+`waterWeights`. Beach coverage includes the island's muted grey-green palette;
+only lake clipping may use maximum(water,beach) to reach submerged island banks.
+Level inference and river geometry retain the original painted-water weights and
+edge sample density. The level stays exactly 41.669526 m, dry island terrain
+remains excluded, and the island uses the beach PBR material at 30 m width.
+Typecheck/148 tests passed; native WebGPU found zero gaps at 768 submerged
+island-bank samples and checked ground/Ctrl+P views. See BIOMES_MAPS.md.

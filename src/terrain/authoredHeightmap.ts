@@ -4,6 +4,7 @@ export { roadsGrassWeight } from '../grass/GrassBiome.ts';
 import { unzlibSync } from 'fflate';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { biomeMapMaterialWeights } from './surfaceTypes.ts';
+import { buildRoadDisplayMask, readRoadDisplayMask } from './roadBlending.ts';
 
 export const HEIGHTMAP_WIDTH = 936;
 export const HEIGHTMAP_DEPTH = 702;
@@ -25,7 +26,7 @@ function paeth(a: number, b: number, c: number): number {
     return da <= db && da <= dc ? a : db <= dc ? b : c;
 }
 
-/** Decode the two supplied non-interlaced formats without Canvas's 8-bit conversion. */
+/** Decode numeric grayscale8/16 and RGB8 PNGs without Canvas colour conversion. */
 export function decodeAuthoredPng(bytes: Uint8Array): AuthoredPng {
     const signature = [137, 80, 78, 71, 13, 10, 26, 10];
     if (!signature.every((value, index) => bytes[index] === value)) throw new Error('Invalid authored PNG signature.');
@@ -42,9 +43,9 @@ export function decodeAuthoredPng(bytes: Uint8Array): AuthoredPng {
             if (offset !== 8 || length !== 13) throw new Error('Invalid authored PNG header.');
             width = view.getUint32(start); height = view.getUint32(start + 4); depth = bytes[start + 8];
             const color = bytes[start + 9];
-            if (!((color === 0 && depth === 16) || (color === 2 && depth === 8))
+            if (!((color === 0 && (depth === 8 || depth === 16)) || (color === 2 && depth === 8))
                 || bytes[start + 10] || bytes[start + 11] || bytes[start + 12]) {
-                throw new Error('Authored PNG requires non-interlaced grayscale16 or RGB8.');
+                throw new Error('Authored PNG requires non-interlaced grayscale8/16 or RGB8.');
             }
             if (!width || !height || width > 4096 || height > 4096) throw new Error('Authored PNG dimensions exceed 4096.');
             channels = color === 0 ? 1 : 3;
@@ -83,7 +84,7 @@ export function decodeAuthoredPng(bytes: Uint8Array): AuthoredPng {
 type Output = { [index: number]: number };
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 
-/** Both measured blue map colours represent water; gray/green island colours do not. */
+/** Both blue colours retain water eligibility; light-blue beach appearance is classified separately. */
 export function roadsWaterWeight(rgb: ArrayLike<number>): number {
     const distance = Math.min(
         Math.hypot(rgb[0] - 129 / 255, rgb[1] - 173 / 255, rgb[2] - 206 / 255),
@@ -113,19 +114,44 @@ export class AuthoredSurfaceMap {
     readonly data: Uint8Array;
     /** Separate from the four terrain deformation/material channels. */
     readonly grassData: Uint8Array;
-    constructor(readonly width: number, readonly height: number, image: AuthoredPng) {
+    readonly roadDisplayData: Uint8Array;
+    readonly rockData: Uint8Array | null;
+    readonly beachData: Uint8Array | null;
+    constructor(readonly width: number, readonly height: number, image: AuthoredPng, groundCoverage?: AuthoredPng, roadDisplay?: AuthoredPng, rockCoverage?: AuthoredPng, beachCoverage?: AuthoredPng) {
+        if (groundCoverage && groundCoverage.channels !== 3) throw new Error('Ground coverage must be linear RGB.');
         this.data = new Uint8Array(width * height * 4);
         this.grassData = new Uint8Array(width * height);
+        this.rockData = rockCoverage ? readRoadDisplayMask(rockCoverage, width, height) : null;
+        this.beachData = beachCoverage ? readRoadDisplayMask(beachCoverage, width, height) : null;
         const rgb = new Float32Array(3), weights = new Float32Array(3);
+        const ground = new Float32Array(3);
         for (let row = 0; row < height; row++) for (let column = 0; column < width; column++) {
             sampleBiomeRgb(image, column / (width - 1) * HEIGHTMAP_WIDTH - HEIGHTMAP_WIDTH / 2,
                 row / (height - 1) * HEIGHTMAP_DEPTH - HEIGHTMAP_DEPTH / 2, rgb);
             biomeMapMaterialWeights(rgb, weights);
             const offset = (row * width + column) * 4;
-            this.grassData[row * width + column] = Math.round(roadsGrassWeight(rgb) * 255);
+            if (this.rockData) weights[1] *= 1 - this.rockData[row * width + column] / 255;
+            const water = roadsWaterWeight(rgb);
+            if (groundCoverage) sampleBiomeRgb(groundCoverage, column / (width - 1) * HEIGHTMAP_WIDTH - HEIGHTMAP_WIDTH / 2,
+                row / (height - 1) * HEIGHTMAP_DEPTH - HEIGHTMAP_DEPTH / 2, ground);
+            const grass = groundCoverage ? ground[0] * (1 - clamp01(weights[0] + water)) : roadsGrassWeight(rgb);
+            this.grassData[row * width + column] = Math.round(grass * 255);
             for (let channel = 0; channel < 3; channel++) this.data[offset + channel] = Math.round(weights[channel] * 255);
-            this.data[offset + 3] = Math.round(roadsWaterWeight(rgb) * 255);
+            this.data[offset + 3] = Math.round(water * 255);
         }
+        this.roadDisplayData = roadDisplay ? readRoadDisplayMask(roadDisplay, width, height)
+            : buildRoadDisplayMask(this.data, width, height, HEIGHTMAP_WIDTH, HEIGHTMAP_DEPTH);
+        if (groundCoverage) for (let i = 0; i < this.grassData.length; i++) {
+            // Thin grass through the visual shoulder; keep the firm road clear.
+            this.grassData[i] = Math.round(this.grassData[i] * (1 - Math.max(this.roadDisplayData[i], this.data[i * 4 + 2]) / 255));
+        }
+    }
+
+    /** Upload display road coverage without changing CPU snow/sand/road/water data. */
+    visualSurfaceData(): Uint8Array {
+        const visual = this.data.slice();
+        for (let i = 0; i < this.roadDisplayData.length; i++) visual[i * 4 + 2] = this.roadDisplayData[i];
+        return visual;
     }
 
     sample<T extends Output>(x: number, z: number, out: T): T {
@@ -134,6 +160,12 @@ export class AuthoredSurfaceMap {
     }
 
     grassAt(x: number, z: number): number { return this.sampleChannel(x, z, 4); }
+    rockAt(x: number, z: number): number { return this.sampleChannel(x, z, 5); }
+    beachAt(x: number, z: number): number { return this.sampleChannel(x, z, 6); }
+
+    hasBeachArea(minX: number, maxX: number, minZ: number, maxZ: number): boolean {
+        return this.hasArea(minX, maxX, minZ, maxZ, 'beach');
+    }
 
     hasGrassArea(minX: number, maxX: number, minZ: number, maxZ: number): boolean {
         return this.hasArea(minX, maxX, minZ, maxZ, 'grass');
@@ -146,8 +178,9 @@ export class AuthoredSurfaceMap {
         const fy = clamp01(z / HEIGHTMAP_DEPTH + 0.5) * (this.height - 1);
         const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
         const nextX = Math.min(ix + 1, this.width - 1), nextY = Math.min(iy + 1, this.height - 1);
-        const pixels = channel === 4 ? this.grassData : this.data;
-        const stride = channel === 4 ? 1 : 4, component = channel === 4 ? 0 : channel;
+        const pixels = channel === 6 ? this.beachData : channel === 5 ? this.rockData : channel === 4 ? this.grassData : this.data;
+        if (!pixels) return 0;
+        const stride = channel >= 4 ? 1 : 4, component = channel >= 4 ? 0 : channel;
         const a = pixels[(iy * this.width + ix) * stride + component];
         const b = pixels[(iy * this.width + nextX) * stride + component];
         const c = pixels[(nextY * this.width + ix) * stride + component];
@@ -168,14 +201,15 @@ export class AuthoredSurfaceMap {
         return this.hasArea(minX, maxX, minZ, maxZ, 'land');
     }
 
-    private hasArea(minX: number, maxX: number, minZ: number, maxZ: number, kind: 'soft' | 'water' | 'land' | 'grass'): boolean {
+    private hasArea(minX: number, maxX: number, minZ: number, maxZ: number, kind: 'soft' | 'water' | 'land' | 'grass' | 'beach'): boolean {
         const x0 = Math.max(0, Math.floor((minX / HEIGHTMAP_WIDTH + .5) * (this.width - 1)));
         const x1 = Math.min(this.width - 1, Math.ceil((maxX / HEIGHTMAP_WIDTH + .5) * (this.width - 1)));
         const z0 = Math.max(0, Math.floor((minZ / HEIGHTMAP_DEPTH + .5) * (this.height - 1)));
         const z1 = Math.min(this.height - 1, Math.ceil((maxZ / HEIGHTMAP_DEPTH + .5) * (this.height - 1)));
         for (let row = z0; row <= z1; row++) for (let column = x0; column <= x1; column++) {
             const offset = (row * this.width + column) * 4;
-            if (kind === 'grass' ? this.grassData[row * this.width + column] > 0 : kind === 'water' ? this.data[offset + 3] > 127
+            if (kind === 'beach' ? (this.beachData?.[row * this.width + column] ?? 0) > 127
+                : kind === 'grass' ? this.grassData[row * this.width + column] > 0 : kind === 'water' ? this.data[offset + 3] > 127
                 : kind === 'land' ? this.data[offset + 3] < 255 : this.data[offset] + this.data[offset + 1] > 0) return true;
         }
         return false;

@@ -34,6 +34,7 @@ export const stats = {
     fps: 0,
     fpsLow: 0, // 1% low fps
     drawCalls: 0,
+    submittedIndices: 0,
     triangles: 0,
     gpuMs: 0,
 };
@@ -92,6 +93,15 @@ function recompute(): void {
  * the overlay reads a whole frame rather than a partial one.
  */
 let drawAccum = 0;
+let indicesAccum = 0;
+let benchmarkDrawRecording = false;
+
+/** Collect instanced indexed submissions only while a benchmark is recording. */
+export function setBenchmarkDrawRecording(enabled: boolean): void {
+    benchmarkDrawRecording = enabled;
+    indicesAccum = 0;
+    stats.submittedIndices = 0;
+}
 
 /**
  * Wrap the engine's indexed and non-indexed draw entry points once. endFrameDraws latches a complete frame rather than an accumulating engine counter.
@@ -101,6 +111,7 @@ export function installDrawCounter(engine: AbstractEngine): void {
     const arrays = engine.drawArraysType.bind(engine);
     engine.drawElementsType = function (a: number, b: number, c: number, d?: number): void {
         drawAccum++;
+        if (benchmarkDrawRecording) indicesAccum += c * (d ?? 1);
         elements(a, b, c, d);
     };
     engine.drawArraysType = function (a: number, b: number, c: number, d?: number): void {
@@ -112,7 +123,9 @@ export function installDrawCounter(engine: AbstractEngine): void {
 /** Latch the frame's draw count. Call once, after `scene.render()`. */
 export function endFrameDraws(): void {
     stats.drawCalls = drawAccum;
+    stats.submittedIndices = indicesAccum;
     drawAccum = 0;
+    indicesAccum = 0;
 }
 
 /** Record a per-system cost in ms (overwrites; call once per frame per system). */

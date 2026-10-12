@@ -41,6 +41,20 @@ remaining visual checks are in [HEIGHTMAP_INTEGRATION.md](HEIGHTMAP_INTEGRATION.
 | Escape | Release the pointer to use the navigation and UI. |
 | 1-9 | Cast spells. |
 | F1 or backtick | Open settings and performance controls. |
+| P | Capture the current view in Screenshots. |
+| Ctrl+P | Capture the whole authored map from above in Screenshots. |
+| Ctrl+Shift+P | Capture the whole map with all forest and desert props, at 4096 × 3072. |
+
+Ctrl+P map screenshots are north-up, orthographic 2048 × 1536 PNGs with a small
+margin. They show the complete terrain, current biome/road textures and actual
+lake/river surfaces. A separate offscreen camera leaves the gameplay view in
+place. Map lighting emphasizes ground colour and terrain relief; water is shown
+in a flat blue. Camera fog, temporal effects, UI, avatar, streamed vegetation
+and props are omitted for a clear ground overview. Preview or download the image
+through the existing Screenshots gallery, including Download all ZIP export.
+Ctrl+Shift+P uses the same orthographic framing at 4096 × 3072 and adds every
+placed forest and desert prop, including overhead spruce crowns, even outside
+gameplay's distance and streaming limits. Use this view to review placement.
 
 ## Grassland lab
 
@@ -67,6 +81,17 @@ These settings, the model mix and diagnostic options are adjustable in the UI.
 
 For comparable benchmarks, keep the same settings and camera route, wait for
 the grass queue to settle, then change one option between runs.
+
+## Forestland lab
+
+Open [/forestland.html](forestland.html) to inspect the authored forest biome
+populated with 12 variants from the pine pack at LOD1/LOD2. A bottom panel mixes
+tree models in percentages that always total 100%. The standalone WebGPU page
+uses the current production heightmap and biome map, with grounded deterministic
+placement, 32 m batches and nearby shadows. Ground/Overview
+cameras, spacing, height, mix and distance controls, and a 30-second copyable
+benchmark are included. See [generator/forestland/README.md](generator/forestland/README.md).
+This lab does not enable forest trees in the main app.
 
 ## Further documentation
 

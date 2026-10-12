@@ -1,6 +1,6 @@
 /** Named Rev B destinations in chart coordinates before Babylon conversion. */
 
-export type BiomeName = 'Desert' | 'Snow' | 'Grassland' | 'Forest' | 'Mountains' | 'Lake' | 'Island' | 'Waterfall' | 'Pass';
+export type BiomeName = 'Desert' | 'Beach' | 'Snow' | 'Grassland' | 'Forest' | 'Mountains' | 'Lake' | 'Island' | 'Waterfall' | 'Pass';
 
 /** Authored player inspection point; X/Y are map-plane coordinates and yaw is radians. */
 export interface SpawnPoint {

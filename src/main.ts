@@ -19,7 +19,7 @@ import { registerShaders } from "./shaders/registry.ts";
 import { S, onChange } from "./core/settings.ts";
 import { captureDraws, type DrawCapture } from './core/drawCapture.ts';
 import {
-    sample, checkSpike, stats, mark, installDrawCounter, endFrameDraws,
+    sample, checkSpike, stats, systemMs, mark, installDrawCounter, endFrameDraws,
 } from "./core/perf.ts";
 import { initInput, pollInput, endFrame, input, resetInput } from "./core/input.ts";
 import { CameraRig } from "./core/camera.ts";
@@ -34,13 +34,17 @@ import { Overlay } from "./ui/overlay.ts";
 import { SpawnBar } from "./ui/spawnBar.ts";
 import { installInspectorShortcut } from './ui/inspector.ts';
 import { ScreenshotGallery } from './ui/screenshotGallery.ts';
+import { captureWholeMap } from './ui/mapScreenshot.ts';
 import { AvatarColors } from './ui/avatarColors.ts';
+import { BenchmarkPanel } from './ui/benchmark.ts';
+import { BenchmarkRoute } from './core/benchmarkRoute.ts';
 import { Sky } from "./render/sky.ts";
 import { ShadowSystem } from "./render/shadows.ts";
 import { Terrain } from "./terrain/terrain.ts";
 import { EXALTED_SPAWN, ExaltedWorld } from "./terrain/exaltedWorld.ts";
 import type { SpawnPoint } from "./world/spawnPoints.ts";
 import { DesertProps } from './world/desertProps.ts';
+import { WorldForest } from './world/worldForest.ts';
 import { FlightWind } from './vfx/flightWind.ts';
 import { WorldWater } from './world/worldWater.ts';
 import { WaterEffects } from './vfx/waterEffects.ts';
@@ -59,6 +63,9 @@ const _vel = new Vector3();
 // Retain the reflection and portal prototypes for later integration without
 // placing their test cubes in the production world.
 const ENABLE_DEMO_CUBES = false;
+// Development diagnostics are currently visible in builds too. Set false for
+// the public release to omit the panel and recording entirely.
+const ENABLE_BENCHMARK_PANEL = true;
 
 /** Systems intentionally exposed for live inspection and tuning in the browser console. */
 interface ExaltedRuntime {
@@ -84,9 +91,11 @@ interface ExaltedRuntime {
     perfStats: typeof stats;
     grass: WorldGrass | null;
     desertProps: DesertProps | null;
+    forest: WorldForest | null;
     worldWater: WorldWater | null;
     screenshotGallery: ScreenshotGallery;
     avatarColors: AvatarColors;
+    benchmark: BenchmarkPanel | null;
     rocketJumpVfx: RocketJumpVfx;
     reflectiveCube: ReflectiveCube | null;
     magicalCube: MagicalCube | null;
@@ -126,6 +135,11 @@ async function boot(): Promise<void> {
         antialias: false, // TAA handles edges; MSAA here would just cost bandwidth
         stencil: false,
         powerPreference: "high-performance",
+        // Authored terrain binds 19 textures plus heightmap ground/rock/beach maps.
+        // Ground maps share repeat samplers, preserving the default sampler limit.
+        deviceDescriptor: exalted ? { requiredLimits: {
+            maxSampledTexturesPerShaderStage: authoredSource === 'heightmap' ? 27 : 19,
+        } } : undefined,
     });
 
     try {
@@ -227,6 +241,13 @@ async function boot(): Promise<void> {
         await desertProps.load();
     }
 
+    const forest = exalted && authoredSource === 'heightmap'
+        ? new WorldForest(scene, terrain, sky, shadows, depthPass) : null;
+    if (forest) {
+        await loading.phase('loading eastern forest pines', .56);
+        await forest.load();
+    }
+
     await loading.phase("placing character", 0.62);
 
     const character = new CharacterController(terrain);
@@ -281,6 +302,7 @@ async function boot(): Promise<void> {
     // Every surface a spell can light.
     spells.addConsumers(
         ...(desertProps?.materials || []),
+        ...(forest?.materials || []),
         ...terrain.materials, figure.bodyMat, figure.clothMat,
         wake.material, spray.material
     );
@@ -300,6 +322,8 @@ async function boot(): Promise<void> {
     initInput(canvas, {
         onToggleOverlay: () => overlay.toggle(),
         onScreenshot: () => void screenshotGallery.capture(),
+        onMapScreenshot: () => void screenshotGallery.capture(() => captureWholeMap(scene, terrain, worldWater)),
+        onPropMapScreenshot: () => void screenshotGallery.capture(() => captureWholeMap(scene, terrain, worldWater, {forest,desertProps})),
     });
     installInspectorShortcut(scene);
 
@@ -312,6 +336,8 @@ async function boot(): Promise<void> {
     terrain.update(rig.camera.position, character.position, 0);
     desertProps?.update(rig.camera.position, character.position, true);
     await desertProps?.warmUp();
+    forest?.update(rig.camera.position, true);
+    await forest?.warmUp();
     worldWater?.update(0,rig.camera.position);
     await worldWater?.warmUp();
     figure.update(0);
@@ -351,6 +377,8 @@ async function boot(): Promise<void> {
     // Only now: the spell meshes had to be standing *through* those frames for
     // their render pipelines to exist. See `WaterBody.warmUp`.
     spells.finishWarmUp();
+    grass?.finishWarmUp();
+    forest?.finishWarmUp();
 
     // ------------------------------------------------------------- run loop
     let prev = performance.now();
@@ -361,16 +389,69 @@ async function boot(): Promise<void> {
         post.resetHistory();
     }) : null;
 
+    const benchmarkRoute = ENABLE_BENCHMARK_PANEL && exalted ? new BenchmarkRoute(rig,
+        (x, z) => terrain.heightAt(x, z), () => post.resetHistory(), resetInput,
+        () => { pendingSpawn = null; spells.reset(); wake.reset(); spray.reset(); grass?.reset(); figure.setVisible(false); },
+        () => { figure.setVisible(S.showCharacter); grass?.reset(); },
+        // Disabled grass pauses queue processing; pending work must not block
+        // preparation for the grass-off comparison run.
+        () => grass?.settings.enabled ? grass.streamingStats.queued : 0) : undefined;
+    const benchmark = ENABLE_BENCHMARK_PANEL ? new BenchmarkPanel({
+        route: benchmarkRoute,
+        grassSettings: grass?.settings,
+        forestSettings: forest?.settings,
+        gpuTiming: gpuTiming && engine.getCaps().timerQuery !== undefined,
+        captureState: () => ({
+            environment: { renderer: 'WebGPU', babylonVersion: '9.18.0', userAgent: navigator.userAgent,
+                logicalCores: navigator.hardwareConcurrency, devicePixelRatio: devicePixelRatio,
+                renderWidth: engine.getRenderWidth(), renderHeight: engine.getRenderHeight(),
+                hardwareScalingLevel: engine.getHardwareScalingLevel() },
+            terrainMode: new URLSearchParams(location.search).get('terrain') === 'procedural' ? 'procedural'
+                : new URLSearchParams(location.search).get('terrain') === 'glb' ? 'glb' : 'heightmap',
+            position: character.position.asArray(), cameraPosition: rig.camera.position.asArray(),
+            route: benchmarkRoute?.active ? benchmarkRoute.snapshot() : null,
+            settings: { ...S }, grassSettings: grass ? { ...grass.settings } : null,
+            grass: grass ? { ...grass.stats, ...grass.streamingStats } : null,
+            forest: forest ? { settings: { ...forest.settings }, ...forest.stats } : null,
+            desert: desertProps?.chunks ? { ...desertProps.chunks.stats, shadowMeshes: [...desertProps.chunks.stats.shadowMeshes] } : null,
+        }),
+        sample: values => {
+            values.cpuTotalMs = systemMs['cpu total'] ?? 0;
+            values.cpuSubmitMs = systemMs['cpu submit'] ?? 0;
+            values.cpuCharacterMs = systemMs['cpu character'] ?? 0;
+            values.cpuSpellsMs = systemMs['cpu spells'] ?? 0;
+            values.cpuTerrainMs = systemMs['cpu terrain'] ?? 0;
+            values.cpuVfxMs = systemMs['cpu wake+spray'] ?? 0;
+            values.drawCalls = stats.drawCalls;
+            values.submittedIndices = stats.submittedIndices;
+            values.grassCpuMs = grass?.stats.updateMs ?? 0;
+            values.grassUploadCpuMs = grass?.streamingStats.uploadMs ?? 0;
+            values.grassQueuedPatches = grass?.streamingStats.queued ?? 0;
+            values.grassVisiblePatches = grass?.stats.visiblePatches ?? 0;
+            values.desertActiveChunks = desertProps?.chunks?.stats.activeChunks ?? 0;
+            values.desertActiveMeshes = desertProps?.chunks?.stats.activeMeshes ?? 0;
+            values.forestCpuMs = forest?.stats.updateMs ?? 0;
+            values.forestVisibleTrees = forest?.stats.visible ?? 0;
+            values.forestActiveChunks = forest?.stats.activeChunks ?? 0;
+            values.forestActiveMeshes = forest?.stats.activeMeshes ?? 0;
+            values.gpuRollingMs = stats.gpuMs;
+        },
+    }, avatarColors.root) : null;
+    scene.onDisposeObservable.add(() => benchmark?.dispose());
+
     engine.runRenderLoop(() => {
         flushResize();
         const now = performance.now();
+        benchmark?.updateFrame(now);
+        const automaticRoute = benchmarkRoute?.active === true;
+        const streamingFocus = automaticRoute && benchmarkRoute ? benchmarkRoute.focus : character.position;
         let dtMs = now - prev;
         prev = now;
         if (dtMs > 100) dtMs = 100;
         const dt = S.freezeTime ? 0 : dtMs / 1000;
         time += dt;
 
-        if (pendingSpawn) {
+        if (pendingSpawn && !automaticRoute) {
             const point = pendingSpawn;
             pendingSpawn = null;
             resetInput();
@@ -392,25 +473,25 @@ async function boot(): Promise<void> {
         }
 
         pollInput();
+        if (automaticRoute) resetInput();
 
         // Per-system CPU timing. Babylon's WebGPU timestamp queries are
         // whole-frame, so the GPU row is a total and these are not subdivisions
         // of it Р В Р’В Р В РІР‚В Р В Р’В Р Р†Р вЂљРЎв„ўР В Р вЂ Р В РІР‚С™Р РЋРЎС™ the overlay labels them `cpu` for that reason.
         const tFrame = performance.now();
 
-        character.update(dt, rig);
+        if (!automaticRoute) character.update(dt, rig);
         // Launch feedback must run before terrain simulation consumes deformation
         // brushes and before the camera consumes the blast trauma.
-        rocketJumpVfx.update(dt);
+        if (!automaticRoute) rocketJumpVfx.update(dt);
         // Pose and simulate before the contact pass: the footprints are stamped
         // at the boot's actual planted position, which only exists once the
         // figure has been solved.
-        figure.update(dt);
-        contact.update(dt);
+        if (!automaticRoute) { figure.update(dt); contact.update(dt); }
         const tChar = performance.now();
 
         _vel.copyFrom(character.velocity);
-        rig.update(dt, character.position, _vel, character.lean, character.speed01);
+        if (!automaticRoute) rig.update(dt, character.position, _vel, character.lean, character.speed01);
 
         // Jitters the projection and republishes everything the screen-space
         // passes derive from the camera. Must be after the rig has moved and
@@ -425,8 +506,9 @@ async function boot(): Promise<void> {
         // writes are in the staging array when the simulation pass runs.
         spells.update(dt, rig.camera.position);
         const tSpells = performance.now();
-        terrain.update(rig.camera.position, character.position, dt);
-        desertProps?.update(rig.camera.position, character.position, false, dt);
+        terrain.update(rig.camera.position, streamingFocus, dt);
+        desertProps?.update(rig.camera.position, streamingFocus, false, dt);
+        forest?.update(rig.camera.position);
         worldWater?.update(dt,rig.camera.position);
         const tTerrain = performance.now();
         // After the shadow refit, so the figure's uniforms carry this frame's
@@ -434,10 +516,9 @@ async function boot(): Promise<void> {
         figure.sync(rig.camera.position);
         // Before the spray: the wake decides where its own lip is, and the
         // grains it sheds have to be in the pool before the pool is uploaded.
-        wake.update(dt, rig.camera.position);
-        grass?.update(dt, rig.camera.position, character, wake, spells.lights);
-        flightWind.update(dt);
-        waterEffects?.update(dt,rig.camera.position);
+        if (!automaticRoute) wake.update(dt, rig.camera.position);
+        grass?.update(dt, rig.camera.position, character, wake, spells.lights, automaticRoute ? streamingFocus : undefined);
+        if (!automaticRoute) { flightWind.update(dt); waterEffects?.update(dt,rig.camera.position); }
         spray.update(dt, rig.camera.position);
         magicalCube?.update(dt, rig.camera, character.position, input.interactPressed);
         reflectiveCube?.update(character.position);
@@ -460,7 +541,7 @@ async function boot(): Promise<void> {
 
         endFrameDraws();
         stats.triangles =
-            (grass?.stats.triangles || 0) + (desertProps?.triangles || 0) + (worldWater?.triangles || 0) +
+            (forest?.stats.triangles || 0) + (grass?.stats.triangles || 0) + (desertProps?.triangles || 0) + (worldWater?.triangles || 0) +
             (terrain.mesh.metadata ? terrain.mesh.metadata.triangles : 0) +
             (terrain.local?.mesh.metadata.triangles || 0) +
             (S.showCharacter ? figure.triangles : 0) +
@@ -476,6 +557,7 @@ async function boot(): Promise<void> {
         overlay.update(dtMs, engine);
 
         endFrame();
+        benchmark?.recordFrame(now);
     });
 
     await loading.done();
@@ -487,9 +569,9 @@ async function boot(): Promise<void> {
         engine, scene, rig, character, figure, contact, spray, wake, spells,
         overlay, terrain, sky, shadows, post, depthPass, spawnBar,
         S, input, perfStats: stats,
-        grass, desertProps,
+        grass, desertProps, forest,
         worldWater,
-        screenshotGallery, avatarColors, rocketJumpVfx, reflectiveCube, magicalCube,
+        screenshotGallery, avatarColors, benchmark, rocketJumpVfx, reflectiveCube, magicalCube,
         };
 }
 

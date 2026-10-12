@@ -7,6 +7,31 @@ geometry before visibility selection and remain available when visuals are culle
 This applies to heightmap and GLB comparison modes; procedural mode has no desert
 prop subsystem.
 
+## Desert ground material
+
+The active material again borrows the `exalted_desert.glb` Ground material's
+colour, normal, roughness, tint and original world-space UV projection. Its
+floor mesh remains excluded from rendering. Surf sides and dust share that
+colour through `desertAppearance.ts`. The newer grass/forest/desert coverage
+map and improved boundary blending remain active.
+
+### Beach sand experiment — tested, reverted on 2026-10-08
+
+The supplied `aerial_beach_01` colour, OpenGL normal and ARM maps from
+`public/terrain/sand/beach/` were tested on desert ground at a 4 m repeat.
+ARM supplied AO/roughness/metallic; the separate AO map was redundant. Colour
+was decoded from sRGB, normal/ARM remained linear, and normals softened over
+compressed footprints. Surf sides/dust shared the beach colour. All maps were
+ready before shader warm-up and Terrain owned their disposal. The experiment
+added no draws, but used one extra texture binding (21 in heightmap mode).
+
+Typecheck and all 131 Node tests passed. A native WebGPU screenshot at Desert
+Start confirmed beach colour/normal/ARM loaded and rendered, without GPU
+validation errors. No build or Playwright was run. The user requested restoring
+the previous desert texture after testing; no reason beyond that preference is
+inferred. Runtime beach loading was removed, while supplied assets and
+[source notes](public/terrain/sand/beach/SOURCE.md) are retained for future use.
+
 ## Streaming and rendering
 
 `propChunks.ts` partitions each geometry/material group's world-space centres

@@ -61,6 +61,9 @@ export interface GrassSystemOptions {
     syncMesh?(mesh: Mesh, visible: boolean, distance: number, staticGrass: boolean): void;
     importedOnly?: boolean;
     streaming?: boolean;
+    /** Optional production view gates. Completed off-screen patches stay cached. */
+    isMeshInView?(mesh: Mesh): boolean;
+    isTileInView?(x: number, z: number, size: number): boolean;
 }
 
 const PATCH_SIZE = 16;
@@ -71,7 +74,7 @@ const NO_IMPACTS: readonly GrassUpdateContext['impacts'][number][] = [];
 export class GrassSystem {
     public streamingPaused = false;
     public readonly materials: ShaderMaterial[] = [];
-    public readonly streamingStats = { queued: 0, uploadMs: 0, staticDraws: 0 };
+    public readonly streamingStats = { queued: 0, deferred: 0, uploadMs: 0, staticDraws: 0 };
     public readonly stats: GrassStats = { updateMs: 0, visiblePatches: 0, nearInstances: 0, midInstances: 0, triangles: 0, draws: 0 };
     private readonly patches: GrassPatch[] = [];
     private readonly nearTemplate: Mesh;
@@ -475,7 +478,16 @@ export class GrassSystem {
         let candidates = 0;
         while (performance.now() < deadline && candidates < 2048) {
             if (!this.streamPending) {
-                const request = this.streamQueue.shift();
+                let index = 0;
+                if (this.options.isTileInView) {
+                    while (index < this.streamQueue.length) {
+                        const request = this.streamQueue[index];
+                        if (this.options.isTileInView(request.x * PATCH_SIZE, request.z * PATCH_SIZE, PATCH_SIZE)) break;
+                        index++;
+                    }
+                }
+                if (index >= this.streamQueue.length) return;
+                const request = this.streamQueue.splice(index, 1)[0];
                 if (!request) return;
                 this.streamReserved = geometry.variants ? null : this.streamPool.pop() ?? null;
                 const nearBuffer = this.streamReserved?.nearBuffer ?? this.streamSpare?.near;
@@ -588,7 +600,12 @@ export class GrassSystem {
         if (this.builtDensity !== this.settings.density || this.builtGeometryKey !== geometryKey) this.rebuild();
         else if (!this.streamingPaused && (moved || this.options.streaming && this.streamRange !== this.visibleDistance())) this.rebuild(true);
         if (this.options.streaming) this.processStreamingQueue();
-        this.streamingStats.queued = this.streamQueue.length + (this.streamPending ? 1 : 0);
+        let deferred = 0;
+        if (this.options.isTileInView) for (const request of this.streamQueue) {
+            if (!this.options.isTileInView(request.x * PATCH_SIZE, request.z * PATCH_SIZE, PATCH_SIZE)) deferred++;
+        }
+        this.streamingStats.deferred = deferred;
+        this.streamingStats.queued = this.streamQueue.length - deferred + (this.streamPending ? 1 : 0);
         const visualization = { final: 0, lod: 1, biome: 2, patches: 3 }[this.settings.visualization];
         const time = this.settings.freezeWind ? 0 : context.elapsedSeconds * this.settings.windSpeed;
         this.impactData.fill(0);
@@ -646,8 +663,9 @@ export class GrassSystem {
         for (const patch of this.patches) {
             this.updatePatchBounds(patch, this.settings.tightGrassBounds === false ? Math.max(14, bendPadding) : bendPadding);
             const distance = Math.hypot(patch.x - context.cameraPosition.x, patch.z - context.cameraPosition.z);
-            const nearVisible = this.settings.enabled && distance <= (distanceLod ? this.settings.nearDistance : this.settings.farDistance);
-            let midVisible = this.settings.enabled && (
+            const inView = !this.options.isMeshInView || this.options.isMeshInView(patch.near);
+            const nearVisible = this.settings.enabled && inView && distance <= (distanceLod ? this.settings.nearDistance : this.settings.farDistance);
+            let midVisible = this.settings.enabled && inView && (
                 distanceLod && distance > this.settings.nearDistance && distance <= this.settings.farDistance ||
                 distantLod && distance > this.settings.farDistance && distance <= this.visibleDistance()
             );

@@ -11,10 +11,12 @@
  */
 
 import { grassBiomeWGSL } from '../grass/GrassBiome.ts';
+import { forestGroundCoverageWGSL } from '../terrain/forestGroundCoverage.ts';
 import { ShaderStore } from "@babylonjs/core/Engines/shaderStore";
 import grassVertex from '../grass/grass.vertex.wgsl?raw';
 import grassFragment from './grass.fragment.wgsl?raw';
 import desertAppearance from './lib/desertAppearance.wgsl?raw';
+import rockSampling from './lib/rockSampling.wgsl?raw';
 import desertPropVert from './desertProp.vertex.wgsl?raw';
 import desertPropFrag from './desertProp.fragment.wgsl?raw';
 
@@ -87,7 +89,11 @@ import crystalPrepassVert from "./crystalPrepass.vertex.wgsl?raw";
 
 const INCLUDES = {
     grassBiome: grassBiomeWGSL,
+    forestGroundCoverage: forestGroundCoverageWGSL,
     desertAppearance,
+    rockSampling,
+    // Identical stochastic PBR mapping, specialized with independent beach bindings.
+    beachSampling: rockSampling.replaceAll('Rock', 'Beach').replaceAll('rock', 'beach'),
     surfaceTypes: surfaceWGSL,
     exaltedSurface,
     surfaceMap,
