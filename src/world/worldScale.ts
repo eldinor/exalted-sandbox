@@ -4,8 +4,7 @@
  * The original authored terrain and all map coordinates are reduced to 50%.
  * Character and prop geometry remain metre-sized; only terrain geometry,
  * authored placements, water and navigation coordinates use this scale.
- * `halved.html` is retained as a compatibility entry point for the experiment
- * that established this production scale.
+ * This scale was established by the former half-world experiment.
  */
 export const AUTHORED_WORLD_SCALE: number = 0.5;
 

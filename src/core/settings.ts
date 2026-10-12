@@ -19,7 +19,7 @@ export const S = {
     // Low enough for long raking shadows, high enough that the beam still
     // carries real energy — below ~10 degrees the air mass eats so much of it
     // that the scene goes flat and sky-lit.
-    sunElevation: 20.0,
+    sunElevation: 30.0,
     sunIntensity: 4.2,
     sunTempWarm: 1.0, // 0 = neutral white, 1 = full warm low-sun tint
     ambientIntensity: 1.0,
@@ -140,7 +140,7 @@ export const SCHEMA: SettingGroup[] = [
     {
         group: "Sun & Sky",
         items: [
-            { k: "sunAzimuth", l: "Azimuth", t: "f", min: 0, max: 360, step: 1 },
+            { k: "sunAzimuth", l: "Base azimuth", t: "f", min: 0, max: 360, step: 1 },
             { k: "sunElevation", l: "Elevation", t: "f", min: 0.5, max: 45, step: 0.1 },
             { k: "sunIntensity", l: "Intensity", t: "f", min: 0, max: 10, step: 0.05 },
             { k: "sunTempWarm", l: "Warmth", t: "f", min: 0, max: 1, step: 0.01 },

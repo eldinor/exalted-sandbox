@@ -72,6 +72,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 
     let state = input.vState;
     let grass = step(5.5, state.z);
+    let agedGrass=step(6.5,state.z);
     let water = step(3.5, state.z) * (1.0-grass);
     let sand = step(1.5, state.z) * (1.0-water) * (1.0-grass);
     let kind = mix(mix(state.z - sand * 2.0, 1.0-step(4.5,state.z), water), 1.0, grass);
@@ -131,7 +132,8 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         soil = desertSoilColor(world.xz,6.0)*1.15;
     }
     let albedo = mix(mix(mix(vec3f(0.92, 0.94, 0.98), soil, sand),vec3f(.78,.91,.98),water),
-        mix(vec3f(.055,.16,.018), vec3f(.14,.32,.035), state.y), grass);
+        mix(mix(vec3f(.055,.16,.018), vec3f(.14,.32,.035), state.y),
+            mix(vec3f(.16,.10,.035),vec3f(.36,.25,.085),clamp(state.y,0.0,1.0)),agedGrass), grass);
     let diff = wrapDiffuse(dot(N, L), 0.75);
     var color = albedo * INV_PI * sun * diff * shadow;
 

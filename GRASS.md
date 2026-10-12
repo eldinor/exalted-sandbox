@@ -7,6 +7,69 @@ controls and ground materials. Production never imports generator code.
 
 ## Placement and assets
 
+Selected yellow-flower dandelions are prepared separately in
+`public/terrain/grassland/dandelions/`, with source attribution, manifest and a
+native WebGPU preview. Recommended flowering mix is 001/002/003 at 45/35/20%;
+005 is an optional bud accent. Production now streams 001/002/003 colonies;
+the bud accent remains prepared but unplaced.
+See [asset notes and placement proposal](public/terrain/grassland/dandelions/README.md).
+
+## Meadow flowers
+
+`MeadowFlowers.ts` defines a flower-family asset/mix/seed/height/density/cutoff
+contract, allowing daisies to be added later without hard-coding them into grass
+placement. Main creates independent `WorldGrass` adapters for dandelions and
+daisies. A family uses one shared albedo/alpha atlas; separate atlases
+require separate families/materials. The loader bakes the complete glTF hierarchy
+and normalizes geometry to unit height with its lowest point at the root.
+Source normal/ORM maps remain in the asset; current shading uses albedo and
+geometry normals with the existing matte vegetation lighting.
+
+Colony centres are deterministic on a jittered 14 m grid: 80% active cells,
+1.8-2.6 m radii and soft edges. This covers roughly 6% of meadow in footprints
+(about 4% weighted coverage), usually a handful of plants per colony rather
+than a continuous carpet. Density .08 supplies approximately .4 candidates/m2
+before colony/biome exclusions. Height is nominally .35 m, varying .23-.47 m.
+Flower instances stay upright and use exact triangle height without the grass
+15 mm offset; roads, water, non-grass and slopes above .7 rise/run are excluded.
+All grass outside colonies retains existing density; inside, candidate density
+falls by up to 35%, independently of biome classification. This fixed meadow
+layout remains when flowers are toggled off for consistent benchmark comparisons.
+
+Rendering reuses pooled 16 m patches, incremental streaming, camera-frustum
+rejection and grass wind/walking/surf deformation. Flowers have no collision,
+shadow casting or additional particles. Colour and camera-depth shaders use the
+same texture alpha/cutoff and world-anchored dither fade from 35 to 50 m. The
+imported texture's gammaSpace determines whether software sRGB conversion is
+needed, avoiding double decoding of WebGPU sRGB textures. Production lighting,
+received shadows, spell lights, fog and linear output are shared with grass.
+Static/dynamic flower colour and depth variants warm behind loading.
+
+Benchmark has a separate **Meadow flowers** toggle and records flower settings,
+CPU time and visible instances. Disabling Grass models also suppresses flowers
+and their depth registrations. Teleport/automatic routes reset both interactions;
+automatic route preparation waits for both enabled streaming queues. Procedural
+mode has no flowers; authored heightmap and GLB comparison modes do.
+
+Daisies now use the three individual LOD1 models at 40/30/30%, density .04
+(half the dandelion budget), nominal height .42 m and independent seed 9001.
+The prepared subset retains the source low alpha cutoff for delicate petals;
+see [daisy asset notes](public/terrain/grassland/daisies/README.md). Dandelion
+sites/mix remain stable. Grass thinning uses the maximum species coverage,
+so overlapping colonies never compound the 35% reduction. Both families share
+the Meadow flowers toggle and aggregate flower CPU/instance metrics; snapshots
+record each family's settings and statistics separately. Both load/warm/reset
+with the ordered startup/frame loop and automatic route preparation.
+
+Validation (2026-10-12): typecheck and 171 Node tests passed. Native Chrome/WebGPU
+loaded/warmed flowers without shader errors; screenshots checked the yellow
+flower silhouettes. Turning either flowers or grass off removed flower colour
+draws and all flower depth registrations. A fixed Long Green spawn view had 41
+visible plants / 1,698 triangles and added 34 actual draws (17 colour + 17 depth),
+10,188 submitted indices per frame across 20 captured frames. This is one view,
+not an automatic-route GPU performance result; shared-atlas patch batching may
+be worthwhile if draw submission becomes the limiting cost.
+
 - Default terrain: `vis_ground_heightmap-11.png` and `vertex_color_4k-9.png`.
 - Grass is the light-green RGB (179, 206, 149) palette, independently classified
   into an 8-bit mask alongside the existing four-channel surface map. Heightmap
@@ -114,6 +177,11 @@ placement, and remains available when grass rendering is disabled.
 
 The existing pooled spray uses kind 6 for small tumbling tufts of three tapered
 grass blades, drawn as shader silhouettes rather than additional GLB instances.
+Forest now uses kind 7 for the same tufts with a brown aged-grass palette.
+Forest coverage is stored separately in row 3 of the wake spine texture; grass
+keeps row 2 alpha and its green palette. Both keep grounded emission, no powder
+drift, shared vertical drag and the same size/lifetime.
+
 Their billboard radius is 0.14–0.26 m, doubled for visibility while surfing.
 Grass emits at 22% of the snow lip rate, with no lingering powder drift. These
 particles use the existing gravity, wind, lighting, fog, fade and teleport reset.

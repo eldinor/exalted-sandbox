@@ -1,4 +1,4 @@
-/** Animated magical shader test object beside the authored default spawn. */
+/** Interactive authored Cube that dissolves into a portal. */
 
 import { Vector3 } from '@babylonjs/core/Maths/math';
 import type { Camera } from '@babylonjs/core/Cameras/camera';
@@ -9,7 +9,6 @@ import { Constants } from '@babylonjs/core/Engines/constants';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { Scene } from '@babylonjs/core/scene';
-import type { CharacterController } from '../character/controller.ts';
 import type { Terrain } from '../terrain/terrain.ts';
 import { whenReady } from '../core/gpuUtil.ts';
 import { InteractionPrompt } from '../ui/interactionPrompt.ts';
@@ -36,7 +35,7 @@ declare global {
     }
 }
 
-/** A 1.5 m HDR crystalline cube placed right of the default avatar spawn. */
+/** A 1.5 m HDR crystalline Cube grounded at a fixed authored location. */
 export class MagicalCube {
     readonly mesh: Mesh;
     readonly material: ShaderMaterial;
@@ -54,10 +53,8 @@ export class MagicalCube {
     private readonly labelAnchor = Vector3.Zero();
     private wasInsidePortal = false;
 
-    constructor(scene: Scene, terrain: Terrain, character: CharacterController) {
-        const facing = character.facing;
-        const x = character.position.x + Math.cos(facing) * 10;
-        const z = character.position.z - Math.sin(facing) * 10;
+    constructor(scene: Scene, terrain: Terrain, location: Readonly<{ x: number; z: number }>) {
+        const { x, z } = location;
         const ground = terrain.heightAt(x, z);
 
         this.mesh = MeshBuilder.CreateBox('magic-test:cube', { size: CUBE_SIZE }, scene);

@@ -41,7 +41,8 @@ for (const [biome, weights] of [['snow', new Float32Array([1, 0])], ['sand', new
     });
 }
 
-test('grass surf keeps each sample biome through boundaries, emits blades, and resets on teleport', () => {
+test('grass and forest surf retain birth coverage and emit only their blade kind with grounding/reset gates', () => {
+    for (const [biome,kind,row,component] of [['grass',6,2,3],['forest',7,3,0]]) {
     const engine = new NullEngine();
     const scene = new Scene(engine);
     const originalRandom = Math.random;
@@ -60,7 +61,7 @@ test('grass surf keeps each sample biome through boundaries, emits blades, and r
         const wake = new SurfWake(scene, { lut: texture }, {
             maps: [texture,texture,texture], registerCaster: () => {},
         }, controller, { emit: (...args) => emissions.push(args) }, terrain);
-        wake.grassWeightAt = (_x,z) => z < 10 ? 1 : 0;
+        wake[`${biome}WeightAt`] = (_x,z) => z < 10 ? 1 : 0;
         const lay = () => {
             wake._odo += .4;
             controller.position.z += .4;
@@ -68,17 +69,17 @@ test('grass surf keeps each sample biome through boundaries, emits blades, and r
         };
         for (let i = 0; i < 12; i++) lay();
         wake._resolve();
-        for (let i = 0; i < wake._count; i++) assert.equal(wake._texData[(96*2+i)*4+3],1);
+        for (let i = 0; i < wake._count; i++) assert.equal(wake._texData[(96*row+i)*4+component],1);
         Math.random = () => .1;
         wake._plume(1/30);
         assert.ok(emissions.length > 0);
-        assert.ok(emissions.every(args => args[8] === 6), 'grass produces blades without white curtain or drift');
+        assert.ok(emissions.every(args => args[8] === kind), 'grass produces blades without white curtain or drift');
         assert.ok(emissions.every(args => args[6] >= .14 && args[6] <= .26 && args[7] <= 1), 'visible short-lived fragments');
 
         controller.position.z = 12;
         lay(); lay(); wake._resolve();
-        assert.equal(wake._texData[96*2*4+3],0);
-        assert.equal(wake._texData[(96*2+3)*4+3],1, 'old grass retains its colour when the avatar leaves the biome');
+        assert.equal(wake._texData[96*row*4+component],0);
+        assert.equal(wake._texData[(96*row+3)*4+component],1, 'old grass retains its colour when the avatar leaves the biome');
 
         wake.reset();
         assert.equal(wake._count,0);
@@ -98,6 +99,7 @@ test('grass surf keeps each sample biome through boundaries, emits blades, and r
     } finally {
         Math.random = originalRandom;
         scene.dispose(); engine.dispose();
+    }
     }
 });
 
@@ -126,7 +128,7 @@ test('tiny grass particles retain their kind, settle, expire and reuse the pool 
     } finally { scene.dispose(); engine.dispose(); }
 });
 
-test('desert and grass particles follow the snow curtain vertical trajectory', () => {
+test('desert, grass and aged forest particles follow the snow curtain vertical trajectory', () => {
     const engine = new NullEngine();
     const scene = new Scene(engine);
     try {
@@ -141,12 +143,15 @@ test('desert and grass particles follow the snow curtain vertical trajectory', (
         sand = true;
         spray.emit(0,30,0,2,2,0,.1,5,0,SNOW_SURF_POWDER_DRAG);
         spray.emit(0,30,0,2,2,0,.1,5,6,1.8);
+        spray.emit(0,30,0,2,2,0,.1,5,7,1.8);
         assert.equal(spray.sand[1],1);
         const camera = new Vector3(0,35,0);
         for (let frame = 0; frame < 90; frame++) {
             spray.update(1/60,camera);
             assert.equal(spray.pos[4],spray.pos[1], 'desert height matches snow during rise and fall');
             assert.equal(spray.pos[7],spray.pos[1], 'grass height matches snow during rise and fall');
+            assert.equal(spray.pos[10],spray.pos[1], 'forest fragments retain the same rise/fall');
+            assert.equal(spray.kind[3],7);assert.equal(spray.sand[3],0);
             assert.equal(spray.vel[4],spray.vel[1]);
             assert.equal(spray.vel[7],spray.vel[1]);
         }

@@ -181,7 +181,7 @@ export class SprayField {
      *
      * @param life - Lifetime in seconds.
      *
-     * @param kind - 0 powder, 1 clod, 4 water droplet, 5 water mist, 6 tiny grass blades.
+     * @param kind - 0 powder, 1 clod, 4 water droplet, 5 water mist, 6 tiny grass blades, 7 aged forest blades.
      *
      * @param drag - Linear drag in 1/s. Defaults to the fall-in-place value for a
      *   grain of settling powder; pass something near 1 for anything thrown.
@@ -254,7 +254,7 @@ export class SprayField {
             // A settling grain reaches equilibrium almost at once; anything
             // thrown hard carries its arc. See the note on `drag` above.
             const k = this.drag[i];
-            const verticalDrag = this.kind[i] === 6 ? SNOW_SURF_POWDER_DRAG : k;
+            const verticalDrag = this.kind[i] === 6 || this.kind[i] === 7 ? SNOW_SURF_POWDER_DRAG : k;
             const vy = this.vel[o + 1];
             this.vel[o] += (wx - this.vel[o]) * Math.min(1, k * h);
             this.vel[o + 2] += (wz - this.vel[o + 2]) * Math.min(1, k * h);

@@ -163,3 +163,11 @@ and `settings.openMix`. Closed-strip placements remain unchanged. Geometry and
 batch counts increase with the new area, so compare enabled/disabled runs at
 identical resolution to measure the whole current forest. No route keyframes
 were changed.
+
+
+Automatic routes hold the effective sun azimuth present when the route starts,
+including the 3 s preparation. Regional sunlight resumes when the route stops.
+Snapshots include `sunRegion.region` and `sunRegion.effectiveAzimuth`, while
+`settings.sunAzimuth` is the editable base bearing. Match the effective angle,
+elevation and render dimensions when comparing captures; a forest run entered
+at 225 degrees differs from one entered at the 185-degree base bearing.

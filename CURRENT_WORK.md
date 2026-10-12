@@ -9,6 +9,88 @@ water, atmosphere, props, collisions, UI, and other player-facing systems.
 Work should be evaluated by how it supports the quality, performance, and
 maintainability of this main application.
 
+## Removed legacy viewers
+
+On 2026-10-12, halved.html, forest.html, forest_road.html and snow_mountain.html
+were removed with their dedicated JavaScript/WGSL, preparation script and tests.
+Deleted assets: forest_previz.glb, forest-opt.glb, both snowy_mountain terrain
+GLBs, and generated forest-demo prototypes/placements/manifest. Vite entries,
+package scripts and current asset/license records were updated. Production
+forest code and replacement pine/fir/spruce assets remain intact. Historical
+experiment notes are retained as history. Source cleanup removed 28 files,
+approximately 38.4 MiB.
+
+## License ownership and third-party audit
+
+The main MIT copyright holder is Andrei Stepanov. THIRD_PARTY_NOTICES.md
+preserves the earlier repository copyright, asset attribution/derivations and
+exact dependency license/notice texts. Its public copy and LICENSE.txt ship via
+Vite's public assets. Refresh dependency notices with `npm run licenses:update`.
+Asset permissions still missing from source records are explicitly listed;
+Raw Catalog purchase/tier and standalone redistribution permission are not
+verified. The project's MIT license does not relicense these assets.
+
+## Dandelion colonies and sun elevation
+
+Selected Daisy_1/2/3 LOD1 flowers now join dandelions in separate sparse colonies,
+with half the dandelion density and a 40/30/30 mix. Both species use the Meadow
+flowers toggle; overlapping colonies keep grass thinning capped at 35%.
+See GRASS.md and the prepared daisy asset notes.
+
+The main authored meadow now streams selected dandelions in sparse colonies,
+with independent flower density/mix, matching colour/depth alpha cutout and
+shared grass interactions. Benchmark includes a Meadow flowers toggle and
+flower diagnostics. The family contract leaves room for later daisies; see
+GRASS.md. Default sun elevation is now 30 degrees, as requested.
+
+## Forest surf appearance
+
+Forest surf sides now use dark olive/moss colours, without snow transmission,
+blue cave tint or snow glints. Forest emits aged-grass blade tufts with a warm
+brown palette, retaining grass particles' size/lifetime/launch/settling. Each
+spine sample stores forest coverage at birth so boundary crossings retain colour.
+No extra meshes/draws/textures are added; the existing spine texture gains one row.
+See FOREST_NOTES.md and GRASS.md.
+
+## Reduced real big-tree density
+
+Real Big 1 pines and Large 2 fir accents now retain exactly half their sites,
+rounded up per model, using deterministic coordinate ranking. Spruce impostors,
+medium/small trees, saplings and fringe shrubs are untouched. Existing closed-area
+barriers remain; removed open Large 2 trunks lose their individual colliders.
+Benchmark settings record `bigTreeDensity: 0.5`. See FOREST_NOTES.md.
+
+## Regional sun bearings
+
+Authored-world gameplay now blends the sun to 225 degrees in forest and 105
+on Lake Island, after 1 s dwell and over a 7 s shortest-arc smooth transition.
+Boundary hysteresis avoids rapid reversals; leaving restores the editable base
+bearing (default 185). Island classification uses the registered island centre
+and a soft 55-75 m boundary. Automatic routes freeze the entry bearing and
+record effective bearing/region in snapshots. Sky/ambient lighting stays at its previous baked state throughout motion,
+then recalculates once at the settled bearing. Direct light/shadows track each
+frame; asynchronous solves remain coalesced.
+See FOREST_NOTES.md and ARCHITECTURE.md.
+
+## Forest collider-edge fringe
+
+A denser fringe follows the dense forest contour: 165 additional small firs
+(2.8-4.3 m) and 258 low evergreen shrub clusters (1.2-1.9 m). The 3.5 m grid
+covers 3 m inside / 14 m outside the contour, retains existing placements and
+clearings, and excludes roads/water/steep slopes. Bushes reuse two Small 2 LOD2
+shoots (592 triangles), shared fir materials and no extra asset download. Bushes
+have no collision; added small trees have trunk-only cylinders. See FOREST_NOTES.md.
+
+## Selected firs in production
+
+The accessible woodland now uses the prepared realistic-fir subset: Large 2
+(4% accents), Medium 1/2 (24/24%) and Small 1/2 (14/14%), plus retained Pine
+Sapling 1/2 (10/10%). Existing 593 open sites retain X/Z/yaw, 8 m spacing and
+clearings; 466 sites now use firs after large-tree thinning. LOD2 stays active everywhere, with matching
+0.35 alpha-cutout colour/depth and all variants warmed behind loading. Dense
+border pines/spruce cards stay unchanged. See [FOREST_NOTES.md](FOREST_NOTES.md)
+and [fir asset notes](public/terrain/forest/fir-pack-selected.README.md).
+
 ## Corrected dense forest contour
 
 The 2026-10-12 user concept now defines a curved western canopy edge instead
@@ -27,8 +109,7 @@ distance/streaming visibility using temporary copies, retains the rig/post chain
 and saves in the screenshot gallery. Ctrl+P keeps its terrain/water map capture.
 
 The accessible woodland west of the closed strip now extends to and around
-Forest Outlook: 593 real trees at 8 m spacing, using Medium 1/2, Small 1/2
-and Sapling 1/2 at 25/25/15/15/10/10% target shares. The overlook retains an
+Forest Outlook: 593 real trees at 8 m spacing, using the fir/pine mix above. The overlook retains an
 18 m clearing and a southeast sightline; Cube Spawn's corridor stays clear.
 Individual trunk colliders keep this section walkable. Models retain their
 pack size ratios, use LOD2 and share the darker foliage material. Existing
@@ -50,7 +131,7 @@ impostor inside the corrected dense contour, apart from the first 15 m at its
 accessible edge and a 33 m radius around Cube Spawn. Real trees mix
 Big 1 and Small 1 LOD2, with a deterministic 25% Small 1 selection and the pack's
 relative sizes. Clearing, spacing and barriers stay intact. There are 741 cards,
-110 Big 1 and 49 Small 1 trees in the dense section, batched in 32 m chunks.
+55 Big 1 and 49 Small 1 trees in the dense section, batched in 32 m chunks.
 Both representations warm colour/depth pipelines behind the loading screen.
 Main-app real pine foliage now has a darker, cooler albedo tint to approach the
 spruce border colour; bark retains its source colour.
@@ -294,25 +375,18 @@ For the authored map, the current working decision is:
   RGBA material-weight map;
 - keep terrain collision separate when the visual mesh is unsuitable.
 
-The main app currently includes a 3 m reflective test cube ten metres left of
-the default avatar spawn. Its bottom is 0.5 m above the sampled terrain. A
-512-pixel dynamic reflection probe retains its last capture and refreshes only
-while the avatar is within 20 m, at one cubemap update every four frames.
-
-A second 1.5 m shader test cube sits ten metres right of the default spawn with
-the same 0.5 m clearance. Its animated crystalline violet/cyan surface emits HDR
-edges and veins into the existing bloom chain. Within 3 m it offers an E-key
-interaction; activation dissolves the cube and grows a persistent animated
-magical portal ring in its place. The ring contains a blended HDR vortex surface
-with counter-rotating spiral currents, travelling sparks and a feathered edge.
-At activation the complete portal snaps parallel to the nearest vertical cube
-face toward the avatar, then retains that orientation.
-Crossing within 1.5 m of the completed portal shows a world-anchored `Portal
-entered` label and dispatches `exalted:portal-entered` on `window`. The event is
-edge-triggered and fires again only after the avatar leaves and re-enters. Entry
-remains locked until the dissolve and portal-growth animation finishes, followed
-by a 0.45-second settling delay, so an avatar already inside the radius sees the
-complete transition before the label and event appear.
+The interactive 1.5 m crystalline Cube is restored at Forest Cube Spawn
+(chart 767, -104; Babylon -383.5, 52), grounded on current terrain with its
+original 0.5 m clearance. Within 3 m, E dissolves the Cube over 1.25 s and grows
+the persistent HDR portal ring and blended vortex. Its orientation snaps to the
+nearest vertical Cube face toward the avatar and remains fixed. After growth
+and a 0.45 s settling delay, entering the 1.5 m radius displays the world label
+and dispatches window event `exalted:portal-entered`, once per crossing.
+The legacy detail `id: 'default-spawn-portal'` and world-space position payload
+remain unchanged for existing listeners. This event does not automatically
+teleport the avatar. Automatic benchmarks suppress E activation. Reflection
+Cube/probe construction, update, diagnostics and triangle accounting are removed
+from the production entry point; its unused prototype remains in source.
 
 The existing `alpha-map.glb` is approximately 329,000 triangles and is a
 reasonable starting point for a single-level terrain, subject to validation on

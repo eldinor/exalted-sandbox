@@ -19,6 +19,37 @@ const root = 'public/terrain/forest/blue-spruce';
 const metadata = JSON.parse(readFileSync(`${root}/impostor.json`, 'utf8'));
 const atlas = parseSpruceAtlas(metadata);
 
+test('prepared fir subset preserves source images, geometry counts, hierarchy scale and shared cutout contract',()=>{
+    const file='public/terrain/forest/fir-pack-selected.glb',bytes=readFileSync(file),length=bytes.readUInt32LE(12);
+    const d=JSON.parse(bytes.subarray(20,20+length).toString());
+    const original=readFileSync('public/assets/exalted/realistic_fir_trees_pack_lods_gameready.glb'),sourceLength=original.readUInt32LE(12);
+    const source=JSON.parse(original.subarray(20,20+sourceLength).toString());
+    assert.equal(d.asset.extras.sourceSha256,createHash('sha256').update(original).digest('hex'));
+    assert.equal(d.asset.extras.author,source.asset.extras.author);assert.equal(d.asset.extras.license,source.asset.extras.license);
+    assert.equal(d.meshes.length,20);assert.equal(d.materials.length,2);assert.equal(d.images.length,6);
+    assert.equal(d.materials[1].alphaMode,'MASK');assert.equal(d.materials[1].alphaCutoff,.35);
+    const imageHash=(data:Buffer,json:typeof d,jsonLength:number,index:number)=>{
+        const view=json.bufferViews[json.images[index].bufferView];
+        return createHash('sha256').update(data.subarray(28+jsonLength+view.byteOffset,28+jsonLength+view.byteOffset+view.byteLength)).digest('hex');
+    };
+    assert.deepEqual(d.images.map((_im:unknown,i:number)=>imageHash(bytes,d,length,i)).sort(),source.images.slice(0,6).map((_im:unknown,i:number)=>imageHash(original,source,sourceLength,i)).sort());
+    for(const field of ['name','doubleSided','extensions'])assert.deepEqual(d.materials[0][field],source.materials[0][field]);
+    for(const key of ['baseColorTexture','metallicRoughnessTexture']){
+        const a=d.materials[0].pbrMetallicRoughness[key].index,b=source.materials[0].pbrMetallicRoughness[key].index;
+        assert.equal(imageHash(bytes,d,length,d.textures[a].source),imageHash(original,source,sourceLength,source.textures[b].source));
+    }
+    assert.equal(imageHash(bytes,d,length,d.textures[d.materials[0].normalTexture.index].source),imageHash(original,source,sourceLength,source.textures[source.materials[0].normalTexture.index].source));
+    const expected={Fir_large_2:[5228,2506],Fir_medium_1:[3856,1961],Fir_medium_2:[3598,2278],Fir_small_1:[437,318],Fir_small_2:[418,296]};
+    for(const [variant,counts] of Object.entries(expected))for(const lod of [1,2]){
+        const node=d.nodes.find((n:{name:string})=>n.name===`${variant}_LOD${lod}`);assert.ok(node);
+        assert.deepEqual(node.matrix.slice(12,15),[0,0,0]);
+        const tris=node.children.reduce((sum:number,i:number)=>sum+d.meshes[d.nodes[i].mesh].primitives.reduce((s:number,p:{indices:number})=>s+d.accessors[p.indices].count/3,0),0);
+        assert.equal(tris,counts[lod-1]);
+    }
+    assert.deepEqual(d.nodes[0].matrix,source.nodes[0].matrix);assert.deepEqual(d.nodes[1].matrix,source.nodes[1].matrix);
+    for(const node of d.nodes.filter((n:{name:string})=>/^Fir_.*_\d+$/.test(n.name)))assert.equal(node.matrix[0],100,'group scale cancels centimetre root scale');
+});
+
 test('spruce fills the interior except for the real-tree edge and spawn surround', () => {
     assert.equal(usesBorderImpostor(-468,0),true);
     const edge = denseForestBoundaryAt(0)-15;

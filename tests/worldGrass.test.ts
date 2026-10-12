@@ -1,4 +1,21 @@
 import test from 'node:test';
+test('sky retains dirty lighting while sun moves and solves once after it settles',async()=>{
+    const {createServer}=await import('vite');
+    const server=await createServer({configFile:false,cacheDir:'node_modules/.vite-test-sky-defer',server:{middlewareMode:true,hmr:false},appType:'custom',optimizeDeps:{noDiscovery:true}});
+    try{
+        const {Sky}=await server.ssrLoadModule('/src/render/sky.ts');
+        let calls=0;
+        const state={_dirty:true,deferAtmosphereUpdates:true,updatingSolve:false,lastUpdateSolve:-Infinity,azimuthOverride:225,
+            syncFromSettings:()=>{},lut:{isReady:()=>true},shLut:{isReady:()=>true},solve:async()=>{calls++;}};
+        for(let frame=0;frame<100;frame++)assert.equal(Reflect.apply(Sky.prototype.update,state,[]),false);
+        assert.equal(calls,0);assert.equal(state._dirty,true,'the final lighting change remains queued');
+        state.deferAtmosphereUpdates=false;
+        assert.equal(Reflect.apply(Sky.prototype.update,state,[]),true);assert.equal(calls,1);
+        for(let frame=0;frame<100;frame++)assert.equal(Reflect.apply(Sky.prototype.update,state,[]),false);
+        await new Promise(resolve=>setImmediate(resolve));
+        assert.equal(calls,1);assert.equal(state.updatingSolve,false);
+    }finally{await server.close();}
+});
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { NullEngine } from '@babylonjs/core/Engines/nullEngine';

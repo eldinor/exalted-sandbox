@@ -1,5 +1,9 @@
 # Exalted history and technical documentation
 
+Historical record: halved.html, forest.html, forest_road.html and snow_mountain.html,
+including their dedicated code/assets, were removed on 2026-10-12. Descriptions
+of those experiments below are historical, not current dev-server pages.
+
 [Back to README](README.md)
 
 The README covers the main application and the authored Grassland lab. This file
@@ -45,11 +49,7 @@ Exalted world's layout, assets or runtime behavior.
 
 | Page | Purpose |
 | --- | --- |
-| [/halved.html](halved.html) | Half-scale authored-world reference. |
 | [/hm.html](hm.html) | Heightmap inspection utility using `vis_ground_heightmap-11.png` and `vertex_color_4k-9.png`, with local map uploads and independent heightmap/vertex-map opacity sliders. |
-| [/forest.html](forest.html) | Legacy forest performance lab with chunks, LOD, wind and recordings. |
-| [/forest_road.html](forest_road.html) | Forest-road experiment. |
-| [/snow_mountain.html](snow_mountain.html) | Mountain viewer using world sky, shadows, fog and post-processing. |
 | [/waterfall.html](waterfall.html) | Standalone waterfall experiment. |
 | [/generator/generated-world.html](generator/generated-world.html) | Offline generated-world preview. |
 | [/generator/grass-performance.html](generator/grass-performance.html) | Generated-world grass benchmark with procedural, imported and hybrid modes. |
@@ -326,7 +326,7 @@ or Grassland lab. Current contracts are in the technical references above.
 Browser automation commands in this archive still require explicit user approval
 before execution.
 
-The mountain viewer is at **[/snow_mountain.html](/snow_mountain.html)** and uses the world sky, shadows, fog and post-processing. Click to look; WASD moves, Space/Ctrl changes altitude and Shift speeds up flight.
+The mountain viewer is at **snow_mountain.html (removed)** and uses the world sky, shadows, fog and post-processing. Click to look; WASD moves, Space/Ctrl changes altitude and Shift speeds up flight.
 
 TypeScript preparation: `npm run typecheck`; automated tests: `npm test`. Legacy JavaScript and the demo pages are not strictly checked. See [TS_Migration.md](TS_Migration.md).
 
@@ -336,7 +336,7 @@ Forest work is deferred until replacement models arrive; requirements and lesson
 
 World website: [exaltedgaming.gg](https://exaltedgaming.gg/).
 
-The separate forest performance demo is at **[/forest.html](/forest.html)**.
+The separate forest performance demo is at **forest.html (removed)**.
 It exposes 32 m thin-instance chunks, LOD, vegetation density, shadows, wind and
 ten-second performance recordings. See [forest integration notes](src/forest/README.md).
 

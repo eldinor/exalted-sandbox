@@ -1,4 +1,6 @@
 /** Production adapter for the shared Grassland renderer. */
+import type { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture';
+import { flowerSettings, flowerSamplers, meadowFlowerColonyAt, loadMeadowFlowers, type MeadowFlowerFamily } from '../grass/MeadowFlowers.ts';
 import type { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Matrix, Vector2, Vector3, Vector4 } from '@babylonjs/core/Maths/math.vector';
@@ -8,7 +10,7 @@ import { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial';
 import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage';
 import type { Scene } from '@babylonjs/core/scene';
 import { GrassSystem } from '../grass/GrassSystem.ts';
-import { loadImportedGrass } from '../grass/ImportedGrass.ts';
+import { loadImportedGrass, type ImportedGrassPrototype } from '../grass/ImportedGrass.ts';
 import { worldGrassSettings } from '../grass/WorldGrassSettings.ts';
 import { createAuthoredGrassSamplers } from '../grass/AuthoredGrassSamplers.ts';
 import { grassInteractionAllowed, MAX_GRASS_SURF_SEGMENTS } from '../grass/GrassInteraction.ts';
@@ -30,7 +32,7 @@ interface MeshPasses { staticGrass: boolean; }
 
 const UNIFORMS = ['world','viewProjection','lightViewProjection','time','wind','windFade','windDirection',
     'windCameraPosition','cameraPosition','interactionEnabled','impactCount','impactData','surfSegmentCount','surfSegments','surfBounds',
-    'visualization','lodKind','colorScale','rootColor','tipColor','sunDir','sunRadiance','shR','cascadeMatrices',
+    'visualization','lodKind','colorScale','rootColor','tipColor','flowerGamma','flowerCutoff','sunDir','sunRadiance','shR','cascadeMatrices',
     'cascadeSplits','cascadeParams','shadowTexel','shadowSoftness','shadowBias','ambientIntensity','fogDensity',
     'fogHeightFalloff','fogStart','aerialStrength','spellLightPos','spellLightCol','spellLightCount'];
 
@@ -39,7 +41,8 @@ export class WorldGrass {
     private viewReady = false;
     private readonly tileMinimum = new Vector3();
     private readonly tileMaximum = new Vector3();
-    readonly settings = worldGrassSettings();
+    readonly settings: GrassSettings;
+    private flowerTexture: BaseTexture | null = null;
     readonly renderer: GrassSystem;
     readonly grassWeightAt: (x: number, z: number) => number;
     private readonly passMaterials: ShaderMaterial[] = [];
@@ -62,14 +65,21 @@ export class WorldGrass {
     private readonly warmUpMeshes: Mesh[] = [];
 
     constructor(private readonly scene: Scene, private readonly terrain: Terrain, private readonly sky: Sky,
-        private readonly shadows: ShadowSystem, private readonly depth: DepthPass) {
+        private readonly shadows: ShadowSystem, private readonly depth: DepthPass,
+        private readonly flowerFamily?: MeadowFlowerFamily, private readonly thinFlowerColonies = false,
+        private readonly layerEnabled?: () => boolean) {
+        this.settings = flowerFamily ? flowerSettings(flowerFamily) : worldGrassSettings();
         const world = terrain.heightfield;
         if (!(world instanceof ExaltedWorld) || !world.surface) throw new Error('Grass requires loaded authored terrain.');
-        const samplers = createAuthoredGrassSamplers(world.surface, world.biomeSurface ?? undefined, (x, z, height) => {
+        const baseSamplers = createAuthoredGrassSamplers(world.surface, world.biomeSurface ?? undefined, (x, z, height) => {
             const water = terrain.water?.sample(x, z);
             return !!water && water.level > height;
         });
-        this.grassWeightAt = samplers.grassWeightAt;
+        this.grassWeightAt = baseSamplers.grassWeightAt;
+        const samplers = flowerFamily ? flowerSamplers(baseSamplers, flowerFamily.seed) : {
+            ...baseSamplers, densityWeightAt: (x: number,z: number) =>
+                this.thinFlowerColonies ? 1 - .35 * meadowFlowerColonyAt(x,z) : 1,
+        };
         this.renderer = new GrassSystem(scene, samplers, this.settings, new Vector2(), 320, {
             importedOnly: true, streaming: true,
             isMeshInView: mesh => !this.viewReady || mesh.getBoundingInfo().isInFrustum(this.viewPlanes),
@@ -85,8 +95,16 @@ export class WorldGrass {
     get streamingStats() { return this.renderer.streamingStats; }
 
     async load(): Promise<void> {
-        const prototypes = await loadImportedGrass(this.scene);
-        this.warmUpGeometry = prototypes.get('grass_medium_01_small_a_LOD1')?.geometry ?? null;
+        let prototypes: Map<string, ImportedGrassPrototype>;
+        if (this.flowerFamily) {
+            const loaded = await loadMeadowFlowers(this.scene, this.flowerFamily);
+            prototypes = loaded.prototypes; this.flowerTexture = loaded.texture;
+            for (const material of this.renderer.materials) {
+                material.setTexture('flowerAlbedo', this.flowerTexture);
+                material.setFloat('flowerGamma', this.flowerTexture.gammaSpace ? 2.2 : 1);
+            }
+        } else prototypes = await loadImportedGrass(this.scene);
+        this.warmUpGeometry = prototypes.get(this.flowerFamily?.mix[0].variant ?? 'grass_medium_01_small_a_LOD1')?.geometry ?? null;
         this.renderer.setImportedPrototypes(prototypes);
         this.renderer.prepareStaticMaterials();
         for (const staticGrass of [false, true]) {
@@ -95,14 +113,19 @@ export class WorldGrass {
     }
 
     private makeMaterial(name: string, lod: number, staticGrass: boolean, pass?: GrassPass): ShaderMaterial {
-        const material = new ShaderMaterial(`world-grass:${name}`, this.scene, 'worldGrass', {
+        const material = new ShaderMaterial(`world-${this.flowerFamily?.id ?? 'grass'}:${name}`, this.scene, 'worldGrass', {
             shaderLanguage: ShaderLanguage.WGSL,
-            attributes: ['position','normal'],
+            attributes: ['position','normal', ...(this.flowerFamily ? ['uv'] : [])],
             uniforms: UNIFORMS.slice(),
-            samplers: ['skyLUT','cascade0','cascade1','cascade2'],
-            defines: ['#define GRASS_PRODUCTION', ...(staticGrass ? ['#define GRASS_STATIC'] : []), ...(pass ? [`#define ${pass}`] : [])],
+            samplers: ['skyLUT','cascade0','cascade1','cascade2', ...(this.flowerFamily ? ['flowerAlbedo'] : [])],
+            defines: ['#define GRASS_PRODUCTION', ...(this.flowerFamily ? ['#define MEADOW_FLOWERS'] : []), ...(staticGrass ? ['#define GRASS_STATIC'] : []), ...(pass ? [`#define ${pass}`] : [])],
         });
         material.backFaceCulling = false;
+        if (this.flowerFamily) material.setFloat('flowerCutoff', this.flowerFamily.alphaCutoff);
+        if (this.flowerTexture) {
+            material.setTexture('flowerAlbedo', this.flowerTexture);
+            material.setFloat('flowerGamma', this.flowerTexture.gammaSpace ? 2.2 : 1);
+        }
         material.setFloat('lodKind', lod);
         material.setFloat('spellLightCount', 0);
         material.setArray4('spellLightPos', new Array<number>(16).fill(0));
@@ -130,6 +153,7 @@ export class WorldGrass {
 
     private syncMesh(mesh: Mesh, visible: boolean, staticGrass: boolean): void {
         mesh.renderingGroupId = 1;
+        if (this.flowerFamily && mesh.name.startsWith('grass:')) mesh.name = mesh.name.replace('grass:', this.flowerFamily.id + ':');
         const previous = this.registered.get(mesh);
         if (!visible) { if (previous) this.unregister(mesh); return; }
         if (previous && previous.staticGrass === staticGrass) return;
@@ -212,7 +236,7 @@ export class WorldGrass {
         this.context.windCameraPosition.copyFrom(camera);
         const angle = S.windDirection * Math.PI / 180;
         this.context.windDirection.set(Math.sin(angle), Math.cos(angle));
-        this.settings.windStrength = .3 * S.windStrength;
+        this.settings.windStrength = (this.flowerFamily ? .07 : .3) * S.windStrength;
         this.context.surfSegmentCount = allowed && this.settings.interaction ? wake.copyInteractionSegments(this.surfSegments) : 0;
         let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
         for (let endpoint = 0; endpoint < this.context.surfSegmentCount * 2; endpoint++) {
@@ -222,7 +246,9 @@ export class WorldGrass {
         }
         if (this.context.surfSegmentCount) this.surfBounds.set(minX - 2.4, minZ - 2.4, maxX + 2.4, maxZ + 2.4);
         else this.surfBounds.set(0, 0, 0, 0);
-        this.renderer.update(this.context);
+        const enabled = this.settings.enabled;
+        if (this.layerEnabled) this.settings.enabled = enabled && this.layerEnabled();
+        try { this.renderer.update(this.context); } finally { this.settings.enabled = enabled; }
         for (const material of this.renderer.materials) lights.apply(material);
         for (const material of this.passMaterials) this.bindMaterial(material, this.context);
     }
@@ -275,5 +301,6 @@ export class WorldGrass {
         this.renderer.dispose();
         for (const material of this.passMaterials) material.dispose();
         this.passMaterials.length = 0; this.passCache.clear(); this.warmUpGeometry = null;
+        this.flowerTexture?.dispose(); this.flowerTexture = null;
     }
 }

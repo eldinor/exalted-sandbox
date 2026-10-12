@@ -22,6 +22,9 @@ import { forestOverlookGroundWeight } from '../terrain/forestGroundCoverage.ts';
 import type { MapPropSnapshot } from '../ui/mapPropSnapshot.ts';
 import { writeImpostorCard } from '../forest/ImpostorBatchGeometry.ts';
 import { DENSE_FOREST_EDGE } from '../forest/DenseForestShape.ts';
+import { loadFirPack } from '../forest/FirPack.ts';
+import { FOREST_FRINGE, createForestBush, placeForestFringe } from '../forest/ForestFringe.ts';
+import { BIG_TREE_DENSITY, thinBigTrees } from '../forest/BigTreeDensity.ts';
 import { ForestImpostorBatch, ForestImpostorResources } from '../forest/ForestImpostorBatch.ts';
 import { parseSpruceAtlas } from '../forest/SpruceImpostor.ts';
 import { isForestColor } from '../forest/ForestBiome.ts';
@@ -40,18 +43,23 @@ export class WorldForest {
         realEdgeWidth: FOREST_REAL_EDGE_WIDTH, spawnRealRadius: FOREST_SPAWN_REAL_RADIUS, smallVariant: 'Pine_small_1', smallShare: FOREST_SMALL_SHARE,
         openForest: OPEN_FOREST, openMix: OPEN_FOREST_MIX,
         denseEdge: DENSE_FOREST_EDGE,
+        firPack: 'terrain/forest/fir-pack-selected.glb',
+        fringe: FOREST_FRINGE,
+        bigTreeDensity: BIG_TREE_DENSITY,
     };
-    readonly stats = { placed: 0, visible: 0, activeChunks: 0, activeMeshes: 0, triangles: 0, colliders: 0, updateMs: 0, impostorPlaced: 0, impostorVisible: 0, impostorChunks: 0, impostorTriangles: 0, bigPlaced: 0, smallPlaced: 0, openPlaced: 0 };
+    readonly stats = { placed: 0, visible: 0, activeChunks: 0, activeMeshes: 0, triangles: 0, colliders: 0, updateMs: 0, impostorPlaced: 0, impostorVisible: 0, impostorChunks: 0, impostorTriangles: 0, bigPlaced: 0, smallPlaced: 0, openPlaced: 0, firPlaced: 0 };
     private readonly chunks: ForestChunk[] = [];
     private readonly warmUpMeshes: Mesh[] = [];
     private readonly shading: ForestMaterials;
     private readonly collisions: PropCollisions;
     private barriers: PropCollider[] = [];
     private container: AssetContainer | null = null;
+    private firContainer: AssetContainer | null = null;
     private impostorResources: ForestImpostorResources | null = null;
     private readonly last = new Vector3(Infinity, Infinity, Infinity);
     private wasEnabled = true;
     private disposed = false;
+    readonly fringeStats = {placed:0,trees:0,bushes:0};
     constructor(private readonly scene: Scene, private readonly terrain: Terrain, sky: Sky, shadows: ShadowSystem,
         private readonly depth: DepthPass) {
         this.shading = new ForestMaterials(scene, sky, shadows);
@@ -69,12 +77,17 @@ export class WorldForest {
         const placed = await loadPinePack(this.scene);
         this.container = placed.container;
         try {
+            const firs = await loadFirPack(this.scene);
+            this.firContainer = firs.container;
             const prototype = placed.prototypes.find(tree => tree.name === CLOSED_FOREST.variant);
             if (!prototype) throw new Error('Missing Big 1 pine prototype.');
             const smallPrototype = placed.prototypes.find(tree => tree.name === 'Pine_small_1');
             if (!smallPrototype) throw new Error('Missing Small 1 pine prototype.');
-            const pinePrototypes: readonly PinePrototype[] = [prototype, ...placed.prototypes.filter(tree =>
-                OPEN_FOREST_MIX.some(entry => entry.variant === tree.name))];
+            const firSmall=firs.prototypes.find(tree=>tree.name==='Fir_small_2');
+            if(!firSmall)throw new Error('Missing Small 2 shrub source.');
+            const bush=createForestBush(firSmall);
+            const pinePrototypes: readonly PinePrototype[] = [prototype, smallPrototype, ...placed.prototypes.filter(tree =>
+                OPEN_FOREST_MIX.some(entry => entry.variant === tree.name)), ...firs.prototypes,bush];
             const placement = placeClosedForest({
                 minX: surface.minX, maxX: surface.maxX, minZ: surface.minZ, maxZ: surface.maxZ,
                 minY: world.minHeight, maxY: world.maxHeight, heightAt,
@@ -88,18 +101,27 @@ export class WorldForest {
                 forestAt:(x,z)=>{surface.sample(x,z,undefined,rgb);return isForestColor(rgb)||forestOverlookGroundWeight(x,z,rgb)>.65;},
                 slopeAt:(x,z)=>{surface.sample(x,z,normal);return Math.hypot(normal.x,normal.z)/Math.max(normal.y,1e-6);},
                 submergedAt:(x,z,y)=>(this.terrain.water?.sample(x,z)?.level??-Infinity)>y,
-            },pinePrototypes,placed.referenceHeight);
+            },[...placed.prototypes,...firs.prototypes],firs.referenceHeight);
+            const fringe=placeForestFringe({
+                minX:surface.minX,maxX:surface.maxX,minZ:surface.minZ,maxZ:surface.maxZ,minY:world.minHeight,maxY:world.maxHeight,heightAt,
+                forestAt:(x,z)=>{surface.sample(x,z,undefined,rgb);return isForestColor(rgb);},
+                slopeAt:(x,z)=>{surface.sample(x,z,normal);return Math.hypot(normal.x,normal.z)/Math.max(normal.y,1e-6);},
+                submergedAt:(x,z,y)=>(this.terrain.water?.sample(x,z)?.level??-Infinity)>y,
+            },pinePrototypes,[...placement.trees,...open.trees]);
+            Object.assign(this.fringeStats,{placed:fringe.trees.length,trees:fringe.trees.length-fringe.bushes,bushes:fringe.bushes});
             const response = await fetch(`${import.meta.env.BASE_URL}terrain/forest/blue-spruce/impostor.json`);
             if (!response.ok) throw new Error('Failed to load border spruce atlas metadata.');
             const atlasData: unknown = await response.json();
             this.impostorResources = new ForestImpostorResources(this.scene, parseSpruceAtlas(atlasData), this.shading);
-            this.barriers = [...placement.barriers,...open.colliders];
+            const retained=thinBigTrees([...placement.trees,...open.trees,...fringe.trees]);
+            const retainedRoots=new Set(retained.map(site=>`${site.x}:${site.z}`));
+            this.barriers = [...placement.barriers,...open.colliders.filter(trunk=>retainedRoots.has(`${trunk.x}:${trunk.z}`)),...fringe.colliders];
             for (const barrier of this.barriers) this.collisions.add(barrier);
-            this.stats.placed = placement.trees.length + open.trees.length;
-            this.stats.openPlaced = open.trees.length;
+            this.stats.placed = retained.length;
+            this.stats.openPlaced = open.trees.filter(site=>retainedRoots.has(`${site.x}:${site.z}`)).length;
             this.stats.colliders = this.barriers.length;
             const grouped = new Map<string, (ForestSite & {variant?:string})[]>();
-            for (const site of [...placement.trees,...open.trees]) {
+            for (const site of retained) {
                 const key = `${Math.floor(site.x / CLOSED_FOREST.chunkSize)},${Math.floor(site.z / CLOSED_FOREST.chunkSize)}`;
                 let group = grouped.get(key);
                 if (!group) { group = []; grouped.set(key, group); }
@@ -111,12 +133,13 @@ export class WorldForest {
                 if (!(part.material instanceof PBRMaterial)) throw new Error('Pine pack requires PBR material metadata.');
                 if (partMaterials.has(part.material)) continue;
                 if (part.material.name === 'Clusters_Mat') part.material.albedoColor.multiplyInPlace(new Color3(.18, .30, .32));
+                if (part.material.name === 'Brunches_Mat') part.material.albedoColor.multiplyInPlace(new Color3(.45, .55, .55));
                 partMaterials.set(part.material, {beauty: this.shading.create(part.material), depth: this.shading.create(part.material, 'PROP_PREPASS')});
             }
             const matrix = new Matrix(), position = new Vector3(), scaling = new Vector3(), rotation = new Quaternion();
             for (const [key, originalSites] of grouped) {
-                const realSites = originalSites.filter(site => !usesBorderImpostor(site.x, site.z));
-                const borderSites = originalSites.filter(site => usesBorderImpostor(site.x, site.z)).map(site => ({
+                const realSites = originalSites.filter(site => site.variant || !usesBorderImpostor(site.x, site.z));
+                const borderSites = originalSites.filter(site => !site.variant && usesBorderImpostor(site.x, site.z)).map(site => ({
                     x: site.x, z: site.z, y: heightAt(site.x,site.z) - .03,
                     height: site.scale * prototype.height, yaw: site.yaw,
                 }));
@@ -128,7 +151,8 @@ export class WorldForest {
                         ...site, y: pineGroundHeight(tree.rootSupport,site.x,site.z,site.scale,site.yaw,heightAt),
                     }));
                     if (!sites.length) continue;
-                    if (tree.name.startsWith('Pine_small')) this.stats.smallPlaced += sites.length;
+                    if (tree.name.startsWith('Fir_')) this.stats.firPlaced += sites.length;
+                    if (tree.name.includes('_small_')) this.stats.smallPlaced += sites.length;
                     else if (tree === prototype) this.stats.bigPlaced += sites.length;
                     // Retain the pack's size ratio: Small 1 uses the same scale
                     // as Big 1, rather than being stretched into another big tree.
@@ -238,7 +262,7 @@ export class WorldForest {
 
     async warmUp(): Promise<void> {
         const samples: PineBatch[] = [];
-        for (const variant of [CLOSED_FOREST.variant, ...OPEN_FOREST_MIX.map(entry=>entry.variant)]) {
+        for (const variant of [CLOSED_FOREST.variant, 'Pine_small_1', 'Fir_shrub_1', ...OPEN_FOREST_MIX.map(entry=>entry.variant)]) {
             const sample = this.chunks.flatMap(chunk => chunk.pines).find(batch => batch.variant === variant);
             if (sample) samples.push(sample);
         }
@@ -296,5 +320,6 @@ export class WorldForest {
         this.barriers = [];
         this.impostorResources?.dispose(); this.impostorResources=null;
         this.shading.dispose(); this.container?.dispose(); this.container = null;
+        this.firContainer?.dispose(); this.firContainer = null;
     }
 }

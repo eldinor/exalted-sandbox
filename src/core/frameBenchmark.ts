@@ -5,7 +5,7 @@ export const BENCHMARK_METRICS = [
     'cpuTerrainMs', 'cpuVfxMs', 'drawCalls', 'submittedIndices', 'grassCpuMs',
     'grassUploadCpuMs', 'grassQueuedPatches', 'grassVisiblePatches',
     'desertActiveChunks', 'desertActiveMeshes', 'forestCpuMs', 'forestVisibleTrees',
-    'forestActiveChunks', 'forestActiveMeshes', 'gpuRollingMs',
+    'forestActiveChunks', 'forestActiveMeshes', 'flowerCpuMs', 'flowerInstances', 'gpuRollingMs',
 ] as const;
 export type BenchmarkMetric = typeof BENCHMARK_METRICS[number];
 export type BenchmarkValues = Record<BenchmarkMetric, number>;

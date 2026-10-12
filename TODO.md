@@ -1,5 +1,9 @@
 # Exalted world integration
 
+Legacy-page cleanup (2026-10-12): the half-world, old forest, forest-road and
+mountain viewers and their dedicated assets/code have been removed. Earlier
+completed-work entries below are historical records.
+
 ## Agreed direction
 
 - Use Exalted's map and descriptions for world layout, biome placement and scale.

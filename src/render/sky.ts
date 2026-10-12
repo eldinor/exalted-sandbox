@@ -54,6 +54,12 @@ interface SkyCameraRig { camera:{position:Vector3;maxZ:number} }
 
 /** Bake atmospheric lookup data and ambient lighting shared by world materials. */
 export class Sky {
+    /** Production region transition; null retains the ordinary sun slider. */
+    azimuthOverride:number|null=null;
+    /** Hold the last baked atmosphere/ambient lighting until regional motion ends. */
+    deferAtmosphereUpdates=false;
+    private updatingSolve=false;
+    private lastUpdateSolve=-Infinity;
     readonly scene: Scene;
     readonly engine: AbstractEngine;
     readonly sunDir = new Vector3(0, .2, 1);
@@ -169,7 +175,7 @@ export class Sky {
      * for a rebake if anything actually moved.
      */
     syncFromSettings(): void {
-        const az = (SS.sunAzimuth * Math.PI) / 180;
+        const az = ((this.azimuthOverride ?? SS.sunAzimuth) * Math.PI) / 180;
         const el = (SS.sunElevation * Math.PI) / 180;
         const ce = Math.cos(el);
         _dir.set(Math.sin(az) * ce, Math.sin(el), Math.cos(az) * ce);
@@ -220,12 +226,17 @@ export class Sky {
     update(): boolean {
         this.syncFromSettings();
         if (!this._dirty) return false;
+        if(this.deferAtmosphereUpdates)return false;
+        // Smooth bearing motion must not launch overlapping asynchronous SH solves.
+        if(this.updatingSolve || this.azimuthOverride!==null && performance.now()-this.lastUpdateSolve<250)return false;
         if (!this.lut.isReady() || !this.shLut.isReady()) return false;
         this._dirty = false;
         // Live re-solve when the sun slider moves. The SH readback is async, so
         // this settles over the next few frames rather than instantly — which
         // is invisible while dragging a slider and avoids a stall.
-        this.solve();
+        this.updatingSolve=true;this.lastUpdateSolve=performance.now();
+        void this.solve().catch(error=>{this._dirty=true;console.error('[exalted] sky solve failed',error);})
+            .finally(()=>{this.updatingSolve=false;});
         return true;
     }
 
@@ -243,16 +254,20 @@ export class Sky {
         this.syncFromSettings();
         await whenReady(this.lut, "skyLUT");
         await whenReady(this.shLut, "skySH");
+        if(this.deferAtmosphereUpdates){this._dirty=true;return;}
         this._dirty = false;
 
         this.groundBounce.set(0, 0, 0);
         for (let i = 0; i < 3; i++) {
+            if(this.deferAtmosphereUpdates){this._dirty=true;return;}
             this.bake();
             await this.projectSH();
+            if(this.deferAtmosphereUpdates){this._dirty=true;return;}
             this._updateGroundBounce();
         }
         // Final bake so the LUT reflects the converged bounce, then one last
         // projection so the SH the shader uses matches the LUT it samples.
+        if(this.deferAtmosphereUpdates){this._dirty=true;return;}
         this.bake();
         await this.projectSH();
     }
@@ -314,6 +329,7 @@ export class Sky {
      */
     async projectSH(): Promise<void> {
         const data = await this.shLut.readPixels(0, 0);
+        if(this.deferAtmosphereUpdates){this._dirty=true;return;}
         if (!data) return;
         if (!(data instanceof Float32Array)) throw new Error(`Sky SH expected Float32Array, received ${data.constructor.name}.`);
         const px = data;

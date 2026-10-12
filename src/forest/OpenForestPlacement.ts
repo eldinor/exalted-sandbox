@@ -7,9 +7,10 @@ import { denseForestBoundaryAt } from './DenseForestShape.ts';
 export const OPEN_FOREST = Object.freeze({ spacing: 8, minX: -417, maxX: -166,
     referenceHeight: 14, overlookX: -248, overlookZ: 125, clearingRadius: 18 });
 export const OPEN_FOREST_MIX = [
-    {variant:'Pine_medium_1',share:.25},{variant:'Pine_medium_2',share:.25},
-    {variant:'Pine_small_1',share:.15},{variant:'Pine_small_2',share:.15},
+    {variant:'Fir_medium_1',share:.24},{variant:'Fir_medium_2',share:.24},
+    {variant:'Fir_small_1',share:.14},{variant:'Fir_small_2',share:.14},
     {variant:'Pine_sapling_1',share:.10},{variant:'Pine_sapling_2',share:.10},
+    {variant:'Fir_large_2',share:.04},
 ] as const;
 export interface OpenForestSite extends ForestSite { variant: string; }
 function random(x:number,z:number,salt:number):number {
@@ -23,7 +24,7 @@ export function openForestExcluded(x:number,z:number):boolean {
     const dx=82,dz=-90,t=Math.max(0,Math.min(1,((x+248)*dx+(z-125)*dz)/(dx*dx+dz*dz)));
     return Math.hypot(x-(-248+dx*t),z-(125+dz*t))<8;
 }
-/** Accessible woodland: deterministic six-model placement and trunk-only collision. */
+/** Accessible woodland: deterministic fir/pine mix and trunk-only collision. */
 export function placeOpenForest(sample:ForestSampling,models:readonly PinePrototype[],referenceHeight:number):{
     trees:OpenForestSite[];colliders:PropCollider[];
 } {
@@ -36,10 +37,14 @@ export function placeOpenForest(sample:ForestSampling,models:readonly PineProtot
         if(!allowed(x,z)||!allowed(x-2,z)||!allowed(x+2,z)||!allowed(x,z-2)||!allowed(x,z+2))continue;
         const ground=sample.heightAt(x,z);
         if(!Number.isFinite(ground)||sample.slopeAt(x,z)>.7||sample.submergedAt(x,z,ground))continue;
-        const selection=random(col,row,13);let cumulative=0,variant:string=OPEN_FOREST_MIX[5].variant;
+        const selection=random(col,row,13);let cumulative=0,variant:string=OPEN_FOREST_MIX[OPEN_FOREST_MIX.length-1].variant;
         for(const entry of OPEN_FOREST_MIX){cumulative+=entry.share;if(selection<cumulative){variant=entry.variant;break;}}
         const model=models.find(tree=>tree.name===variant);if(!model)throw new Error(`Missing open forest model ${variant}.`);
-        const scale=OPEN_FOREST.referenceHeight/referenceHeight*(.85+random(col,row,14)*.3),yaw=random(col,row,15)*Math.PI*2;
+        const targetHeight = variant==='Fir_large_2'?20:OPEN_FOREST.referenceHeight;
+        const baseScale = variant==='Fir_large_2'?targetHeight/model.height:
+            variant.startsWith('Fir_')?targetHeight/referenceHeight:
+            targetHeight/(models.find(tree=>tree.name==='Pine_medium_2')?.height??referenceHeight);
+        const scale=baseScale*(.85+random(col,row,14)*.3),yaw=random(col,row,15)*Math.PI*2;
         const y=pineGroundHeight(model.rootSupport,x,z,scale,yaw,sample.heightAt);
         trees.push({x,y,z,scale,yaw,variant});
         colliders.push({x,z,radius:Math.max(.12,model.height*scale*.018),minY:ground-.3,maxY:ground+model.height*scale*.65,name:`open-forest:${col}:${row}:${variant}`});

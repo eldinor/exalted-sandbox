@@ -362,7 +362,7 @@ export class GrassSystem {
 
     private geometryKey(): string {
         this.activeMix();
-        return `${this.settings.bladeSource}:${this.settings.importedVariant}:${this.importedNearName()}:${this.settings.bladeHeight}:${this.settings.bladeWidth}:${this.settings.maxSlope ?? .4}:${this.mixSignature}`;
+        return `${this.settings.bladeSource}:${this.settings.importedVariant}:${this.importedNearName()}:${this.settings.bladeHeight}:${this.settings.bladeWidth}:${this.settings.maxSlope ?? .4}:${this.settings.upright ?? false}:${this.settings.groundOffset ?? .015}:${this.mixSignature}`;
     }
 
     private releaseStreamingPatch(patch: GrassPatch): void {
@@ -404,7 +404,7 @@ export class GrassSystem {
                 nearTriangles: nearImported && near ? near.triangles : 8,
                 midTriangles: midImported && mid ? mid.triangles : 2,
                 radius,
-                placement: { density: this.settings.density, maxSlope: this.settings.maxSlope, height: this.settings.bladeHeight * (nearImported ? height / reference : 1), width: this.settings.bladeWidth, nearImported, midImported },
+                placement: { density: this.settings.density, upright: this.settings.upright, groundOffset: this.settings.groundOffset, maxSlope: this.settings.maxSlope, height: this.settings.bladeHeight * (nearImported ? height / reference : 1), width: this.settings.bladeWidth, nearImported, midImported },
             };
             this.midColorScale = grassLightingResponse(nearData) / grassLightingResponse(midData);
             const mix = this.activeMix();

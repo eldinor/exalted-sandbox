@@ -3,9 +3,8 @@
 Status: the complete forest remains deferred, with user-authorized production
 sections: the heightmap world's closed eastern strip now repeats the replacement
 `Pine_big_1` and `Pine_small_1` models alongside spruce impostors. See [FOREST_NOTES.md](FOREST_NOTES.md) for its extent, density,
-barrier and benchmark contract. The legacy `forest.html`, JavaScript forest
-modules, preparation script, tests and original assets remain prototype references;
-do not integrate those old models into the main world.
+barrier and benchmark contract. The legacy forest page, renderer, preparation script, tests and assets were
+removed on 2026-10-12. Historical lessons below remain reference.
 
 The separate `/forestland.html` lab now explores 12 user-supplied pine-pack
 variants with authored LOD1/LOD2 on the current heightmap's forest biome. Its placement,
@@ -30,9 +29,9 @@ the current border section; complete biome population remains deferred.
 
 The user also authorized the accessible section westward through Forest Outlook.
 It spans westward from the curved dense edge to X=-166 within the forest palette and the bounded
-forest-floor correction around (-248,125). It uses Medium 1/2, Small 1/2 and
-Sapling 1/2, deterministic 25/25/15/15/10/10% target shares, 8 m spacing and a
-14 m Medium 2 reference height. An 18 m overlook clearing and southeast sightline
+forest-floor correction around (-248,125). It uses Fir Large 2 (4%), Fir Medium 1/2 (24/24%), Fir Small 1/2 (14/14%) and
+retained Pine Sapling 1/2 (10/10%). Spacing is 8 m, Medium 1 reference height
+is 14 m, Large 2 is 20 m, and pine saplings retain their previous scale. An 18 m overlook clearing and southeast sightline
 stay open. Per-model trunk-root grounding and size ratios are retained. Each
 32 m chunk has separate thin-instance bindings per model, shared materials,
 matching depth and startup warm-up. Trunk-only cylinders replace an area barrier
@@ -101,3 +100,16 @@ before and after optimizations. Preserve meaningful CPU regression tests and
 perform a manual GPU visual/performance check. Do not use Playwright unless asked.
 
 Implementation reference: [src/forest/README.md](src/forest/README.md).
+
+
+The authorized collider-edge fringe uses a 3.5 m jittered grid in a 3 m inside /
+14 m outside band along the dense contour. It adds short Small 1/2 firs and low
+paired-shoot Small 2 LOD2 shrubs without moving existing sites or obstructing the
+clearings. Bushes have no collision; new trees use trunk cylinders. All fringe
+geometry shares production chunking, depth, warm-up, toggles and map snapshots.
+
+
+Real Big 1 pines and Large 2 fir accents now use deterministic 50% thinning
+(ceil per model). Spruce impostors and all other models stay unchanged. The
+closed barrier is independent of thinning; removed open-tree colliders are
+removed together with their trunks. This does not alter the dense contour.

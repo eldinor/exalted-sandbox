@@ -1,5 +1,9 @@
 attribute position: vec3f;
 attribute normal: vec3f;
+#ifdef MEADOW_FLOWERS
+attribute uv: vec2f;
+varying vFlowerUV: vec2f;
+#endif
 #ifdef INSTANCES
 attribute world0: vec4f;
 attribute world1: vec4f;
@@ -108,6 +112,9 @@ fn main(input: VertexInputs)->FragmentInputs {
 #endif
   vertexOutputs.vHeight=h;
   vertexOutputs.vWorld=worldPosition.xyz;
+#ifdef MEADOW_FLOWERS
+  vertexOutputs.vFlowerUV=input.uv;
+#endif
   let clip=uniforms.viewProjection*worldPosition;
 #ifdef GRASS_PRODUCTION
   vertexOutputs.vViewZ=clip.w;

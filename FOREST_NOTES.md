@@ -1,12 +1,35 @@
 # Forest asset and rendering notes
 
+## Restored forest Cube and portal (2026-10-12)
+
+The interactive crystalline Cube from commit `2486717` is active at Forest
+Cube Spawn: chart (767, -104), world (-383.5, 52), with current terrain grounding
+and its original 0.5 m clearance. The shared `FOREST_CUBE_SPAWN` navigation
+constant anchors placement; avatar movement no longer determines Cube position.
+Existing clearing, corridor and tree placements are unchanged.
+
+Within 3 m, E starts the 1.25 s dissolve/portal growth. Portal orientation locks
+to the Cube face nearest the avatar. Entry arms after growth and 0.45 s settling;
+crossing into the 1.5 m radius displays `Portal entered` and publishes window
+event `exalted:portal-entered`. Preserve the legacy detail ID
+`default-spawn-portal` and world-space position for existing consumers. Standing
+inside does not repeatedly dispatch; leaving and re-entering dispatches again.
+The event is a hook, not an automatic teleport destination.
+
+Reflection Cube/probe is not instantiated or updated by the production app.
+Cube/portal shader registrations, materials and warm-up remain as before;
+automatic benchmarks suppress E activation. Native WebGPU checked E activation,
+visible ring/surface, event payload and absence of reflection meshes without
+shader errors. Node tests cover grounding, range, settling, orientation, event
+edge triggering and UI/resource disposal.
+
 Updated: 2026-10-09.
 
 These findings come from the standalone `/forestland.html` lab and supplied GLB
 assets. Forestland remains a standalone lab. A user-authorized eastern-strip
 trial now populates the main heightmap app with the replacement Big 1 pine.
 Full forest integration remains deferred under [FOREST_SPEC.md](FOREST_SPEC.md);
-the legacy `forest.html` prototype is retained separately. See the [lab README](generator/forestland/README.md)
+the legacy forest prototype and its assets were removed on 2026-10-12. See the [lab README](generator/forestland/README.md)
 for implementation details and [asset provenance](public/terrain/forest/SOURCE.md)
 for source and licence notes.
 
@@ -611,3 +634,265 @@ cylinders plus 593 individual trunk colliders. The capture completed without
 GPU errors, changed no live camera/pass membership counts, and left no map
 copies. This is a visual/lifecycle check, not a performance benchmark; the
 larger real-tree pocket adds batches despite fewer dense cards.
+
+## Realistic fir pack inspection - 2026-10-12
+
+Source: `public/assets/exalted/realistic_fir_trees_pack_lods_gameready.glb`.
+17,246,848 bytes (17.25 MB), 9 variants (Large/Medium/Small 1-3), 111 nodes,
+63 meshes, 11 materials, 41 embedded PNG textures; no animation/skin/morphs.
+Embedded metadata credits LOLIPOP, CC BY 4.0, Sketchfab source
+https://sketchfab.com/3d-models/realistic-fir-trees-pack-lods-gameready-f58e8b6d733e4b0586e5b7db847b89e7.
+No extraction or production integration has been performed.
+
+| Variant | LOD0 triangles | LOD1 | LOD2 | LOD3 |
+| --- | ---: | ---: | ---: | ---: |
+| Large 1 | 12,969 | 6,633 | 3,268 | 20 |
+| Large 2 | 9,872 | 5,228 | 2,506 | 20 |
+| Large 3 | 11,786 | 6,019 | 3,014 | 20 |
+| Medium 1 | 7,844 | 3,856 | 1,961 | 20 |
+| Medium 2 | 6,813 | 3,598 | 2,278 | 20 |
+| Medium 3 | 11,581 | 5,266 | 2,476 | 20 |
+| Small 1 | 599 | 437 | 318 | 20 |
+| Small 2 | 583 | 418 | 296 | 20 |
+| Small 3 | 501 | 390 | 296 | 20 |
+
+LOD0/1/2 have separate bark and foliage meshes but share Bark_Mat and the
+source's misspelled Brunches_Mat. LOD3 uses one variant-specific billboard
+material: four side images plus an overhead crown, 20 triangles total including
+four horizontal triangles at mid-height. This supplies aerial coverage, although
+it is planar approximation rather than actual canopy volume; inspect oblique
+views and transitions before adoption. Normal/roughness maps accompany cards.
+Large/medium billboard tilesheets are 512x512; small are 256x256. Shared bark
+maps are 512x1024, foliage maps 1024x1024. Images total about 10.9 MB, so subset
+extraction can avoid most unused per-variant billboard texture payloads.
+
+Foliage and all billboard materials are BLEND. Production should test MASK
+with a shared colour/depth/shadow threshold (0.35 is a starting point), rather
+than sorted blend rendering. Geometry has normals, tangents and UV0 throughout.
+The complete hierarchy cancels root 0.01 scaling with each tree group's 100x
+scale, so LOD0 world heights are Large 1/2/3 = 9.293/9.229/8.026 m, Medium
+1/2/3 = 4.419/4.158/6.592 m, Small 1/2/3 = 1.531/1.338/1.524 m. LOD nodes
+have 0/10/20/30 display translations plus coordinate rotations. Remove display
+offsets and bake the complete hierarchy before normalizing target size and
+grounding; do not infer orientation from raw accessor bounds or ground the
+minimum leaf tip as the trunk root. Atlas UV direction
+must be preserved; raw PNG views alone do not establish rendered orientation.
+
+Initial selection candidates: Large 2 for occasional large accents (cheapest
+large LOD2), Medium 1 plus Medium 2 for accessible woodland, Small 1 plus Small 2
+for regeneration/understory. Medium 3 is an alternate taller medium form.
+Small fir LOD2 (296-318 triangles) is substantially cheaper than our Small 1
+pine (847). Large fir LOD2 (2,506-3,268) is heavier than Big 1 pine (1,389), so
+retain existing two-triangle spruce impostors for the dense border until a
+fixed-camera comparison supports replacement. LOD3 is 10x the current card's
+geometry and has variant-specific textures/materials, but avoids a new bake.
+
+Inspection used GLB metadata, accessor/index counts, hierarchy matrices,
+embedded PNG headers, horizontal-card triangles and actual extracted billboard
+textures. No 3D WebGPU visual verification, tests, build or Playwright was run.
+
+## Selected fir production integration - 2026-10-12
+
+The user approved proceeding with the suggested five fir variants. The original
+17.25 MB pack remains unchanged. `scripts/prepare-fir-pack.mjs` reproducibly writes
+`public/terrain/forest/fir-pack-selected.glb` (7,101,576 bytes): Large 2, Medium
+1/2, Small 1/2, LOD1/LOD2, 20 bark/foliage meshes, two shared materials and six
+unchanged source textures. It clears tree/LOD display translations, retains the
+complete cancelling-scale/rotation hierarchy, records SHA256/provenance and
+converts Brunches_Mat to MASK 0.35. Attribution and contract are in the asset
+README. LOD0/LOD3 are not included; original LOD3 remains available for later
+comparison, while dense-border spruce cards are retained.
+
+`PinePack.ts` now accepts an optional pack manifest, retaining its lab default.
+`FirPack.ts` supplies the prepared path, five identities and Medium 1 reference.
+The loader bakes imported transforms exactly once, removes trunk X/Z offsets,
+and derives root support from both LODs. Models render upright at normalized
+sizes, without importing generator preparation code into production.
+
+Existing open-grid X/Z, yaw, size randomness, 8 m spacing, biome/slope/water
+exclusions, clearing/corridor and trunk-collider count stay unchanged. Model mix:
+Fir Large 2 4%, Medium 1/2 24/24%, Small 1/2 14/14%, Pine Sapling 1/2 10/10%.
+Large 2 is nominally 20 m with +/-15% variation; Medium 1 is the 14 m reference.
+Medium 2 and small firs retain their proportions (roughly 13.2 m and 4.8/4.2 m
+before variation). Pine saplings use the old pine Medium 2 reference scale,
+avoiding a size jump from the fir reference. Fir foliage receives linear tint
+(0.45,0.55,0.55); pine tint and bark colours are preserved.
+
+The 593 open sites now contain 23 Large 2, 141 Medium 1, 122 Medium 2, 89 Small
+1, 102 Small 2, 51 Pine Sapling 1 and 65 Pine Sapling 2. Thus 477 firs replace
+pines rather than increasing density. The dense contour still has 741 spruce
+cards, 110 Big 1 and 49 Small 1 pines. Total 1,493 trees and 1,685 colliders stay
+unchanged. Selected triangles rise from 722,752 to 898,294 (about 24%); selected
+colour meshes rise from 633 to 677 because of the rare seventh open variant.
+These figures are not measured GPU cost; use the unchanged forest benchmark.
+
+All active real variants use LOD2 and independent per-model chunk matrices.
+Materials are shared within each pack; cutoff matches colour/camera depth.
+Casting and wind remain off. Warm-up includes all nine active real variants
+plus spruce cards, and removes its probes before gameplay. Source containers,
+geometry, materials, registrations and colliders have ownership-based cleanup.
+The forest toggle and Ctrl+Shift+P snapshot include firs; the lab remains unchanged.
+
+Validation: typecheck and all 161 Node tests passed. Asset tests cover provenance,
+source texture bytes/remapping, LOD counts, display-offset removal, retained unit
+scales and MASK cutoff. Placement tests cover the new mix, bounded large accents,
+relative sizes and viewpoint/collision rules. Native WebGPU ground/orthographic
+captures inspected upright trees and intact clearing. All fir materials report
+0.35 cutoff; startup probes are zero, tree-off depth membership is zero, all
+colliders are retained, snapshot before/after counts match and no GPU errors
+occurred. No production build or Playwright was run.
+
+## Small-tree and bush fringe along the collider boundary - 2026-10-12
+
+The user requested additional small trees and bushes across the closed forest's
+collider boundary. `ForestFringe.ts` adds a deterministic 3.5 m jittered grid
+from 3 m inside to 14 m outside `denseForestBoundaryAt(z)`. It only accepts
+forest palette terrain, probes boundaries at 1 m, excludes road/water/slopes
+above 0.7, keeps viewpoint/spawn/corridor exclusions, and rejects roots within
+1.5 m of retained tree placements. Existing sites/models are not moved.
+
+The target is 40% Small 1/2 firs, 60% low evergreen shrubs. The current map adds
+165 small trees (79 Small 1, 86 Small 2) and 258 bushes, 423 sites total.
+Small-tree heights are 2.8-4.3 m; bushes 1.2-1.9 m. Small trunks have simple
+cylinders; bushes have no collision. The existing dense-area barrier stays in
+place. Grounding uses real triangles and root support; roots inside the dense
+side do not become impostors, even when representation rules change later.
+
+No dedicated lightweight bush model exists in the supplied active set. The
+ConiferousShrub source has 5,722 triangles and no LODs. Instead a bush prototype
+merges two low/wide Small 2 LOD2 shoots, with different yaw, offsets and heights:
+592 triangles total, original bark/foliage UVs and shared fir materials. This is
+an evergreen sapling-cluster shrub approximation, not extraction of the detailed
+ConiferousShrub. Source fir geometry is cloned before transformation/merge and
+remains unchanged; no additional model texture download is required. Attribution
+is the same as the selected fir source. New bush batches join existing 32 m
+model/chunk bindings, warm-up, colour/depth alpha cutout, forest toggle and map
+snapshot. No new wind, casting, particles or closed-area colliders are added.
+
+Diagnostics: `EXALTED.forest.fringeStats` reports placed/trees/bushes; all normal
+forest counters include the fringe. Current total is 1,916 vegetation sites,
+1,850 colliders and 1,101,608 distance-selected triangles (versus 898,294 before).
+Selected colour meshes are 741; native frame frustum rejection can reduce actual
+draws. The extra cover adds rendering cost; benchmark the forest route if needed.
+
+Validation: typecheck and all 163 Node tests passed. Regression covers contour
+band, deterministic counts, model selection, water and existing-root rejection,
+clearings, collision-free bushes and source geometry preservation during merge.
+Native WebGPU startup/ground fringe view inspected, no warm-up probes remained,
+forest off removed all forest depth entries and kept colliders. Only the existing
+headless float32-filterable warning appeared. No build or Playwright was run.
+
+## Forest and Lake Island sun transitions - 2026-10-12
+
+The user authorized 225-degree forest lighting and requested 105 degrees on
+Lake Island to reduce mountain-shadow darkness. Base bearing remains editable
+(default 185), with elevation/intensity unchanged. BiomeSun waits 1 s in a new
+region, then blends over 7 s with smoothstep and shortest-arc angle interpolation.
+Forest palette and the Forest Outlook floor correction determine forest weight;
+entry/release thresholds 0.65/0.25 give hysteresis at interpolated biome edges.
+Lake Island uses its authored Babylon centre (272.5,76) and a soft 55-75 m radius.
+This also treats the immediate island shore as an island transition zone; the
+main lake shore retains base lighting. Flight follows avatar X/Z, not camera X/Z.
+Leaving a region blends back to the base bearing; teleport does not snap the sun.
+Pause freezes transition timers. Automatic benchmark routes freeze their entry
+bearing and record actual azimuth/region separately from base settings.
+
+The effective bearing feeds the existing Sky sun vector before post/sky/shadow
+updates, so world/forest/water lighting and cascades share one direction. No new
+light, exposure/ambient boost or camera post effect is added. Smooth bearing
+changes throttle atmosphere/SH recalculation to 4 Hz and prevent overlapping
+asynchronous solves; direct sunlight and shadows move each frame.
+
+Typecheck and all 164 Node tests passed, including dwell delay, blend completion,
+boundary hysteresis, shortest-angle wrap, pause/benchmark hold, base release and
+island falloff. No production build or Playwright.
+
+Native WebGPU verified the effective Sky direction reaches 225 degrees at
+Forest Cube Spawn and 105 degrees at the island centre while the base slider
+remains 185. Ground captures were inspected: the forest clearing receives direct
+sunlight in the checked view. An automatic forest route started at 105 kept that
+bearing after the avatar was moved to forest, confirming route hold independently
+of avatar position. No GPU errors appeared; only the existing headless adapter
+warning was replayed by the follow-up connection. Visual coverage elsewhere and
+lighting-transition performance remain subject to normal in-app review.
+
+## Hold sky lighting during sun movement - 2026-10-12
+
+The user reported black blinking during regional sun motion and requested no
+recalculation until the sun stops. `BiomeSun.moving` now gates
+`Sky.deferAtmosphereUpdates`: live direct-sun direction and cascades continue
+moving, while sky LUTs, SH ambient lighting and ground bounce retain the prior
+baked state. Dirty lighting is kept pending through the seven-second transition.
+At the endpoint one normal solve updates the lighting for the settled direction.
+Pause/automatic benchmark freezes during an unfinished transition also retain
+that baked state until normal motion resumes and completes.
+
+The update gate runs before scheduling any solve. If another transition starts
+while a prior asynchronous solve is pending, readiness/readback continuations
+check the gate, withhold SH publication and stop remaining bake/bounce stages.
+Coalescing and the previous minimum interval remain, but no periodic solves run
+while regional motion is active. This does not disable moving shadow cascades
+or introduce another light/post effect. It implements the requested isolation
+step; it does not establish that every possible cause of black blinking is fixed.
+
+Validation: typecheck and all 165 Node tests passed. Native WebGPU instrumented
+the forest transition: zero solves/bakes while moving, then one solve with the
+normal four internal bake iterations after reaching 225 degrees. No GPU errors
+were reported. This verifies deferred recalculation; no claim of full-frame
+flicker elimination was made. No build or Playwright.
+
+## Half real big-tree density - 2026-10-12
+
+The user requested keeping spruce impostors unchanged while halving big trees.
+`BigTreeDensity.ts` deterministically ranks retained real sites by X/Z, then
+keeps ceil(count/2) independently for Pine_big_1 and Fir_large_2. It runs after
+placement/fringe selection and before chunk construction, so smaller vegetation
+is not regenerated into removed sites. Every spruce card, medium/small tree,
+sapling and bush keeps its placement, scale and yaw. On the current placements
+this reduces real Big 1 from 110 to 55 and Large 2 from 23 to 12; the 741 cards
+stay intact. Existing closed-area collider cylinders remain, while individual
+trunk colliders for removed open Large 2 sites are removed. Shrub/tree fringe
+colliders and viewpoint/corridor exclusions stay unchanged.
+
+Forest snapshots use the retained source matrices, so Ctrl+Shift+P and normal
+rendering show the same thinning. Stats/benchmark expose the final counts and
+`settings.bigTreeDensity=0.5`. The selection is independent of input order and
+makes no hot-loop, material, shadow, sun, asset or loading pipeline changes.
+Validation: typecheck, relevant placement tests and all 166 Node tests passed,
+including exact per-model halving, unchanged card/non-big memberships and
+selection stability under reordered input. No build, Playwright or new GPU
+visual verification for this placement-only change.
+
+## Forest surfing and aged-grass particles - 2026-10-12
+
+The user requested forest-coloured surf sides and particles like the grass tufts,
+but browner/aged. SurfWake captures forest palette coverage plus the bounded
+Forest Outlook floor correction at each sample's birth, independently of forest
+rendering enablement. A fourth row in the existing 96-column RGBA32F spine texture
+stores forest coverage; grass remains row 2 alpha. The ring keeps forest coverage
+through turns and crossings, and teleport reset retains existing trail lifecycle.
+No deformation/ground biome channel is repurposed.
+
+Wake beauty blends dark olive/moss albedo (linear base .075/.10/.04, lip
+.19/.23/.09), roughness .9. Forest coverage suppresses snow subsurface scattering,
+blue cave tint and glints just as grass does. Geometry/depth/shadow shaping is
+unchanged. Forest emits particle kind 7: the same tapered three-blade tuft shape,
+rotation, .14-.26 m radius, .5-1 s life, outward throw and upward speed as grass
+kind 6, but warm brown albedo varies from .16/.10/.035 to .36/.25/.085. Kind 7
+shares grass/snow-curtain vertical drag; it never becomes desert dust by landing
+in another biome. Grounded-only emission and no lingering powder drift apply to
+both vegetation kinds. Grass/desert/snow/water keep their previous appearance.
+
+The shared pool, shaders, existing lighting/fog and startup warm-up handle the
+new kind; no extra particle mesh, material, texture or rendering pass is added.
+Particles remain excluded from opaque camera depth and custom shadow cascades.
+The fourth spine row adds only 1,536 bytes to the existing data texture/upload.
+
+Validation: typecheck and all 166 Node tests passed. Grass/forest parameterized
+trail tests cover birth coverage, boundary preservation, appropriate particle
+kind, visible size/lifetime, reset, airborne and swimming gating. Trajectory
+regression covers kind 7 sharing grass/snow vertical motion and preserving kind
+outside forest. A controlled native WebGPU surf capture at Forest Outlook was
+inspected: olive sides and brown blade tufts appeared; all retained forest samples
+had coverage 1 and only kind 7 particles were emitted. Warm-up/new WGSL compiled
+without GPU errors. No production build or Playwright was run.

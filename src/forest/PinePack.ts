@@ -24,14 +24,14 @@ export function selectTreeVariant(mix: readonly GrassMixEntry[], random: number)
 export interface PinePart { geometry: VertexData; material: Material; sideOrientation: number; }
 export interface PinePrototype { name: string; near: PinePart[]; far: PinePart[]; height: number; rootSupport: Float32Array; }
 
-export async function loadPinePack(scene: Scene): Promise<{ container: AssetContainer; prototypes: PinePrototype[]; referenceHeight: number }> {
-    const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}terrain/forest/pine-pack-forestland.glb`, scene);
+export async function loadPinePack(scene: Scene, pack?: {path:string;variants:readonly string[];referenceVariant:string}): Promise<{ container: AssetContainer; prototypes: PinePrototype[]; referenceHeight: number }> {
+    const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}${pack?.path ?? 'terrain/forest/pine-pack-forestland.glb'}`, scene);
     try {
-        const prototypes: PinePrototype[] = TREE_VARIANTS.map(([name]) => ({ name, near: [], far: [], height: 0, rootSupport: new Float32Array() }));
+        const prototypes: PinePrototype[] = (pack?.variants ?? TREE_VARIANTS.map(([name])=>name)).map(name => ({ name, near: [], far: [], height: 0, rootSupport: new Float32Array() }));
         for (const mesh of container.meshes) {
             if (!(mesh instanceof Mesh) || !mesh.getTotalVertices() || !mesh.material) continue;
             let node = mesh.parent; let owner = '';
-            while (node) { if (/^Pine_\w+_\d+_LOD[12]$/.test(node.name)) { owner = node.name; break; } node = node.parent; }
+            while (node) { if (/^(Pine|Fir)_\w+_\d+_LOD[12]$/.test(node.name)) { owner = node.name; break; } node = node.parent; }
             const prototype = prototypes.find(value => owner === `${value.name}_LOD1` || owner === `${value.name}_LOD2`);
             if (!prototype) continue;
             const geometry = VertexData.ExtractFromMesh(mesh, true, true); geometry.transform(mesh.computeWorldMatrix(true));
@@ -69,7 +69,7 @@ export async function loadPinePack(scene: Scene): Promise<{ container: AssetCont
                 });
             prototype.rootSupport = pineRootSupport(rootLods, prototype.height);
         }
-        const referenceHeight = prototypes.find(value => value.name === 'Pine_medium_2')?.height;
+        const referenceHeight = prototypes.find(value => value.name === (pack?.referenceVariant ?? 'Pine_medium_2'))?.height;
         if (!referenceHeight) throw new Error('Missing Medium 2 reference height.');
         return { container, prototypes, referenceHeight };
     } catch (error) { container.dispose(); throw error; }

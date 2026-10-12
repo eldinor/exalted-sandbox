@@ -9,6 +9,7 @@ interface BenchmarkSources {
     sample(values: BenchmarkValues): void;
     route?: BenchmarkRoute;
     grassSettings?: { enabled: boolean };
+    flowerSettings?: { enabled: boolean };
     forestSettings?: { enabled: boolean };
 }
 
@@ -26,6 +27,7 @@ export class BenchmarkPanel {
     private readonly mode = document.createElement('select');
     private readonly grassEnabled = document.createElement('input');
     private readonly forestEnabled = document.createElement('input');
+    private readonly flowerEnabled = document.createElement('input');
     private preparingSince: number | null = null;
     private preparationSeconds = 0;
     private preparationTimedOut = false;
@@ -78,6 +80,16 @@ export class BenchmarkPanel {
         this.grassEnabled.addEventListener('change', () => {
             if (sources.grassSettings) sources.grassSettings.enabled = this.grassEnabled.checked;
         });
+        const flowerLabel = document.createElement('label');
+        flowerLabel.className = 'benchmark-grass-toggle';
+        flowerLabel.textContent = 'Meadow flowers';
+        flowerLabel.hidden = !sources.flowerSettings;
+        const flowerEnabled = this.flowerEnabled;
+        flowerEnabled.type = 'checkbox';flowerEnabled.checked = sources.flowerSettings?.enabled ?? false;
+        flowerLabel.append(flowerEnabled);
+        flowerEnabled.addEventListener('change', () => {
+            if (sources.flowerSettings) sources.flowerSettings.enabled = flowerEnabled.checked;
+        });
         const forestLabel = document.createElement('label');
         forestLabel.className = 'benchmark-grass-toggle';
         forestLabel.textContent = 'Forest trees';
@@ -102,7 +114,7 @@ export class BenchmarkPanel {
         this.results.setAttribute('aria-label', 'Benchmark results JSON');
         this.details.hidden = true;
         this.details.append(resultSummary, this.results);
-        controls.append(modeLabel, grassLabel, forestLabel, label, this.startButton, this.stopButton, this.copyButton, this.status, this.details);
+        controls.append(modeLabel, grassLabel, flowerLabel, forestLabel, label, this.startButton, this.stopButton, this.copyButton, this.status, this.details);
         details.append(summary, controls);
         this.root.append(details);
         this.stack.append(this.root, avatarPanel);
@@ -118,7 +130,7 @@ export class BenchmarkPanel {
         this.automatic = (this.mode.value === 'automatic' || (this.mode.value === 'forest' && !!this.sources.forestSettings)) && !!this.sources.route;
         this.preparationSeconds = 0; this.preparationTimedOut = false;
         this.mode.disabled = this.startButton.disabled = this.description.disabled = true;
-        this.grassEnabled.disabled = this.forestEnabled.disabled = true;
+        this.grassEnabled.disabled = this.flowerEnabled.disabled = this.forestEnabled.disabled = true;
         this.copyButton.disabled = true; this.stopButton.disabled = false;
         this.results.value = ''; this.details.hidden = true;
         if (this.automatic) {
@@ -135,6 +147,7 @@ export class BenchmarkPanel {
     updateFrame(now: number): void {
         if (!this.recording && this.preparingSince === null) {
             this.grassEnabled.checked = this.sources.grassSettings?.enabled ?? false;
+            this.flowerEnabled.checked = this.sources.flowerSettings?.enabled ?? false;
             this.forestEnabled.checked = this.sources.forestSettings?.enabled ?? false;
         }
         const route = this.sources.route;
@@ -196,7 +209,7 @@ export class BenchmarkPanel {
                 this.preparingSince = null;
                 this.sources.route?.stop();
                 this.mode.disabled = this.startButton.disabled = this.description.disabled = false;
-                this.grassEnabled.disabled = this.forestEnabled.disabled = false;
+                this.grassEnabled.disabled = this.flowerEnabled.disabled = this.forestEnabled.disabled = false;
                 this.stopButton.disabled = true;
                 this.status.textContent = `Preparation cancelled (${reason}).`;
             }

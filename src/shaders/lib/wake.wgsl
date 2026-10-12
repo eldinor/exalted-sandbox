@@ -17,6 +17,7 @@
 //   row 0   (x, y, z, distance behind the bow, metres)
 //   row 1   (rightX, rightZ, amplitude left, amplitude right)
 //   row 2   (curl left, curl right, age 0..1, grass coverage at birth)
+//   row 3   (forest coverage at birth, reserved, reserved, reserved)
 //
 // Amplitude and curl are resolved per side on the CPU, because which side of the
 // board is the *outside* of the turn is a question about the carve, not about
@@ -87,6 +88,11 @@ fn wakeGrass(tex: texture_2d<f32>, count: f32, u: f32) -> f32 {
     return mix(textureLoad(tex, vec2i(i, 2), 0).w,
         textureLoad(tex, vec2i(min(i + 1, i32(n) - 1), 2), 0).w,
         smoothstep(0.0, 1.0, fract(f)));
+}
+
+fn wakeForest(tex: texture_2d<f32>, count: f32, u: f32) -> f32 {
+    let n=max(count,2.0);let f=clamp(u,0.0,1.0)*(n-1.0);let i=i32(floor(f));
+    return mix(textureLoad(tex,vec2i(i,3),0).x,textureLoad(tex,vec2i(min(i+1,i32(n)-1),3),0).x,smoothstep(0.0,1.0,fract(f)));
 }
 
 fn wakeScalars(tex: texture_2d<f32>, count: f32, u: f32, side: f32) -> vec4f {

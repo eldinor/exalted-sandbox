@@ -2,7 +2,7 @@
 
 This document describes the production world application served by `index.html`.
 It covers the TypeScript code under `src`, its runtime order, major data paths,
-and extension points. The standalone mountain and forest pages are prototypes and
+and extension points. The supporting grass/forest labs and asset tools are utilities and
 are described separately under [Demo boundaries](#demo-boundaries).
 
 ## System overview
@@ -51,6 +51,9 @@ The default mode loads the authored Exalted world:
 - Shared Grassland geometry streams onto the authored grass biome, with avatar
   walking/surf bending and a matching production depth pass. Density is 3; grass
   receives shadows but does not cast them. See [GRASS.md](GRASS.md).
+- A separate flower-family adapter streams dandelion colonies using the same
+  patch/interactions infrastructure. Colour/depth share alpha cutout and fade;
+  flower density/mix and diagnostics remain separate, with future daisies in mind.
 - Heightmap textured ground blends grass, forest and desert using the generated
   linear RGB `ground-coverage-9.png`, also read by CPU grass placement. Existing
   snow, road, water and deformation masks remain separate. See
@@ -64,6 +67,10 @@ The default mode loads the authored Exalted world:
 - Water geometry is derived from the selected terrain triangles and water mask plus
   `world/waterReference.json`.
 - The spawn bar exposes named locations and texture and wind controls.
+- The interactive crystalline Cube is anchored to `FOREST_CUBE_SPAWN`, converted
+  from chart coordinates once and grounded on the selected terrain. E dissolves
+  it into a persistent portal; entry publishes `exalted:portal-entered` with the
+  legacy ID/position payload. Reflection Cube/probe is absent from main startup.
 
 `?terrain=procedural` selects the original procedural snow terrain. It uses
 the nested clipmap and generated heightfield and keeps geometric snow deformation
@@ -404,12 +411,14 @@ not access. The shaped dense section reserves the spawn clearing and exit corrid
 versioned automatic benchmark combines a ground-edge pass and aerial sweep using
 the same camera lifecycle as the independent grass route. Tree casting/wind and
 full-biome integration remain deferred. `OpenForestPlacement.ts` adds the
-walkable section toward Forest Outlook with six medium/small/sapling variants,
+walkable section toward Forest Outlook with five selected firs and two pine saplings,
 8 m spacing, per-model root grounding and individual trunk cylinders. It leaves
 the overlook centre and grassland sightline clear, fills the pocket outside the
 corrected dense contour and batches each model independently with shared pack materials. The
 existing forest toggle and route include this extension; per-variant pipelines
-warm during loading.
+warm during loading. `FirPack.ts` supplies the selected fir manifest to the shared
+hierarchy-baking/root-grounding loader. Pine and fir source containers/materials
+are owned independently and released together by the production forest.
 
 The future complete forest implementation must follow [FOREST_SPEC.md](FOREST_SPEC.md):
 32 m chunks, thin instances, two geometry LOD levels, stable shadows, root-anchored
@@ -418,15 +427,11 @@ rendering.
 
 ## Demo boundaries
 
-These pages are intentionally outside the production TypeScript migration:
-
-- `snow_mountain.html` and `src/mountain/demo.js`
-- `forest_road.html` and its mountain helper modules
-- `forest.html` and its retained JavaScript modules under `src/forest`
-
-They may import production TypeScript modules through Vite, but production code
-must not depend on them. The old forest implementation is a performance and
-regression reference for future replacement models, not a world subsystem.
+The old half-world, forest performance, forest-road and mountain viewers were
+removed on 2026-10-12, together with their dedicated renderer/helpers, tests,
+preparation script and GLBs. Current Grassland, Forestland, Spruceland, heightmap,
+waterfall and generator tools remain independent supporting utilities.
+Production must not import their lab entry points or authoring code.
 
 ## Validation
 
@@ -462,3 +467,32 @@ visibility. Forest snapshots use all matrices and overhead impostor views.
 Temporary geometry/materials use an exclusive layer and the depth-tested group
 0, then dispose after readback. The prop shader's MAP_SCREENSHOT branch retains
 alpha cutout and emits readable sRGB map colours without distance fade/fog/wind.
+
+
+`world/biomeSun.ts` supplies authored-world sun azimuth independently of the base
+sun slider. Avatar X/Z classify forest palette/overlook correction and Lake
+Island at (272.5,76), with a soft island radius (55-75 m), entry/release hysteresis
+(0.65/0.25), 1 s dwell and 7 s smooth shortest-arc motion. Forest target is 225,
+island target 105; elevation/intensity remain global settings. Procedural mode
+is unchanged. Pause stops transition time; teleports use the same delayed blend.
+Automatic routes freeze the current entry angle throughout preparation/recording;
+benchmark `sunRegion` snapshots record effective angle and region. `EXALTED.biomeSun`
+exposes the controller. The settings azimuth is labelled Base azimuth.
+
+The main frame sets `Sky.azimuthOverride` and synchronizes the sun after avatar/
+rig movement and before post uniforms, sky, shadows and world materials. It does
+not overwrite S.sunAzimuth or alter render-target ordering/history. Sky update
+defers atmosphere/SH solves throughout `BiomeSun.moving`, preserving the previous
+baked lighting while sun direction/direct light/cascades change every frame.
+The dirty state is retained for one solve when motion ends. Already-started
+readbacks do not publish SH during a new transition, and remaining bake steps
+are stopped until settled. The existing coalescing and 250 ms guard remain as
+safety measures, rather than scheduling periodic lighting solves during motion.
+
+
+The surf spine texture is now 96x4 RGBA32F: rows 0/1 retain position/distance
+and direction/amplitude, row 2 curl/age/grass, row 3 forest coverage. Coverage
+is retained at sample birth. Wake colour blends forest olive/moss with matching
+geometry/depth/shadow passes; the shared spray pool distinguishes kind 6 green
+grass from kind 7 aged forest tufts. Both use identical silhouette/settling, and
+neither participates in opaque depth or custom shadow targets.

@@ -57,7 +57,7 @@ the atlas remains baked at 0.35 and requires rebaking to change its source cutou
 The main app uses this impostor throughout the closed eastern forest strip,
 following the corrected 2026-10-12 concept contour, except the first 15 m along
 its accessible edge and a 33 m radius around Cube Spawn (-383.5, 52). There
-are 741 cards and 159 real pines (110 Big 1, 49 Small 1) in the dense section. Real sites select Small 1 deterministically at 25% without adding
+are 741 cards and 104 real pines (55 Big 1, 49 Small 1) in the dense section. Real sites select Small 1 deterministically at 25% without adding
 placement density; Small 1 retains its original relative size. Cards preserve
 target heights (about 18-22 m), X/Z and yaw. Spruce roots sample actual terrain
 with 3 cm embedding. One typed-buffer mesh per occupied 32 m chunk shares atlas

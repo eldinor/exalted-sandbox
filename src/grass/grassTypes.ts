@@ -4,6 +4,9 @@ import type { GrassMixEntry } from './GrassMix.ts';
 export interface GrassSettings {
     enabled: boolean;
     density: number;
+    /** Optional upright flower placement; ordinary grass keeps authored jitter. */
+    upright?: boolean;
+    groundOffset?: number;
     /** Maximum rise/run for placement; omitted retains the lab limit of 0.4. */
     maxSlope?: number;
     nearDistance: number;
@@ -55,6 +58,8 @@ export interface GrassStats {
 export interface GrassSamplers {
     heightAt(x: number, z: number): number;
     grassWeightAt(x: number, z: number): number;
+    /** Optional placement density independent of biome classification. */
+    densityWeightAt?(x: number, z: number): number;
     excludedAt(x: number, z: number): boolean;
     /** Optional exact triangle slope, expressed as rise over horizontal run. */
     slopeAt?(x: number, z: number): number;

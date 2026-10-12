@@ -18,8 +18,11 @@ and regeneration steps are documented in [BIOMES_MAPS.md](../../../BIOMES_MAPS.m
 
 `pine_tree_01.glb` was supplied in this repository by the user. Its embedded
 metadata names a Sketchfab export (`pine tree 01.obj.cleaner.materialmerger.gles`)
-with one merged mesh, two tree shapes, and embedded PBR textures. The original
-creator, source URL and licence were not provided; none is inferred here.
+with one merged mesh, two tree shapes, and embedded PBR textures. A 2026-10-12
+licensing audit found embedded `asset.extras` crediting Digital screen official
+(https://sketchfab.com/ck212575), CC BY 4.0, source:
+https://sketchfab.com/3d-models/pine-tree-01-ba7c8f8e1cb549b3a3a30f1221386c8c.
+See the root THIRD_PARTY_NOTICES.md for consolidated attribution.
 
 The initial Forestland lab read this file and separated geometry in memory.
 The original asset is retained unchanged as a reference.
@@ -68,3 +71,14 @@ embedded metadata. The derived alpha-cutout GLB and WebGPU-baked colour/normal
 impostor atlases live under `blue-spruce/`. Original bytes remain unchanged.
 See [blue-spruce/README.md](blue-spruce/README.md) for source/creator/licence links,
 derivation, regeneration and the seventeen ground/aerial capture views.
+
+
+## Realistic fir subset (2026-10-12)
+
+User-supplied source under `public/assets/exalted/realistic_fir_trees_pack_lods_gameready.glb`.
+LOLIPOP, CC BY 4.0, source:
+https://sketchfab.com/3d-models/realistic-fir-trees-pack-lods-gameready-f58e8b6d733e4b0586e5b7db847b89e7.
+Derived `fir-pack-selected.glb` contains Large 2, Medium 1/2 and Small 1/2,
+LOD1/LOD2, source textures and preserved attribution. Preparation clears display
+offsets, renames selected nodes and changes foliage BLEND to MASK 0.35.
+See `fir-pack-selected.README.md` and `scripts/prepare-fir-pack.mjs`.

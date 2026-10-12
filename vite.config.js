@@ -38,7 +38,7 @@ export default defineConfig({
     build: {
         target: "esnext",
         sourcemap: true,
-        rollupOptions: { input: { main: 'index.html', halved: 'halved.html', heightmap: 'hm.html', forest: 'forest.html', forestland: 'forestland.html', spruceland: 'spruceland.html', mountain: 'snow_mountain.html', forestRoad: 'forest_road.html', generatedWorld: 'generator/generated-world.html', grassPerformance: 'generator/grass-performance.html', authoredGrassland: 'generator/grassland.html' } },
+        rollupOptions: { input: { main: 'index.html', heightmap: 'hm.html', forestland: 'forestland.html', spruceland: 'spruceland.html', generatedWorld: 'generator/generated-world.html', grassPerformance: 'generator/grass-performance.html', authoredGrassland: 'generator/grassland.html' } },
     },
     // .wgsl imported via ?raw
     assetsInclude: ["**/*.hdr", "**/*.env"],

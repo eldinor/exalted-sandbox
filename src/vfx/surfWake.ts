@@ -19,7 +19,7 @@
  *
  * The spine is a ring of samples laid every 30 cm of travel. Nothing is rebuilt:
  * the mesh is a static lattice of (column, row, side) and the vertex shader
- * places every vertex from a 96 x 3 data texture, exactly as the spray billboards
+ * places every vertex from a 96 x 4 data texture, exactly as the spray billboards
  * are placed. So a 19-metre wake and a 2-metre one cost the same buffer and the
  * same upload.
  *
@@ -48,6 +48,7 @@ import type { ShadowSystem } from "../render/shadows.ts";
 import type { CharacterController } from "../character/controller.ts";
 import type { SprayField } from "./particles.ts";
 import { SNOW_SURF_POWDER_DRAG } from './particles.ts';
+import { forestOverlookGroundWeight } from '../terrain/forestGroundCoverage.ts';
 import type { Terrain } from "../terrain/terrain.ts";
 import type { DepthPass } from "../render/depthPass.ts";
 
@@ -110,6 +111,9 @@ export class SurfWake {
     private readonly _grassCover: Float32Array;
     /** Authored palette coverage, independent of grass rendering being enabled. */
     grassWeightAt?: (x: number, z: number) => number;
+    forestWeightAt?: (x:number,z:number)=>number;
+    private readonly _forestCover:Float32Array;
+    private readonly _forestRgb=new Float32Array(3);
     private readonly _carve: Float32Array;
     private _head: number;
     private _count: number;
@@ -157,6 +161,7 @@ export class SurfWake {
         this._strength = new Float32Array(SPINE_MAX);
         this._grassStrength = new Float32Array(SPINE_MAX);
         this._grassCover = new Float32Array(SPINE_MAX);
+        this._forestCover = new Float32Array(SPINE_MAX);
         /** Signed carve captured at lay time. */
         this._carve = new Float32Array(SPINE_MAX);
 
@@ -178,9 +183,9 @@ export class SurfWake {
         this._col = new Int32Array(SPINE_MAX);
 
         // ---- GPU ----------------------------------------------------------
-        this._texData = new Float32Array(SPINE_MAX * 3 * 4);
+        this._texData = new Float32Array(SPINE_MAX * 4 * 4);
         this.dataTex = RawTexture.CreateRGBATexture(
-            this._texData, SPINE_MAX, 3, scene,
+            this._texData, SPINE_MAX, 4, scene,
             false, false,
             Constants.TEXTURE_NEAREST_SAMPLINGMODE,
             Constants.TEXTURETYPE_FLOAT
@@ -399,6 +404,15 @@ export class SurfWake {
         this._y[i] = this.terrain.heightAt(bx, bz);
         this._z[i] = bz;
         this._grassCover[i] = this.grassWeightAt?.(bx, bz) ?? 0;
+        let forest=0;
+        const world=this.terrain.heightfield;
+        if(this.forestWeightAt)forest=this.forestWeightAt(bx,bz);
+        else if(world instanceof ExaltedWorld&&world.surface){
+            world.surface.sample(bx,bz,undefined,this._forestRgb);
+            const distance=Math.hypot(this._forestRgb[0]-124/255,this._forestRgb[1]-170/255,this._forestRgb[2]-129/255);
+            forest=Math.max(clamp01((.08-distance)/.055),forestOverlookGroundWeight(bx,bz,this._forestRgb));
+        }
+        this._forestCover[i]=clamp01(forest)*(1-this._grassCover[i]);
         this._rx[i] = Math.cos(ch.facing);
         this._rz[i] = -Math.sin(ch.facing);
         this._travel[i] = this._odo;
@@ -434,6 +448,7 @@ export class SurfWake {
             this._strength[n] = this._strength[i]; this._carve[n] = this._carve[i];
             this._grassStrength[n] = this._grassStrength[i];
             this._grassCover[n] = this._grassCover[i];
+            this._forestCover[n] = this._forestCover[i];
         }
     }
 
@@ -508,6 +523,8 @@ export class SurfWake {
             d[o0] = this._x[i]; d[o0 + 1] = this._y[i]; d[o0 + 2] = this._z[i]; d[o0 + 3] = dist;
             d[o1] = this._rx[i]; d[o1 + 1] = this._rz[i]; d[o1 + 2] = ampL; d[o1 + 3] = ampR;
             d[o2] = curlL; d[o2 + 1] = curlR; d[o2 + 2] = a01; d[o2 + 3] = this._grassCover[i];
+            const o3=(SPINE_MAX*3+j)*4;
+            d[o3]=this._forestCover[i];d[o3+1]=d[o3+2]=d[o3+3]=0;
         }
 
         return maxAmp;
@@ -612,13 +629,14 @@ export class SurfWake {
                 // Small torn blades, not a powder curtain. Retain the biome at
                 // birth so a trail crossing a boundary keeps its source material.
                 const grass = this._grassCover[i] + (this._grassCover[i2] - this._grassCover[i]) * t;
-                if (grass > 0.5) {
+                const forest=this._forestCover[i]+(this._forestCover[i2]-this._forestCover[i])*t;
+                if (grass > 0.5 || forest > .5) {
                     if (this._grassStrength[i] + this._grassStrength[i2] <= 0 || Math.random() > 0.22) continue;
                     sp.emit(px, py, pz,
                         rx * side * (1 + Math.random() * 2) + ch.velocity.x * .2,
                         0.9 + Math.random() * 1.8,
                         rz * side * (1 + Math.random() * 2) + ch.velocity.z * .2,
-                        .14 + Math.random() * .12, .5 + Math.random() * .5, 6, 1.8);
+                        .14 + Math.random() * .12, .5 + Math.random() * .5, forest>.5?7:6, 1.8);
                     continue;
                 }
 
@@ -682,6 +700,7 @@ export class SurfWake {
                 const rz = this._rz[i] + (this._rz[i2] - this._rz[i]) * t;
                 const lat = (Math.random() - 0.5) * 1.6;
                 if (this._grassCover[i] + (this._grassCover[i2] - this._grassCover[i]) * t > .5) continue;
+                if (this._forestCover[i] + (this._forestCover[i2] - this._forestCover[i]) * t > .5) continue;
                 sp.emit(
                     this._x[i] + (this._x[i2] - this._x[i]) * t + rx * lat,
                     this._y[i] + (this._y[i2] - this._y[i]) * t + 0.08 + Math.random() * 0.35,

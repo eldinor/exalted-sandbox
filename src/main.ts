@@ -28,6 +28,7 @@ import { Character } from "./character/character.ts";
 import { SnowContact } from "./character/snowContact.ts";
 import { SprayField } from "./vfx/particles.ts";
 import { WorldGrass } from './world/worldGrass.ts';
+import { DANDELIONS, DAISIES } from './grass/MeadowFlowers.ts';
 import { SurfWake } from "./vfx/surfWake.ts";
 import { SpellSystem } from "./spells/spellSystem.ts";
 import { Overlay } from "./ui/overlay.ts";
@@ -35,6 +36,7 @@ import { SpawnBar } from "./ui/spawnBar.ts";
 import { installInspectorShortcut } from './ui/inspector.ts';
 import { ScreenshotGallery } from './ui/screenshotGallery.ts';
 import { captureWholeMap } from './ui/mapScreenshot.ts';
+import { BiomeSun, islandSunWeight } from './world/biomeSun.ts';
 import { AvatarColors } from './ui/avatarColors.ts';
 import { BenchmarkPanel } from './ui/benchmark.ts';
 import { BenchmarkRoute } from './core/benchmarkRoute.ts';
@@ -42,7 +44,7 @@ import { Sky } from "./render/sky.ts";
 import { ShadowSystem } from "./render/shadows.ts";
 import { Terrain } from "./terrain/terrain.ts";
 import { EXALTED_SPAWN, ExaltedWorld } from "./terrain/exaltedWorld.ts";
-import type { SpawnPoint } from "./world/spawnPoints.ts";
+import { FOREST_CUBE_SPAWN, type SpawnPoint } from "./world/spawnPoints.ts";
 import { DesertProps } from './world/desertProps.ts';
 import { WorldForest } from './world/worldForest.ts';
 import { FlightWind } from './vfx/flightWind.ts';
@@ -50,7 +52,6 @@ import { WorldWater } from './world/worldWater.ts';
 import { WaterEffects } from './vfx/waterEffects.ts';
 import { RocketJumpVfx } from './vfx/rocketJump.ts';
 import { AUTHORED_WORLD_SCALE } from './world/worldScale.ts';
-import { ReflectiveCube } from './world/reflectiveCube.ts';
 import { MagicalCube } from './world/magicalCube.ts';
 import { DepthPass } from "./render/depthPass.ts";
 import { PostChain } from "./post/postChain.ts";
@@ -60,9 +61,6 @@ import * as loading from "./core/loading.ts";
 // ------------------------------------------------------- module-scope scratch
 const _vel = new Vector3();
 
-// Retain the reflection and portal prototypes for later integration without
-// placing their test cubes in the production world.
-const ENABLE_DEMO_CUBES = false;
 // Development diagnostics are currently visible in builds too. Set false for
 // the public release to omit the panel and recording entirely.
 const ENABLE_BENCHMARK_PANEL = true;
@@ -90,14 +88,16 @@ interface ExaltedRuntime {
     input: typeof input;
     perfStats: typeof stats;
     grass: WorldGrass | null;
+    flowers: WorldGrass | null;
+    daisies: WorldGrass | null;
     desertProps: DesertProps | null;
     forest: WorldForest | null;
     worldWater: WorldWater | null;
     screenshotGallery: ScreenshotGallery;
+    biomeSun: BiomeSun;
     avatarColors: AvatarColors;
     benchmark: BenchmarkPanel | null;
     rocketJumpVfx: RocketJumpVfx;
-    reflectiveCube: ReflectiveCube | null;
     magicalCube: MagicalCube | null;
 }
 
@@ -278,11 +278,17 @@ async function boot(): Promise<void> {
     const wake = new SurfWake(scene, sky, shadows, character, spray, terrain);
     onChange("showWake", (v) => wake.setEnabled(v));
     wake.registerPrepass(depthPass);
-    const grass = exalted ? new WorldGrass(scene, terrain, sky, shadows, depthPass) : null;
+    const grass = exalted ? new WorldGrass(scene, terrain, sky, shadows, depthPass, undefined, true) : null;
+    const flowers = exalted ? new WorldGrass(scene, terrain, sky, shadows, depthPass, DANDELIONS,
+        false, () => grass?.settings.enabled ?? false) : null;
+    const daisies = exalted ? new WorldGrass(scene, terrain, sky, shadows, depthPass, DAISIES,
+        false, () => !!grass?.settings.enabled && !!flowers?.settings.enabled) : null;
     if (grass) {
         wake.grassWeightAt = grass.grassWeightAt;
         await loading.phase('loading grassland models', .66);
         await grass.load();
+        await flowers?.load();
+        await daisies?.load();
     }
 
     // The nine spells, the water body they bend and the ice they leave. Every
@@ -291,13 +297,11 @@ async function boot(): Promise<void> {
     const spells = new SpellSystem(
         scene, sky, shadows, terrain, character, figure.figure, rig, spray
     );
-    const magicalCube = exalted && ENABLE_DEMO_CUBES
-        ? new MagicalCube(scene, terrain, character)
-        : null;
-    // Construct the probe after the magical cube so it is included in the
-    // probe's fixed render list and can appear in the metal cube reflection.
-    const reflectiveCube = exalted && ENABLE_DEMO_CUBES
-        ? new ReflectiveCube(scene, terrain, character)
+    const magicalCube = exalted
+        ? new MagicalCube(scene, terrain, {
+            x: -FOREST_CUBE_SPAWN.x * AUTHORED_WORLD_SCALE,
+            z: -FOREST_CUBE_SPAWN.y * AUTHORED_WORLD_SCALE,
+        })
         : null;
     // Every surface a spell can light.
     spells.addConsumers(
@@ -317,6 +321,7 @@ async function boot(): Promise<void> {
     const post = new PostChain(scene, rig.camera, depthPass, sky);
 
     const overlay = new Overlay({ rig, character });
+    const biomeSun = new BiomeSun(S.sunAzimuth);
     const screenshotGallery = new ScreenshotGallery(engine, rig.camera);
     const avatarColors = new AvatarColors(figure);
     initInput(canvas, {
@@ -347,6 +352,8 @@ async function boot(): Promise<void> {
     await spray.warmUp();
     await wake.warmUp();
     await grass?.warmUp();
+    await flowers?.warmUp();
+    await daisies?.warmUp();
     await spells.warmUp(
         character.position.x + 3, character.position.y, character.position.z + 3
     );
@@ -378,6 +385,8 @@ async function boot(): Promise<void> {
     // their render pipelines to exist. See `WaterBody.warmUp`.
     spells.finishWarmUp();
     grass?.finishWarmUp();
+    flowers?.finishWarmUp();
+    daisies?.finishWarmUp();
     forest?.finishWarmUp();
 
     // ------------------------------------------------------------- run loop
@@ -391,14 +400,15 @@ async function boot(): Promise<void> {
 
     const benchmarkRoute = ENABLE_BENCHMARK_PANEL && exalted ? new BenchmarkRoute(rig,
         (x, z) => terrain.heightAt(x, z), () => post.resetHistory(), resetInput,
-        () => { pendingSpawn = null; spells.reset(); wake.reset(); spray.reset(); grass?.reset(); figure.setVisible(false); },
-        () => { figure.setVisible(S.showCharacter); grass?.reset(); },
+        () => { pendingSpawn = null; spells.reset(); wake.reset(); spray.reset(); grass?.reset(); flowers?.reset(); daisies?.reset(); figure.setVisible(false); },
+        () => { figure.setVisible(S.showCharacter); grass?.reset(); flowers?.reset(); daisies?.reset(); },
         // Disabled grass pauses queue processing; pending work must not block
         // preparation for the grass-off comparison run.
-        () => grass?.settings.enabled ? grass.streamingStats.queued : 0) : undefined;
+        () => grass?.settings.enabled ? grass.streamingStats.queued + (flowers?.settings.enabled ? flowers.streamingStats.queued + (daisies?.settings.enabled ? daisies.streamingStats.queued : 0) : 0) : 0) : undefined;
     const benchmark = ENABLE_BENCHMARK_PANEL ? new BenchmarkPanel({
         route: benchmarkRoute,
         grassSettings: grass?.settings,
+        flowerSettings: flowers?.settings,
         forestSettings: forest?.settings,
         gpuTiming: gpuTiming && engine.getCaps().timerQuery !== undefined,
         captureState: () => ({
@@ -411,7 +421,10 @@ async function boot(): Promise<void> {
             position: character.position.asArray(), cameraPosition: rig.camera.position.asArray(),
             route: benchmarkRoute?.active ? benchmarkRoute.snapshot() : null,
             settings: { ...S }, grassSettings: grass ? { ...grass.settings } : null,
+            sunRegion: {region:biomeSun.region,effectiveAzimuth:biomeSun.azimuth},
             grass: grass ? { ...grass.stats, ...grass.streamingStats } : null,
+            flowers: flowers ? { settings: {...flowers.settings}, ...flowers.stats, ...flowers.streamingStats } : null,
+            daisies: daisies ? { settings: {...daisies.settings}, ...daisies.stats, ...daisies.streamingStats } : null,
             forest: forest ? { settings: { ...forest.settings }, ...forest.stats } : null,
             desert: desertProps?.chunks ? { ...desertProps.chunks.stats, shadowMeshes: [...desertProps.chunks.stats.shadowMeshes] } : null,
         }),
@@ -425,6 +438,8 @@ async function boot(): Promise<void> {
             values.drawCalls = stats.drawCalls;
             values.submittedIndices = stats.submittedIndices;
             values.grassCpuMs = grass?.stats.updateMs ?? 0;
+            values.flowerCpuMs = (flowers?.stats.updateMs ?? 0) + (daisies?.stats.updateMs ?? 0);
+            values.flowerInstances = (flowers?.stats.nearInstances ?? 0) + (flowers?.stats.midInstances ?? 0) + (daisies?.stats.nearInstances ?? 0) + (daisies?.stats.midInstances ?? 0);
             values.grassUploadCpuMs = grass?.streamingStats.uploadMs ?? 0;
             values.grassQueuedPatches = grass?.streamingStats.queued ?? 0;
             values.grassVisiblePatches = grass?.stats.visiblePatches ?? 0;
@@ -465,7 +480,7 @@ async function boot(): Promise<void> {
             figure.resetPose();
             contact.reset();
             wake.reset();
-            grass?.reset();
+            grass?.reset(); flowers?.reset(); daisies?.reset();
             spray.reset();
             rig.teleport(character.position, point.yaw);
             post.resetHistory();
@@ -497,6 +512,14 @@ async function boot(): Promise<void> {
         // passes derive from the camera. Must be after the rig has moved and
         // before anything reads `scene.getTransformMatrix()` Р В Р’В Р В РІР‚В Р В Р’В Р Р†Р вЂљРЎв„ўР В Р вЂ Р В РІР‚С™Р РЋРЎС™ which the depth
         // prepass and the beauty pass both do.
+        if(terrain.heightfield instanceof ExaltedWorld){
+            const position=character.position;
+            sky.azimuthOverride=biomeSun.update(dt,S.sunAzimuth,
+                biomeSun.forestWeight(terrain.heightfield.surface,position.x,position.z),
+                islandSunWeight(position.x,position.z),automaticRoute);
+            sky.deferAtmosphereUpdates=biomeSun.moving;
+            sky.syncFromSettings();
+        }
         post.update(dt, character.streak01, rig.distance);
         sky.update();
         sky.render(rig, time);
@@ -518,10 +541,11 @@ async function boot(): Promise<void> {
         // grains it sheds have to be in the pool before the pool is uploaded.
         if (!automaticRoute) wake.update(dt, rig.camera.position);
         grass?.update(dt, rig.camera.position, character, wake, spells.lights, automaticRoute ? streamingFocus : undefined);
+        flowers?.update(dt, rig.camera.position, character, wake, spells.lights, automaticRoute ? streamingFocus : undefined);
+        daisies?.update(dt, rig.camera.position, character, wake, spells.lights, automaticRoute ? streamingFocus : undefined);
         if (!automaticRoute) { flightWind.update(dt); waterEffects?.update(dt,rig.camera.position); }
         spray.update(dt, rig.camera.position);
-        magicalCube?.update(dt, rig.camera, character.position, input.interactPressed);
-        reflectiveCube?.update(character.position);
+        magicalCube?.update(dt, rig.camera, character.position, !automaticRoute && input.interactPressed);
         const tVfx = performance.now();
 
         scene.render();
@@ -541,13 +565,12 @@ async function boot(): Promise<void> {
 
         endFrameDraws();
         stats.triangles =
-            (forest?.stats.triangles || 0) + (grass?.stats.triangles || 0) + (desertProps?.triangles || 0) + (worldWater?.triangles || 0) +
+            (forest?.stats.triangles || 0) + (grass?.stats.triangles || 0) + (flowers?.stats.triangles || 0) + (daisies?.stats.triangles || 0) + (desertProps?.triangles || 0) + (worldWater?.triangles || 0) +
             (terrain.mesh.metadata ? terrain.mesh.metadata.triangles : 0) +
             (terrain.local?.mesh.metadata.triangles || 0) +
             (S.showCharacter ? figure.triangles : 0) +
             (wake.mesh.isVisible ? wake.mesh.metadata.triangles : 0) +
             spells.triangles +
-            (reflectiveCube ? 12 : 0) +
             (magicalCube ? (magicalCube.mesh.isVisible ? 12 : 0) + (magicalCube.ring.isVisible ? 192 : 0) : 0) +
             (magicalCube?.surface.isVisible ? 192 : 0) +
             spray.liveCount * 2;
@@ -569,9 +592,9 @@ async function boot(): Promise<void> {
         engine, scene, rig, character, figure, contact, spray, wake, spells,
         overlay, terrain, sky, shadows, post, depthPass, spawnBar,
         S, input, perfStats: stats,
-        grass, desertProps, forest,
+        grass, flowers, daisies, desertProps, forest,
         worldWater,
-        screenshotGallery, avatarColors, benchmark, rocketJumpVfx, reflectiveCube, magicalCube,
+        screenshotGallery, biomeSun, avatarColors, benchmark, rocketJumpVfx, magicalCube,
         };
 }
 

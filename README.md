@@ -98,5 +98,8 @@ This lab does not enable forest trees in the main app.
 Technical details, supporting pages and previous implementation notes are in
 [HISTORY_DOCS.md](HISTORY_DOCS.md).
 
-Project code is released under the [MIT license](LICENSE). Runtime assets have
-separate provenance and license notes alongside their files.
+Andrei Stepanov's Exalted code is released under the [MIT license](LICENSE).
+Inherited code, libraries, models, textures and fonts retain their respective
+terms and credits in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The project
+MIT license does not relicense third-party assets. Unverified asset permissions
+are identified in that file. Notices are also served at `/THIRD_PARTY_NOTICES.md`.

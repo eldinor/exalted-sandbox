@@ -3,6 +3,8 @@ import { grassCandidateSeed, grassHash as hash, writeGrassMatrix } from './Grass
 
 export interface GrassPlacementConfig {
     density: number;
+    upright?: boolean;
+    groundOffset?: number;
     maxSlope?: number;
     height: number;
     width: number;
@@ -48,7 +50,8 @@ export class GrassPlacementJob {
             const x = this.patchX * 16 + hash(seed) * 16;
             const z = this.patchZ * 16 + hash(seed + 11) * 16;
             const weight = this.samplers.grassWeightAt(x, z);
-            const coverage = Math.max(0, Math.min(1, (weight - .06) / .48));
+            const coverage = Math.max(0, Math.min(1, (weight - .06) / .48))
+                * Math.max(0, Math.min(1, this.samplers.densityWeightAt?.(x, z) ?? 1));
             if (coverage <= 0 || hash(seed + 23) > coverage || this.samplers.excludedAt(x, z)) continue;
             if (this.samplers.slopeAt) {
                 if (this.samplers.slopeAt(x, z) > (this.config.maxSlope ?? .4)) continue;
@@ -71,15 +74,15 @@ export class GrassPlacementJob {
             const height = this.config.height * heightRatio * (.65 + hash(seed + 31) * .7);
             const width = this.config.width * (.78 + hash(seed + 47) * .44);
             const yaw = (hash(seed + 59) * 2 - 1) * Math.PI;
-            const pitch = (hash(seed + 71) * 2 - 1) * Math.PI / 18;
-            const roll = (hash(seed + 83) * 2 - 1) * Math.PI / 18;
+            const pitch = this.config.upright ? 0 : (hash(seed + 71) * 2 - 1) * Math.PI / 18;
+            const roll = this.config.upright ? 0 : (hash(seed + 83) * 2 - 1) * Math.PI / 18;
             const spreadX = .8 + hash(seed + 97) * .4;
             const spreadZ = .8 + hash(seed + 109) * .4;
             if (this.variantMaxHeights && this.variantMaxWidths) {
                 this.variantMaxHeights[variant] = Math.max(this.variantMaxHeights[variant], height);
                 this.variantMaxWidths[variant] = Math.max(this.variantMaxWidths[variant], height * spreadX, height * spreadZ);
             }
-            const y = this.samplers.heightAt(x, z) + .015;
+            const y = this.samplers.heightAt(x, z) + (this.config.groundOffset ?? .015);
             writeGrassMatrix(this.nearBuffer, this.count * 16, x, y, z, (this.config.nearImported ? height : width) * spreadX, height, (this.config.nearImported ? height : width) * spreadZ, pitch, yaw, roll);
             if (this.midBuffer !== this.nearBuffer) writeGrassMatrix(this.midBuffer, this.count * 16, x, y, z, (this.config.midImported ? height : width) * spreadX, height, (this.config.midImported ? height : width) * spreadZ, pitch, yaw, roll);
             this.count++;

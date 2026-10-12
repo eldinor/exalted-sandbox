@@ -5,6 +5,45 @@ import { PropCollisions } from '../src/world/propCollisions.ts';
 import { OPEN_FOREST, OPEN_FOREST_MIX, openForestExcluded, placeOpenForest } from '../src/forest/OpenForestPlacement.ts';
 import type { PinePrototype } from '../src/forest/PinePack.ts';
 import { denseForestBoundaryAt } from '../src/forest/DenseForestShape.ts';
+import { FOREST_BUSH_VARIANT, FOREST_FRINGE, createForestBush, placeForestFringe } from '../src/forest/ForestFringe.ts';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import { BiomeSun, islandSunWeight } from '../src/world/biomeSun.ts';
+import { thinBigTrees } from '../src/forest/BigTreeDensity.ts';
+
+test('halving real big trees preserves every impostor and non-big site deterministically',()=>{
+    const sample=sampling(),closed=placeClosedForest(sample,support,10).trees,open=placeOpenForest(sample,openModels,10).trees;
+    const all=[...closed,...open],kept=thinBigTrees(all);
+    const realBig=(sites:typeof all)=>sites.filter(site=>!('variant' in site)&&!usesBorderImpostor(site.x,site.z)&&realForestVariant(site.x,site.z)==='Pine_big_1');
+    const large=(sites:typeof all)=>sites.filter(site=>'variant' in site&&site.variant==='Fir_large_2');
+    assert.equal(realBig(kept).length,Math.ceil(realBig(all).length/2));assert.equal(large(kept).length,Math.ceil(large(all).length/2));
+    for(const site of all){
+        const big=realBig([site]).length||large([site]).length;
+        if(!big)assert.ok(kept.includes(site),'all impostors, medium/small trees and saplings stay');
+    }
+    assert.deepEqual(new Set(thinBigTrees([...all].reverse())),new Set(kept),'input grouping cannot change retained sites');
+});
+
+test('biome sun delays, blends smoothly to forest/island, releases and freezes for pause/benchmarks',()=>{
+    const sun=new BiomeSun(185);
+    sun.update(.9,185,1,0);assert.equal(sun.azimuth,185);
+    assert.equal(sun.moving,false,'dwell does not mark a lighting transition');
+    sun.update(.2,185,1,0);assert.equal(sun.region,'forest');assert.ok(sun.azimuth>185&&sun.azimuth<186);
+    assert.equal(sun.moving,true);
+    for(let i=0;i<80;i++)sun.update(.1,185,1,0);
+    assert.equal(sun.azimuth,225);
+    assert.equal(sun.moving,false,'one settled solve is eligible at the endpoint');
+    sun.update(2,185,.4,0);assert.equal(sun.region,'forest','hysteresis keeps soft forest edges');
+    const held=sun.azimuth;sun.update(8,185,0,1,true);assert.equal(sun.azimuth,held);assert.equal(sun.region,'forest');
+    sun.update(0,185,0,1);assert.equal(sun.region,'forest');
+    for(let i=0;i<90;i++)sun.update(.1,185,0,1);
+    assert.equal(sun.azimuth,105);
+    for(let i=0;i<90;i++)sun.update(.1,200,0,0);
+    assert.equal(sun.azimuth,200,'leaving restores editable base bearing');
+    const crossing=new BiomeSun(350);crossing.update(7,10,0,0);
+    assert.equal(crossing.azimuth,10,'base slider crosses north by the short arc');
+    assert.equal(islandSunWeight(272.5,76),1);assert.equal(islandSunWeight(272.5+80,76),0);
+    assert.ok(islandSunWeight(272.5+65,76)>0&&islandSunWeight(272.5+65,76)<1);
+});
 
 const support = new Float32Array([0, 0, 0]);
 const sampling = (): ForestSampling => ({ minX: -468, maxX: 468, minZ: -351, maxZ: 351,
@@ -12,7 +51,29 @@ const sampling = (): ForestSampling => ({ minX: -468, maxX: 468, minZ: -351, max
     heightAt: (x, z) => 70 + x * .01 + z * .02, slopeAt: () => .1, submergedAt: () => false });
 
 const openModels: PinePrototype[] = OPEN_FOREST_MIX.map(entry=>({name:entry.variant,near:[],far:[],
-    height:entry.variant.includes('medium')?10:entry.variant.includes('small')?5:2,rootSupport:support}));
+    height:entry.variant.includes('large')?15:entry.variant.includes('medium')?10:entry.variant.includes('small')?5:2,rootSupport:support}));
+test('forest fringe follows the collider contour, adds trees and collision-free bushes, and preserves clearings',()=>{
+    const sample=sampling(),models=[...openModels,{name:FOREST_BUSH_VARIANT,height:1.5,near:[],far:[],rootSupport:support}];
+    const retained=placeOpenForest(sample,openModels,10).trees;
+    const a=placeForestFringe(sample,models,retained),b=placeForestFringe(sample,models,retained);
+    assert.deepEqual(a,b);assert.ok(a.trees.length>100);assert.ok(a.bushes>0&&a.colliders.length>0);
+    assert.equal(a.colliders.length,a.trees.length-a.bushes);
+    for(const site of a.trees){
+        const edge=denseForestBoundaryAt(site.z);
+        assert.ok(site.x>=edge-FOREST_FRINGE.inside&&site.x<=edge+FOREST_FRINGE.outside);
+        assert.equal(openForestExcluded(site.x,site.z),false);
+        assert.ok(retained.every(other=>Math.hypot(site.x-other.x,site.z-other.z)>=1.5));
+        assert.ok([FOREST_BUSH_VARIANT,'Fir_small_1','Fir_small_2'].includes(site.variant));
+    }
+    sample.submergedAt=()=>true;assert.equal(placeForestFringe(sample,models,retained).trees.length,0);
+});
+test('derived shrub duplicates only LOD2 geometry without mutating its source',()=>{
+    const geometry=new VertexData();geometry.positions=[0,0,0,1,0,0,0,1,0];geometry.indices=[0,1,2];geometry.normals=[0,0,1,0,0,1,0,0,1];
+    const source={name:'Fir_small_2',height:1,near:[],far:[{geometry,material:null,sideOrientation:0}],rootSupport:support};
+    const bush=createForestBush(source);
+    assert.equal(bush.far[0].geometry.indices!.length,6);assert.equal(geometry.indices.length,3);
+    assert.deepEqual(geometry.positions,[0,0,0,1,0,0,0,1,0]);assert.equal(bush.height,1.5);
+});
 test('corrected dense contour cuts the middle pocket and transfers it to accessible woodland',()=>{
     assert.ok(denseForestBoundaryAt(45)<denseForestBoundaryAt(-100)-45);
     assert.ok(denseForestBoundaryAt(45)<denseForestBoundaryAt(200)-40);
@@ -26,19 +87,22 @@ test('corrected dense contour cuts the middle pocket and transfers it to accessi
     assert.ok(open.trees.some(tree=>tree.x<-366&&tree.x>-410&&tree.z>65&&tree.z<100),'medium/small/saplings fill the cut-back pocket');
     for(const tree of open.trees)assert.ok(tree.x>denseForestBoundaryAt(tree.z)+2);
 });
-test('open woodland deterministically fills only the extension with all six models and clear viewpoints',()=>{
+test('open woodland deterministically fills only the extension with the selected fir/pine models and clear viewpoints',()=>{
     const sample=sampling(),a=placeOpenForest(sample,openModels,10),b=placeOpenForest(sample,openModels,10);
     assert.deepEqual(a,b);assert.ok(a.trees.length>200);
-    assert.equal(new Set(a.trees.map(tree=>tree.variant)).size,6);assert.equal(a.colliders.length,a.trees.length);
+    assert.equal(new Set(a.trees.map(tree=>tree.variant)).size,OPEN_FOREST_MIX.length);assert.equal(a.colliders.length,a.trees.length);
     for(const site of a.trees){
         assert.ok(site.x>denseForestBoundaryAt(site.z)+2&&site.x<=OPEN_FOREST.maxX);
         assert.equal(openForestExcluded(site.x,site.z),false);
         assert.ok(Math.abs(site.y-(sample.heightAt(site.x,site.z)-.03))<1e-8);
-        assert.ok(site.scale>=1.19&&site.scale<=1.61,'all models retain pack proportions');
+        const baseScale=site.variant==='Fir_large_2'?20/15:14/10;
+        assert.ok(site.scale>=baseScale*.85&&site.scale<=baseScale*1.15,'relative size is retained and Large 2 has its own target');
     }
     assert.equal(openForestExcluded(-248,125),true);
     assert.equal(openForestExcluded(-207,80),true,'overlook sightline stays clear');
     assert.ok(a.trees.some(tree=>Math.hypot(tree.x+248,tree.z-125)<40),'trees surround the overlook clearing');
+    const large=a.trees.filter(tree=>tree.variant==='Fir_large_2').length;
+    assert.ok(large>a.trees.length*.02&&large<a.trees.length*.07,'Large 2 remains an occasional accent');
 });
 test('open trees exclude roads, water and steep slopes and collide only with their own trunks',()=>{
     const sample=sampling();sample.forestAt=(_x,z)=>!(z>20&&z<40);

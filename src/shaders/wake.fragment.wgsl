@@ -35,6 +35,7 @@ varying vAmp: f32;
 varying vCurl: f32;
 varying vViewDist: f32;
 varying vGrass: f32;
+varying vForest: f32;
 
 var skyLUT: texture_2d<f32>;
 var skyLUTSampler: sampler;
@@ -145,10 +146,13 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     var soil = vec3f(0.83, 0.66, 0.39);
     if (sand > 0.001 && uniforms.useDesertTextures > 0.5) { soil = desertSoilColor(world.xz,3.0)*1.10; }
     let grass = clamp(input.vGrass, 0.0, 1.0);
-    let snow = (1.0 - sand) * (1.0 - grass);
+    let forest=clamp(input.vForest,0.0,1.0);
+    let vegetation=clamp(grass+forest,0.0,1.0);
+    let snow = (1.0 - sand) * (1.0 - vegetation);
     let grassColor = mix(vec3f(0.055, 0.16, 0.018), vec3f(0.14, 0.32, 0.035), q);
-    let albedo = mix(mix(vec3f(0.895, 0.920, 0.965), soil, sand), grassColor, grass);
-    let roughness = mix(mix(0.80,0.95,sand), 0.9, grass);
+    let forestColor=mix(vec3f(.075,.10,.04),vec3f(.19,.23,.09),q);
+    let albedo = mix(mix(mix(vec3f(0.895, 0.920, 0.965), soil, sand), grassColor, grass),forestColor,forest);
+    let roughness = mix(mix(0.80,0.95,sand), 0.9, vegetation);
     let f0 = vec3f(0.026);
 
     // Thin at the lip, deep at the base. This is the gradient the whole read
@@ -245,7 +249,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     if (uniforms.spellLightCount > 0.5) {
         color += spellLighting(
             world, N, V, albedo, thickness,
-            uniforms.sssStrength * 0.45 * (1.0-grass), 1.5,
+            uniforms.sssStrength * 0.45 * (1.0-vegetation), 1.5,
             uniforms.spellLightPos, uniforms.spellLightCol, uniforms.spellLightCount
         );
     }
