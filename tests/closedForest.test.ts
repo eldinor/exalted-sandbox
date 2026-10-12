@@ -4,6 +4,7 @@ import { CLOSED_FOREST, forestLod, placeClosedForest, type ForestSampling, fores
 import { PropCollisions } from '../src/world/propCollisions.ts';
 import { OPEN_FOREST, OPEN_FOREST_MIX, openForestExcluded, placeOpenForest } from '../src/forest/OpenForestPlacement.ts';
 import type { PinePrototype } from '../src/forest/PinePack.ts';
+import { denseForestBoundaryAt } from '../src/forest/DenseForestShape.ts';
 
 const support = new Float32Array([0, 0, 0]);
 const sampling = (): ForestSampling => ({ minX: -468, maxX: 468, minZ: -351, maxZ: 351,
@@ -12,12 +13,25 @@ const sampling = (): ForestSampling => ({ minX: -468, maxX: 468, minZ: -351, max
 
 const openModels: PinePrototype[] = OPEN_FOREST_MIX.map(entry=>({name:entry.variant,near:[],far:[],
     height:entry.variant.includes('medium')?10:entry.variant.includes('small')?5:2,rootSupport:support}));
+test('corrected dense contour cuts the middle pocket and transfers it to accessible woodland',()=>{
+    assert.ok(denseForestBoundaryAt(45)<denseForestBoundaryAt(-100)-45);
+    assert.ok(denseForestBoundaryAt(45)<denseForestBoundaryAt(200)-40);
+    for(let z=-160;z<=225;z+=.25){
+        assert.ok(Number.isFinite(denseForestBoundaryAt(z)));
+        assert.ok(Math.abs(denseForestBoundaryAt(z+.25)-denseForestBoundaryAt(z))<1);
+    }
+    const sample=sampling(),closed=placeClosedForest(sample,support,10),open=placeOpenForest(sample,openModels,10);
+    for(const tree of closed.trees)assert.ok(tree.x<=denseForestBoundaryAt(tree.z));
+    for(const barrier of closed.barriers)assert.ok(barrier.x<=denseForestBoundaryAt(barrier.z));
+    assert.ok(open.trees.some(tree=>tree.x<-366&&tree.x>-410&&tree.z>65&&tree.z<100),'medium/small/saplings fill the cut-back pocket');
+    for(const tree of open.trees)assert.ok(tree.x>denseForestBoundaryAt(tree.z)+2);
+});
 test('open woodland deterministically fills only the extension with all six models and clear viewpoints',()=>{
     const sample=sampling(),a=placeOpenForest(sample,openModels,10),b=placeOpenForest(sample,openModels,10);
     assert.deepEqual(a,b);assert.ok(a.trees.length>200);
     assert.equal(new Set(a.trees.map(tree=>tree.variant)).size,6);assert.equal(a.colliders.length,a.trees.length);
     for(const site of a.trees){
-        assert.ok(site.x>OPEN_FOREST.minX+2&&site.x<=OPEN_FOREST.maxX);
+        assert.ok(site.x>denseForestBoundaryAt(site.z)+2&&site.x<=OPEN_FOREST.maxX);
         assert.equal(openForestExcluded(site.x,site.z),false);
         assert.ok(Math.abs(site.y-(sample.heightAt(site.x,site.z)-.03))<1e-8);
         assert.ok(site.scale>=1.19&&site.scale<=1.61,'all models retain pack proportions');
@@ -45,10 +59,10 @@ test('impostor expansion preserves sites/barriers and real trees protect the edg
     const cards = placement.trees.filter(site => usesBorderImpostor(site.x,site.z));
     assert.ok(cards.length > placement.trees.length * .7,'most trees now use the cheap representation');
     assert.equal(real.length+cards.length,placement.trees.length);
-    assert.ok(real.some(site=>site.x>-367));
+    assert.ok(real.some(site=>site.x>denseForestBoundaryAt(site.z)-15));
     assert.ok(real.some(site=>Math.hypot(site.x+383.5,site.z-52)>18&&Math.hypot(site.x+383.5,site.z-52)<33));
     for(const site of cards) {
-        assert.ok(site.x<=-367);
+        assert.ok(site.x<=denseForestBoundaryAt(site.z)-15);
         assert.ok(Math.hypot(site.x+383.5,site.z-52)>33);
     }
     const small=real.filter(site=>realForestVariant(site.x,site.z)==='Pine_small_1');
@@ -116,7 +130,7 @@ test('LOD includes camera altitude, keeps distant authored crowns, and culls bey
 
 test('doubling the strip reserves an accessible spawn clearing and continuous western exit corridor', () => {
     const placement = placeClosedForest(sampling(), support, 10), collisions = new PropCollisions();
-    assert.equal(CLOSED_FOREST.eastBoundary, -352);
+    assert.equal(CLOSED_FOREST.eastBoundary, -366);
     for (const barrier of placement.barriers) {
         collisions.add(barrier);
         assert.equal(forestAccessExcluded(barrier.x, barrier.z, barrier.radius), false);

@@ -1,14 +1,15 @@
 import { pineGroundHeight } from './PineGrounding.ts';
 import type { PropCollider } from '../world/propCollisions.ts';
+import { denseForestBoundaryAt } from './DenseForestShape.ts';
 
 export const CLOSED_FOREST = Object.freeze({ variant: 'Pine_big_1', spacing: 5.5,
-    height: 20, eastBoundary: -352, chunkSize: 32, nearDistance: 0, distance: 600 });
+    height: 20, eastBoundary: -366, chunkSize: 32, nearDistance: 0, distance: 600 });
 export const FOREST_REAL_EDGE_WIDTH = 15;
 export const FOREST_IMPOSTOR_BOUNDARY = CLOSED_FOREST.eastBoundary - FOREST_REAL_EDGE_WIDTH;
 export const FOREST_SPAWN_REAL_RADIUS = 33;
 export const FOREST_SMALL_SHARE = .25;
 export function usesBorderImpostor(x: number, z: number): boolean {
-    return x <= FOREST_IMPOSTOR_BOUNDARY && Math.hypot(x + 383.5, z - 52) > FOREST_SPAWN_REAL_RADIUS;
+    return x <= denseForestBoundaryAt(z) - FOREST_REAL_EDGE_WIDTH && Math.hypot(x + 383.5, z - 52) > FOREST_SPAWN_REAL_RADIUS;
 }
 /** Small 1 replaces a deterministic share of real sites, keeping total density. */
 export function realForestVariant(x: number, z: number): 'Pine_big_1' | 'Pine_small_1' {
@@ -42,7 +43,7 @@ export function placeClosedForest(sample: ForestSampling, rootSupport: Float32Ar
 } {
     const trees: ForestSite[] = [], barriers: PropCollider[] = [];
     const spacing = CLOSED_FOREST.spacing;
-    const allowed = (x: number, z: number) => x >= sample.minX + 3 && x <= CLOSED_FOREST.eastBoundary
+    const allowed = (x: number, z: number) => x >= sample.minX + 3 && x <= denseForestBoundaryAt(z)
         && z >= sample.minZ + 3 && z <= sample.maxZ - 3
         && !forestAccessExcluded(x, z) && sample.forestAt(x, z);
     for (let row = Math.ceil(sample.minZ / spacing); row * spacing <= sample.maxZ; row++) {

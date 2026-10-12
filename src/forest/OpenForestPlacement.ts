@@ -1,9 +1,10 @@
-import { CLOSED_FOREST, forestAccessExcluded, type ForestSampling, type ForestSite } from './ClosedForestPlacement.ts';
+import { forestAccessExcluded, type ForestSampling, type ForestSite } from './ClosedForestPlacement.ts';
 import { pineGroundHeight } from './PineGrounding.ts';
 import type { PinePrototype } from './PinePack.ts';
 import type { PropCollider } from '../world/propCollisions.ts';
+import { denseForestBoundaryAt } from './DenseForestShape.ts';
 
-export const OPEN_FOREST = Object.freeze({ spacing: 8, minX: CLOSED_FOREST.eastBoundary, maxX: -166,
+export const OPEN_FOREST = Object.freeze({ spacing: 8, minX: -417, maxX: -166,
     referenceHeight: 14, overlookX: -248, overlookZ: 125, clearingRadius: 18 });
 export const OPEN_FOREST_MIX = [
     {variant:'Pine_medium_1',share:.25},{variant:'Pine_medium_2',share:.25},
@@ -27,10 +28,10 @@ export function placeOpenForest(sample:ForestSampling,models:readonly PineProtot
     trees:OpenForestSite[];colliders:PropCollider[];
 } {
     const trees:OpenForestSite[]=[],colliders:PropCollider[]=[],spacing=OPEN_FOREST.spacing;
-    const allowed=(x:number,z:number)=>x>OPEN_FOREST.minX+2&&x<=OPEN_FOREST.maxX
+    const allowed=(x:number,z:number)=>x>denseForestBoundaryAt(z)+2&&x<=OPEN_FOREST.maxX
         &&x>=sample.minX+3&&x<=sample.maxX-3&&z>=sample.minZ+3&&z<=sample.maxZ-3
         &&!openForestExcluded(x,z)&&sample.forestAt(x,z);
-    for(let row=Math.ceil(sample.minZ/spacing);row*spacing<=sample.maxZ;row++)for(let col=Math.ceil(OPEN_FOREST.minX/spacing);col*spacing<=OPEN_FOREST.maxX;col++){
+    for(let row=Math.ceil(sample.minZ/spacing);row*spacing<=sample.maxZ;row++)for(let col=Math.ceil(Math.max(sample.minX,OPEN_FOREST.minX)/spacing);col*spacing<=OPEN_FOREST.maxX;col++){
         const x=(col+(random(col,row,11)-.5)*.55)*spacing,z=(row+(random(col,row,12)-.5)*.55)*spacing;
         if(!allowed(x,z)||!allowed(x-2,z)||!allowed(x+2,z)||!allowed(x,z-2)||!allowed(x,z+2))continue;
         const ground=sample.heightAt(x,z);

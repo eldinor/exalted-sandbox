@@ -572,3 +572,42 @@ position was identical, zero map copies remained and no GPU errors occurred.
 Typecheck and all 159 Node tests passed; snapshot regression covers complete
 instance counts, independent buffers, shared clone ownership, unchanged source
 defines and cleanup. No production build or Playwright.
+
+## Corrected dense forest concept - 2026-10-12
+
+The user supplied a corrected top-down concept and requested the dense big-tree
+shape to match it. The original reference is preserved unchanged as
+`public/terrain/forest/concept/forest-shape-2026-10-12.png`, with coordinate
+registration/source notes beside it. `DenseForestShape.ts` traces the western
+canopy boundary from that image: approximately X=-362 in the upper stand,
+curving inward to X=-413 around Z=45, then widening toward X=-363 at Z=225.
+Smooth interpolation avoids hard rectangular steps. Root centres use a 4 m
+inset, balancing crown overhang and the existing 2 m placement probes.
+
+Dense trees and the independent closed-area collider grid use the same contour,
+while road/water/slope/biome exclusions still apply. The real-tree band follows
+the contour at 15 m width instead of the old fixed X=-367 line. The spawn ring
+still prevents impostors where real sites exist; the 18 m spawn clearing and
+16 m exit corridor stay open. No new closed area appears in the released pocket.
+
+The medium/small/sapling section now extends to the curved edge and fills the
+released pocket, using its existing deterministic 8 m grid, model mix, relative
+sizes and individual trunk collisions. Existing open sites west of the old edge
+retain positions and deterministic model choice; density is not raised. This
+replaces the former fixed dense rectangle, rather than changing ground biome
+textures, roads, other props or the authored heightmap. Snapshot/benchmark
+metadata includes the contour points; `eastBoundary`/`impostorBoundary` are now
+maximum X limits, not a description of the curved boundary at every Z.
+
+Typecheck and all 160 Node tests passed. Contour tests cover the indentation,
+continuous interpolation, dense tree/collider agreement, real-edge selection,
+and mixed-woodland coverage of the released pocket. No build or Playwright.
+
+Native Ctrl+Shift+P capture was inspected against the supplied concept: the
+middle indentation and wider lower stand are visible, with mixed woodland in
+the pocket. The dense section now has 900 trees (741 cards, 110 Big 1, 49 Small
+1), and the accessible woodland has 593 trees. There are 1,092 dense-area
+cylinders plus 593 individual trunk colliders. The capture completed without
+GPU errors, changed no live camera/pass membership counts, and left no map
+copies. This is a visual/lifecycle check, not a performance benchmark; the
+larger real-tree pocket adds batches despite fewer dense cards.

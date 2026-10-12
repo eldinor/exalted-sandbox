@@ -21,6 +21,7 @@ import { OPEN_FOREST, OPEN_FOREST_MIX, placeOpenForest } from '../forest/OpenFor
 import { forestOverlookGroundWeight } from '../terrain/forestGroundCoverage.ts';
 import type { MapPropSnapshot } from '../ui/mapPropSnapshot.ts';
 import { writeImpostorCard } from '../forest/ImpostorBatchGeometry.ts';
+import { DENSE_FOREST_EDGE } from '../forest/DenseForestShape.ts';
 import { ForestImpostorBatch, ForestImpostorResources } from '../forest/ForestImpostorBatch.ts';
 import { parseSpruceAtlas } from '../forest/SpruceImpostor.ts';
 import { isForestColor } from '../forest/ForestBiome.ts';
@@ -38,6 +39,7 @@ export class WorldForest {
         enabled: true, ...CLOSED_FOREST, shadows: false as const, impostorBoundary: FOREST_IMPOSTOR_BOUNDARY, borderVariant: 'blue-spruce-impostor',
         realEdgeWidth: FOREST_REAL_EDGE_WIDTH, spawnRealRadius: FOREST_SPAWN_REAL_RADIUS, smallVariant: 'Pine_small_1', smallShare: FOREST_SMALL_SHARE,
         openForest: OPEN_FOREST, openMix: OPEN_FOREST_MIX,
+        denseEdge: DENSE_FOREST_EDGE,
     };
     readonly stats = { placed: 0, visible: 0, activeChunks: 0, activeMeshes: 0, triangles: 0, colliders: 0, updateMs: 0, impostorPlaced: 0, impostorVisible: 0, impostorChunks: 0, impostorTriangles: 0, bigPlaced: 0, smallPlaced: 0, openPlaced: 0 };
     private readonly chunks: ForestChunk[] = [];

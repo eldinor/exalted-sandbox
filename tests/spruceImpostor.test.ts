@@ -7,6 +7,7 @@ import { spruceImpostorViews, selectImpostorView } from '../src/forest/ImpostorV
 import { parseSpruceAtlas } from '../src/forest/SpruceImpostor.ts';
 import { writeImpostorCard } from '../src/forest/ImpostorBatchGeometry.ts';
 import { usesBorderImpostor } from '../src/forest/ClosedForestPlacement.ts';
+import { denseForestBoundaryAt } from '../src/forest/DenseForestShape.ts';
 import { ForestImpostorBatch } from '../src/forest/ForestImpostorBatch.ts';
 import { NullEngine } from '@babylonjs/core/Engines/nullEngine';
 import { Scene } from '@babylonjs/core/scene';
@@ -20,11 +21,12 @@ const atlas = parseSpruceAtlas(metadata);
 
 test('spruce fills the interior except for the real-tree edge and spawn surround', () => {
     assert.equal(usesBorderImpostor(-468,0),true);
-    assert.equal(usesBorderImpostor(-367,0),true);
-    assert.equal(usesBorderImpostor(-366.999,0),false);
+    const edge = denseForestBoundaryAt(0)-15;
+    assert.equal(usesBorderImpostor(edge,0),true);
+    assert.equal(usesBorderImpostor(edge+.001,0),false);
     assert.equal(usesBorderImpostor(-352,0),false);
     assert.equal(usesBorderImpostor(-410,52),false,'real trees surround the clearing');
-    assert.equal(usesBorderImpostor(-420,52),true,'impostors resume beyond the spawn surround');
+    assert.equal(usesBorderImpostor(-440,52),true,'impostors resume beyond the spawn surround and real contour edge');
 });
 
 test('batched cards select object-relative views, retain height and face ground/aerial cameras at every yaw', () => {

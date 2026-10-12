@@ -16,8 +16,9 @@ remains the target for later integration.
 
 ## Scope and integration
 
-The authorized main-app border trial uses blue-spruce impostors throughout the
-116 m strip except its accessible 15 m edge (Babylon X > -367) and a 33 m
+The authorized main-app dense section follows the corrected 2026-10-12 concept
+via `DenseForestShape.ts`, including the inward middle curve. Spruce impostors
+fill the interior except the accessible 15 m band along that curve and a 33 m
 radius around Cube Spawn (-383.5, 52). These real-tree areas mix Big 1 and
 Small 1 LOD2 (deterministic 25% Small 1 selection). Small trees retain the
 pack's size ratio and use their own root-support grounding. This preserves
@@ -28,7 +29,7 @@ batches, matching alpha-tested camera depth and no casting or wind. This is
 the current border section; complete biome population remains deferred.
 
 The user also authorized the accessible section westward through Forest Outlook.
-It spans Babylon X > -350 to -166 within the forest palette and the bounded
+It spans westward from the curved dense edge to X=-166 within the forest palette and the bounded
 forest-floor correction around (-248,125). It uses Medium 1/2, Small 1/2 and
 Sapling 1/2, deterministic 25/25/15/15/10/10% target shares, 8 m spacing and a
 14 m Medium 2 reference height. An 18 m overlook clearing and southeast sightline

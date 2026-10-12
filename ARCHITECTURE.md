@@ -390,7 +390,7 @@ The eastern forest sections live in `src/world/worldForest.ts`, with shared
 TypeScript pine asset, placement, grounding and material adapters in `src/forest`.
 It uses 32 m independent thin-instance batches per Big 1/Small 1 LOD2 model
 at the accessible 15 m edge and around Cube Spawn, plus CPU-expanded sprite
-batches for the remaining closed strip (X <= -367 outside the 33 m spawn ring),
+batches for the dense interior (15 m inside the authored contour, outside the 33 m spawn ring),
 sharing two spruce
 atlas textures and colour/prepass materials. `ImpostorBatchGeometry.ts` handles
 height, yaw-relative view selection and camera-facing geometry without temporary
@@ -400,14 +400,14 @@ registered production prop shaders and matching alpha-tested depth. Frame update
 follow desert props; pine and card colour/depth pipelines draw during loading. An
 independent overlapping-cylinder area barrier shares the existing collision grid
 and is removed by ownership on disposal. A benchmark toggle changes rendering,
-not access. The 116 m strip reserves the spawn clearing and exit corridor; its
+not access. The shaped dense section reserves the spawn clearing and exit corridor; its
 versioned automatic benchmark combines a ground-edge pass and aerial sweep using
 the same camera lifecycle as the independent grass route. Tree casting/wind and
 full-biome integration remain deferred. `OpenForestPlacement.ts` adds the
 walkable section toward Forest Outlook with six medium/small/sapling variants,
 8 m spacing, per-model root grounding and individual trunk cylinders. It leaves
-the overlook centre and grassland sightline clear, preserves the original closed
-stand and batches each model independently with shared pack materials. The
+the overlook centre and grassland sightline clear, fills the pocket outside the
+corrected dense contour and batches each model independently with shared pack materials. The
 existing forest toggle and route include this extension; per-variant pipelines
 warm during loading.
 

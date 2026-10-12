@@ -9,6 +9,16 @@ water, atmosphere, props, collisions, UI, and other player-facing systems.
 Work should be evaluated by how it supports the quality, performance, and
 maintainability of this main application.
 
+## Corrected dense forest contour
+
+The 2026-10-12 user concept now defines a curved western canopy edge instead
+of the rectangular border strip. The middle pocket curves inward; open mixed
+woodland fills the released area. Real trees occupy the first 15 m along the
+curved edge; closed-area colliders follow it. The spawn clearing/corridor,
+terrain palette, model mixes and grounding rules remain separate constraints.
+The reference is saved under `public/terrain/forest/concept`; editable boundary
+points live in `src/forest/DenseForestShape.ts`. See [FOREST_NOTES.md](FOREST_NOTES.md).
+
 ## Open forest toward Forest Outlook
 
 Ctrl+Shift+P now saves a full-placement orthographic map at 4096x3072, including
@@ -17,7 +27,7 @@ distance/streaming visibility using temporary copies, retains the rig/post chain
 and saves in the screenshot gallery. Ctrl+P keeps its terrain/water map capture.
 
 The accessible woodland west of the closed strip now extends to and around
-Forest Outlook: 464 new real trees at 8 m spacing, using Medium 1/2, Small 1/2
+Forest Outlook: 593 real trees at 8 m spacing, using Medium 1/2, Small 1/2
 and Sapling 1/2 at 25/25/15/15/10/10% target shares. The overlook retains an
 18 m clearing and a southeast sightline; Cube Spawn's corridor stays clear.
 Individual trunk colliders keep this section walkable. Models retain their
@@ -36,11 +46,11 @@ albedo and object-normal views are saved under `public/terrain/forest/blue-spruc
 Both use production lighting and matching alpha-tested camera depth; the full
 tree also has matching custom shadow passes. Controls support view, height,
 threshold, visibility and depth inspection. The main forest now uses this spruce
-impostor throughout the closed strip, apart from the first 15 m at its accessible
-edge (Babylon X > -367) and a 33 m radius around Cube Spawn. Real trees mix
+impostor inside the corrected dense contour, apart from the first 15 m at its
+accessible edge and a 33 m radius around Cube Spawn. Real trees mix
 Big 1 and Small 1 LOD2, with a deterministic 25% Small 1 selection and the pack's
-relative sizes. Clearing, spacing and barriers stay intact. There are 1,005 cards,
-117 Big 1 and 47 Small 1 trees, batched in 32 m chunks.
+relative sizes. Clearing, spacing and barriers stay intact. There are 741 cards,
+110 Big 1 and 49 Small 1 trees in the dense section, batched in 32 m chunks.
 Both representations warm colour/depth pipelines behind the loading screen.
 Main-app real pine foliage now has a darker, cooler albedo tint to approach the
 spruce border colour; bark retains its source colour.
