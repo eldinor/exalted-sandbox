@@ -1,5 +1,9 @@
 # Forest asset and rendering notes
 
+Forest Outlook is now a separate top-panel teleport destination at the existing
+clearing, world (-248, 125), chart (496, -250), facing the southeast sightline.
+It uses the standard terrain-grounded teleport and movement/effect reset flow.
+
 ## Restored forest Cube and portal (2026-10-12)
 
 The interactive crystalline Cube from commit `2486717` is active at Forest
