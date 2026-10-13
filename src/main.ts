@@ -47,6 +47,7 @@ import { EXALTED_SPAWN, ExaltedWorld } from "./terrain/exaltedWorld.ts";
 import { FOREST_CUBE_SPAWN, type SpawnPoint } from "./world/spawnPoints.ts";
 import { DesertProps } from './world/desertProps.ts';
 import { WorldForest } from './world/worldForest.ts';
+import { IronRocks } from './world/ironRocks.ts';
 import { FlightWind } from './vfx/flightWind.ts';
 import { WorldWater } from './world/worldWater.ts';
 import { WaterEffects } from './vfx/waterEffects.ts';
@@ -92,6 +93,7 @@ interface ExaltedRuntime {
     daisies: WorldGrass | null;
     desertProps: DesertProps | null;
     forest: WorldForest | null;
+    ironRocks: IronRocks | null;
     worldWater: WorldWater | null;
     screenshotGallery: ScreenshotGallery;
     biomeSun: BiomeSun;
@@ -248,6 +250,10 @@ async function boot(): Promise<void> {
         await forest.load();
     }
 
+    const ironRocks = exalted && authoredSource === 'heightmap'
+        ? new IronRocks(scene, terrain, sky, shadows, depthPass) : null;
+    if (ironRocks) { await loading.phase('placing Iron Mountains rock accents', .60); await ironRocks.load(); }
+
     await loading.phase("placing character", 0.62);
 
     const character = new CharacterController(terrain);
@@ -307,6 +313,7 @@ async function boot(): Promise<void> {
     spells.addConsumers(
         ...(desertProps?.materials || []),
         ...(forest?.materials || []),
+        ...(ironRocks?.materials || []),
         ...terrain.materials, figure.bodyMat, figure.clothMat,
         wake.material, spray.material
     );
@@ -328,7 +335,7 @@ async function boot(): Promise<void> {
         onToggleOverlay: () => overlay.toggle(),
         onScreenshot: () => void screenshotGallery.capture(),
         onMapScreenshot: () => void screenshotGallery.capture(() => captureWholeMap(scene, terrain, worldWater)),
-        onPropMapScreenshot: () => void screenshotGallery.capture(() => captureWholeMap(scene, terrain, worldWater, {forest,desertProps})),
+        onPropMapScreenshot: () => void screenshotGallery.capture(() => captureWholeMap(scene, terrain, worldWater, {forest,desertProps,ironRocks})),
     });
     installInspectorShortcut(scene);
 
@@ -343,6 +350,8 @@ async function boot(): Promise<void> {
     await desertProps?.warmUp();
     forest?.update(rig.camera.position, true);
     await forest?.warmUp();
+    ironRocks?.update(rig.camera.position);
+    await ironRocks?.warmUp();
     worldWater?.update(0,rig.camera.position);
     await worldWater?.warmUp();
     figure.update(0);
@@ -388,6 +397,7 @@ async function boot(): Promise<void> {
     flowers?.finishWarmUp();
     daisies?.finishWarmUp();
     forest?.finishWarmUp();
+    ironRocks?.finishWarmUp();
 
     // ------------------------------------------------------------- run loop
     let prev = performance.now();
@@ -425,6 +435,7 @@ async function boot(): Promise<void> {
             grass: grass ? { ...grass.stats, ...grass.streamingStats } : null,
             flowers: flowers ? { settings: {...flowers.settings}, ...flowers.stats, ...flowers.streamingStats } : null,
             daisies: daisies ? { settings: {...daisies.settings}, ...daisies.stats, ...daisies.streamingStats } : null,
+            ironRocks: ironRocks ? { enabled:S.ironMountainsRocks, ...ironRocks.stats } : null,
             forest: forest ? { settings: { ...forest.settings }, ...forest.stats } : null,
             desert: desertProps?.chunks ? { ...desertProps.chunks.stats, shadowMeshes: [...desertProps.chunks.stats.shadowMeshes] } : null,
         }),
@@ -532,6 +543,7 @@ async function boot(): Promise<void> {
         terrain.update(rig.camera.position, streamingFocus, dt);
         desertProps?.update(rig.camera.position, streamingFocus, false, dt);
         forest?.update(rig.camera.position);
+        ironRocks?.update(rig.camera.position);
         worldWater?.update(dt,rig.camera.position);
         const tTerrain = performance.now();
         // After the shadow refit, so the figure's uniforms carry this frame's
@@ -565,7 +577,7 @@ async function boot(): Promise<void> {
 
         endFrameDraws();
         stats.triangles =
-            (forest?.stats.triangles || 0) + (grass?.stats.triangles || 0) + (flowers?.stats.triangles || 0) + (daisies?.stats.triangles || 0) + (desertProps?.triangles || 0) + (worldWater?.triangles || 0) +
+            (S.ironMountainsRocks ? ironRocks?.stats.triangles || 0 : 0) + (forest?.stats.triangles || 0) + (grass?.stats.triangles || 0) + (flowers?.stats.triangles || 0) + (daisies?.stats.triangles || 0) + (desertProps?.triangles || 0) + (worldWater?.triangles || 0) +
             (terrain.mesh.metadata ? terrain.mesh.metadata.triangles : 0) +
             (terrain.local?.mesh.metadata.triangles || 0) +
             (S.showCharacter ? figure.triangles : 0) +
@@ -592,7 +604,7 @@ async function boot(): Promise<void> {
         engine, scene, rig, character, figure, contact, spray, wake, spells,
         overlay, terrain, sky, shadows, post, depthPass, spawnBar,
         S, input, perfStats: stats,
-        grass, flowers, daisies, desertProps, forest,
+        grass, flowers, daisies, desertProps, forest, ironRocks,
         worldWater,
         screenshotGallery, biomeSun, avatarColors, benchmark, rocketJumpVfx, magicalCube,
         };

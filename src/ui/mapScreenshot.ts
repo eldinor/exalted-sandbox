@@ -13,6 +13,7 @@ import type { WorldWater } from '../world/worldWater.ts';
 import { mapScreenshotFraming } from './mapScreenshotFraming.ts';
 import { MapPropSnapshot } from './mapPropSnapshot.ts';
 import type { WorldForest } from '../world/worldForest.ts';
+import type { IronRocks } from '../world/ironRocks.ts';
 import type { DesertProps } from '../world/desertProps.ts';
 
 const MAP_LAYER = 0x10000000;
@@ -20,7 +21,7 @@ const WIDTH = 2048, HEIGHT = 1536;
 
 /** Render authored terrain offscreen without moving the rig or touching temporal passes. */
 export async function captureWholeMap(scene: Scene, terrain: Terrain, water: WorldWater | null,
-    props?: {forest:WorldForest|null;desertProps:DesertProps|null}): Promise<string> {
+    props?: {forest:WorldForest|null;desertProps:DesertProps|null;ironRocks?:IronRocks|null}): Promise<string> {
     const width=props?4096:WIDTH,height=props?3072:HEIGHT;
     const world = terrain.heightfield;
     if (!(world instanceof ExaltedWorld) || !world.surface) throw new Error('Whole-map screenshots require the authored world.');
@@ -67,7 +68,7 @@ export async function captureWholeMap(scene: Scene, terrain: Terrain, water: Wor
     target.renderParticles = false; target.renderSprites = false;
     target.clearColor = new Color4(.055, .085, .1, 1);
     try {
-        props?.forest?.addMapSnapshot(snapshot);props?.desertProps?.addMapSnapshot(snapshot);
+        props?.forest?.addMapSnapshot(snapshot);props?.desertProps?.addMapSnapshot(snapshot);props?.ironRocks?.addMapSnapshot(snapshot);
         target.renderList = [mesh, ...waterMeshes, ...snapshot.meshes];
         await material.forceCompilationAsync(mesh);
         if (waterMeshes.length) await waterMaterial.forceCompilationAsync(waterMeshes[0]);

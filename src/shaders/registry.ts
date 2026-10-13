@@ -17,6 +17,8 @@ import grassVertex from '../grass/grass.vertex.wgsl?raw';
 import grassFragment from './grass.fragment.wgsl?raw';
 import desertAppearance from './lib/desertAppearance.wgsl?raw';
 import rockSampling from './lib/rockSampling.wgsl?raw';
+import ironMountains from './lib/ironMountains.wgsl?raw';
+import { ironHeightBlendWGSL } from '../terrain/IronMountains.ts';
 import desertPropVert from './desertProp.vertex.wgsl?raw';
 import desertPropFrag from './desertProp.fragment.wgsl?raw';
 
@@ -92,8 +94,9 @@ const INCLUDES = {
     forestGroundCoverage: forestGroundCoverageWGSL,
     desertAppearance,
     rockSampling,
+    ironMountains: ironHeightBlendWGSL + '\n' + ironMountains,
     // Identical stochastic PBR mapping, specialized with independent beach bindings.
-    beachSampling: rockSampling.replaceAll('Rock', 'Beach').replaceAll('rock', 'beach'),
+    beachSampling: rockSampling.replaceAll('Rock', 'Beach').replaceAll('rock', 'beach').replaceAll('sampleUV, 0, sampleDx','sampleUV, sampleDx'),
     surfaceTypes: surfaceWGSL,
     exaltedSurface,
     surfaceMap,

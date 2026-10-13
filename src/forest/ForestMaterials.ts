@@ -16,7 +16,7 @@ export class ForestMaterials {
     private readonly flat: RawTexture;
     private readonly center = new Vector2();
     private readonly splits = new Vector4();
-    constructor(private readonly scene: Scene, private readonly sky: Sky, private readonly shadows: ShadowSystem) {
+    constructor(private readonly scene: Scene, private readonly sky: Sky, private readonly shadows: ShadowSystem, private readonly receiveShadows = true, private readonly matteRock = false) {
         this.white = RawTexture.CreateRGBATexture(new Uint8Array([255,255,255,255]), 1, 1, scene, false, false);
         this.flat = RawTexture.CreateRGBATexture(new Uint8Array([128,128,255,255]), 1, 1, scene, false, false);
     }
@@ -24,7 +24,7 @@ export class ForestMaterials {
         const mat = new ShaderMaterial(`forest:${pass || 'beauty'}:${source.name}`, this.scene, 'desertProp', {
             shaderLanguage: ShaderLanguage.WGSL,
             attributes: ['position','normal','uv', ...(batch ? ['impostorYaw'] : [])],
-            defines: [...(pass ? [`#define ${pass}`] : []), ...(source.unlit ? ['#define PROP_UNLIT'] : []), ...(impostor ? ['#define PROP_IMPOSTOR'] : []), ...(batch ? ['#define PROP_IMPOSTOR_BATCH'] : [])],
+            defines: [...(this.matteRock ? ['#define PROP_MATTE_ROCK'] : []), ...(!this.receiveShadows ? ['#define PROP_NO_SHADOWS'] : []), ...(pass ? [`#define ${pass}`] : []), ...(source.unlit ? ['#define PROP_UNLIT'] : []), ...(impostor ? ['#define PROP_IMPOSTOR'] : []), ...(batch ? ['#define PROP_IMPOSTOR_BATCH'] : [])],
             uniforms: ['world','viewProjection','lightViewProjection','uvMatrix','baseColor','alphaCutoff','gammaDecode','roughness','normalStrength',
                 'cameraPos','cullCenter','cullDistance','sunDir','sunRadiance','shR','cascadeMatrices','cascadeSplits','cascadeParams','shadowTexel','shadowSoftness','shadowBias',
                 'ambientIntensity','fogDensity','fogHeightFalloff','fogStart','aerialStrength','spellLightPos','spellLightCol','spellLightCount',

@@ -13,6 +13,8 @@ export const S = {
     // ---------------------------------------------------------------- quality
     preset: "ultra",
     resolutionScale: 1.0,
+    ironMountainsMaterial: true,
+    ironMountainsRocks: true,
 
     // ------------------------------------------------------------------- sun
     sunAzimuth: 185, // degrees, compass bearing of the sun
@@ -137,6 +139,7 @@ export interface SettingGroup {
  * @type {{group:string, items:Array<{k:string,l:string,t:string,min?:number,max?:number,step?:number,opts?:string[]}>}[]}
  */
 export const SCHEMA: SettingGroup[] = [
+    { group: 'Iron Mountains', items: [{ k: 'ironMountainsMaterial', l: 'Layered rock material', t: 'b' }, { k: 'ironMountainsRocks', l: 'Cliff and boulder accents', t: 'b' }] },
     {
         group: "Sun & Sky",
         items: [

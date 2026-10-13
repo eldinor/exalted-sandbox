@@ -75,9 +75,9 @@ var biomeMapTex: texture_2d<f32>;
 #ifdef HEIGHTMAP_TERRAIN
 var groundCoverageTex: texture_2d<f32>;
 var detailCoverageTex: texture_2d<f32>;
-var rockBaseTex: texture_2d<f32>;
-var rockNormalTex: texture_2d<f32>;
-var rockArmTex: texture_2d<f32>;
+var rockBaseTex: texture_2d_array<f32>;
+var rockNormalTex: texture_2d_array<f32>;
+var rockArmTex: texture_2d_array<f32>;
 var beachBaseTex: texture_2d<f32>;
 var beachNormalTex: texture_2d<f32>;
 var beachArmTex: texture_2d<f32>;
@@ -85,8 +85,10 @@ uniform beachTextureScale: f32;
 uniform beachGamma: f32;
 uniform rockTextureScale: f32;
 uniform rockGamma: f32;
+uniform ironMountainsEnabled: f32;
 #include<rockSampling>
 #include<beachSampling>
+#include<ironMountains>
 // Reuse the linear, clamped biome sampler; no additional sampler binding.
 #endif
 var biomeMapTexSampler: sampler;
@@ -316,10 +318,11 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // even where the independent water-eligibility channel is one.
     let otherCover = clamp(snowCover, 0.0, 1.0);
     let sandCover = groundWeights.b * (1.0 - otherCover);
-    // Packed detail mask: R=rock, G=beach, B reserved; shares biome sampler.
-    let detailWeights = textureSampleLevel(detailCoverageTex, biomeMapTexSampler, groundMaskUV, 0.0).rg;
+    // R=rock, G=beach, B=Iron Mountains subset; no additional texture binding.
+    let detailWeights = textureSampleLevel(detailCoverageTex, biomeMapTexSampler, groundMaskUV, 0.0).rgb;
     let rockCover = detailWeights.r * (1.0 - otherCover);
     let beachCover = detailWeights.g * (1.0 - otherCover);
+    let ironCover = detailWeights.b * (1.0 - otherCover) * uniforms.ironMountainsEnabled;
 #else
     let rockCover = 0.0;
     let beachCover = 0.0;
@@ -557,18 +560,25 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         let uv = vec2f(-world.x, world.z) * uniforms.rockTextureScale;
         let dx = vec2f(-ddxW.x, ddxW.z) * uniforms.rockTextureScale;
         let dy = vec2f(-ddyW.x, ddyW.z) * uniforms.rockTextureScale;
-        let sampled = sampleRockGround(uv, dx, dy);
-        let rockAlbedo = sampled.base * (.97 + .03 * noise2(world.xz * .025));
-        let arm = sampled.arm;
+        let ironWeight=clamp(ironCover/max(rockCover,.000001),0.0,1.0);
+        var rockAlbedo=vec3f(0.0);var arm=vec3f(0.0);var mapped=vec3f(0.0);
+        if(ironWeight<.999){
+            let sampled=sampleRockGround(uv,dx,dy);
+            rockAlbedo=sampled.base*(.97+.03*noise2(world.xz*.025));arm=sampled.arm;
+            let T=cross(ddyW,N)*dx.x+cross(N,ddxW)*dy.x;
+            let B=cross(ddyW,N)*dx.y+cross(N,ddxW)*dy.y;
+            let scale=inverseSqrt(max(max(dot(T,T),dot(B,B)),1e-12));
+            mapped=normalize(N*max(sampled.normal.z,.1)+(T*sampled.normal.x+B*sampled.normal.y)*scale);
+        }
+        if(ironWeight>.001){
+            let iron=sampleIronMountains(world,N,ddxW,ddyW,uniforms.cameraPos);
+            rockAlbedo=mix(rockAlbedo,iron.base,ironWeight);arm=mix(arm,iron.arm,ironWeight);
+            mapped=normalize(mix(mapped,iron.normal,ironWeight));
+        }
         albedo = mix(albedo, rockAlbedo, rockBlend);
         roughness = mix(roughness, clamp(arm.g, .045, 1.0), rockBlend);
         f0 = mix(f0, mix(vec3f(.04), rockAlbedo, arm.b), rockBlend);
         groundAO = mix(groundAO, arm.r, rockBlend);
-        let bump = sampled.normal;
-        let T = cross(ddyW, N) * dx.x + cross(N, ddxW) * dy.x;
-        let B = cross(ddyW, N) * dx.y + cross(N, ddxW) * dy.y;
-        let scale = inverseSqrt(max(max(dot(T,T), dot(B,B)), 1e-12));
-        let mapped = normalize(N * max(bump.z, .1) + (T * bump.x + B * bump.y) * scale);
         N = normalize(mix(N, mapped, rockBlend));
     }
     if (beachCover > 0.001) {
@@ -696,6 +706,13 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
            * (1.0 - clamp(deformDepth * 1.9, 0.0, 1.0) * mix(0.38,mix(0.25,0.18,desertTextureCover),sandCover));
 
     ao *= groundAO;
+#ifdef HEIGHTMAP_TERRAIN
+    let ironLightingWeight = clamp(detailWeights.b * (1.0 - otherCover) * (1.0 - roadCover), 0.0, 1.0);
+#else
+    let ironLightingWeight = 0.0;
+#endif
+    // Keep mountain crevices readable without flattening all surface variation.
+    ao = mix(ao, max(ao, .78), ironLightingWeight);
 
     // ------------------------------------------------------------- lighting
     let NdotL = dot(N, L);
@@ -708,7 +725,16 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 
     var shadow = 1.0;
     if (NdotL > -0.35) {
-        shadow = sunShadow(world, geoN, viewDist, noiseRot);
+        // Iron Mountains retain direct/surface lighting without cast-shadow darkening.
+        // Use the region mask independently of the layered material comparison toggle.
+#ifdef HEIGHTMAP_TERRAIN
+        let ironShadowExclusion = clamp(detailWeights.b * (1.0 - otherCover), 0.0, 1.0);
+#else
+        let ironShadowExclusion = 0.0;
+#endif
+        if (ironShadowExclusion < .999) {
+            shadow = mix(sunShadow(world, geoN, viewDist, noiseRot), 1.0, ironShadowExclusion);
+        }
     }
 
     let sunRadiance = uniforms.sunRadiance;
@@ -732,6 +758,14 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // makes shadowed snow go flat and grey.
     direct += sss * albedo * mix(0.42, 1.0, shadow);
 
+    // Dry Iron Mountains rock: attenuate sun and sky specular together.
+    // Keep the final road overlay and all other biomes at their existing response.
+#ifdef HEIGHTMAP_TERRAIN
+    let surfaceSpecularScale = mix(1.0, .18, clamp(ironCover * (1.0 - roadCover), 0.0, 1.0));
+#else
+    let surfaceSpecularScale = 1.0;
+#endif
+
     // --- direct specular ---------------------------------------------------
     if (NdotL > 0.0) {
         let H = normalize(V + L);
@@ -740,7 +774,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         let D = distributionGGX(NdotH, roughness);
         let Vis = visSmithGGXCorrelated(NdotV, NdotL, roughness);
         let F = fresnelSchlick(VdotH, f0);
-        direct += sunRadiance * D * Vis * F * NdotL * shadow;
+        direct += sunRadiance * D * Vis * F * NdotL * shadow * surfaceSpecularScale;
     }
 
     // --- ambient -----------------------------------------------------------
@@ -754,6 +788,11 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     irradiance += shIrradiance(vec3f(0.0, 1.0, 0.0), uniforms.shR)
                 * uniforms.ambientIntensity * 0.28 * bounceUp * albedo;
 
+    // Neutral sky fill supplies a floor on sun-facing-away mountain surfaces.
+    // It follows ambient intensity and never adds to already brighter faces.
+    let ironSkyLuma = max(dot(shIrradiance(vec3f(0.0, 1.0, 0.0), uniforms.shR), vec3f(.2126, .7152, .0722)), 0.0);
+    let ironAmbientFloor = vec3f(ironSkyLuma * uniforms.ambientIntensity * .55);
+    irradiance = mix(irradiance, max(irradiance, ironAmbientFloor), ironLightingWeight);
     var ambient = albedo * INV_PI * irradiance;
 
     // Ambient specular from the sky, at a roughness-selected mip.
@@ -761,7 +800,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     let mip = sqrt(roughness) * 6.0;
     let skyRefl = textureSampleLevel(skyLUT, skyLUTSampler, dirToLatLong(R), mip).rgb;
     let Fr = fresnelSchlickRough(NdotV, f0, roughness);
-    ambient += skyRefl * Fr * uniforms.ambientIntensity * mix(1.0, 2.6, iceAmount);
+    ambient += skyRefl * Fr * uniforms.ambientIntensity * mix(1.0, 2.6, iceAmount) * surfaceSpecularScale;
 
     var color = direct + ambient;
 

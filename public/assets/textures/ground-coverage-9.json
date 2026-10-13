@@ -15,7 +15,7 @@
   "beach": "assets/textures/biome-beach-9.png",
   "beachSha256": "bac7435eba595bd3a63fcac19bc1a38e18240d6a6f3fd88b0cad50f574385818",
   "detail": "assets/textures/ground-detail-coverage-9.png",
-  "detailSha256": "bf57ab94a145bba6c545ab4998393ab2b84acbfa06bbed25ed202102085c0287",
+  "detailSha256": "7ed3b2ce0c67064be60a7062c9013d71cb1406502b3ba3cf96eee7587b08aa09",
   "beachPaletteRgb": [
     [
       129,
@@ -28,10 +28,12 @@
       128
     ]
   ],
+  "iron": "assets/textures/biome-iron-mountains-9.png",
+  "ironSha256": "c0806d38603710391370e5dfd10efaf830a6d21ae69fa652558f0971be474203",
   "detailChannels": [
     "rock",
     "beach",
-    "reserved"
+    "ironMountains"
   ],
   "remainingGround": "1 - sum(RGB) - rock - beach; roads continue nearest land underneath and remain a separate overlay",
   "sigmaMetres": 1.5,

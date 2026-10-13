@@ -111,13 +111,28 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     let bump = textureSampleGrad(normalTex, normalTexSampler, input.vUV, du, dv).xyz * 2.0 - 1.0;
     N = normalize(N * max(bump.z, 0.1) + (T * bump.x - B * bump.y) * inv * uniforms.normalStrength);
 #endif
-    let rough = clamp(textureSampleGrad(roughTex, roughTexSampler, input.vUV, du, dv).g * uniforms.roughness, 0.25, 1.0);
+    var rough = clamp(textureSampleGrad(roughTex, roughTexSampler, input.vUV, du, dv).g * uniforms.roughness, 0.25, 1.0);
+#ifdef PROP_MATTE_ROCK
+    rough = max(rough, .90);
+    let surfaceSpecularScale = .18;
+#else
+    let surfaceSpecularScale = 1.0;
+#endif
     let H = normalize(L + V);
     let nl = max(dot(N,L), 0.0); let nv = max(dot(N,V), 0.001);
     let spec = distributionGGX(max(dot(N,H),0.0), rough) * visSmithGGXCorrelated(nv,nl,rough) * fresnelSchlick(max(dot(V,H),0.0), vec3f(0.04));
+#ifdef PROP_NO_SHADOWS
+    let shadow = 1.0;
+#else
     let shadow = sunShadow(input.vWorld, geoN, distance(input.vWorld, uniforms.cameraPos), noise * 6.283185);
-    var color = (albedo / PI * nl + spec * nl) * uniforms.sunRadiance * shadow;
-    color += albedo / PI * shIrradiance(N, uniforms.shR) * uniforms.ambientIntensity;
+#endif
+    var color = (albedo / PI * nl + spec * nl * surfaceSpecularScale) * uniforms.sunRadiance * shadow;
+    var ambientIrradiance = shIrradiance(N, uniforms.shR) * uniforms.ambientIntensity;
+#ifdef PROP_MATTE_ROCK
+    let skyLuma = max(dot(shIrradiance(vec3f(0.0, 1.0, 0.0), uniforms.shR), vec3f(.2126, .7152, .0722)), 0.0);
+    ambientIrradiance = max(ambientIrradiance, vec3f(skyLuma * uniforms.ambientIntensity * .55));
+#endif
+    color += albedo / PI * ambientIrradiance;
     color += spellLightingSurface(input.vWorld, N, V, albedo, vec3f(0.04), rough, 0.0, uniforms.spellLightPos, uniforms.spellLightCol, uniforms.spellLightCount);
 #endif
     let emission=textureSampleGrad(emissiveTex,emissiveTexSampler,input.vEmissiveUV,dpdx(input.vEmissiveUV),dpdy(input.vEmissiveUV)).rgb;

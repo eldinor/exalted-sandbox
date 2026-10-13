@@ -69,6 +69,13 @@ No Playwright or production build was run.
 
 ## Rock coverage and northern corridor correction
 
+The upper-right rock component now has a dedicated Iron Mountains mask,
+`biome-iron-mountains-9.png`, packed into B of `ground-detail-coverage-9.png`.
+R/G remain rock/beach; B is a subset of R. Land, physics, snow, water and road
+classification are unchanged. The two supplied 90 m rocky-terrain sets blend
+by slope/texture height through triplanar projection. Other rocks retain the
+river material. See [IRON_MOUNTAINS.md](IRON_MOUNTAINS.md).
+
 `public/assets/textures/biome-rock-9.png` is a saved grayscale8 2049 × 1537
 rock mask, with white=rock, black=other biomes and grey=blend. It is generated
 together with `ground-coverage-9.png` so grass, forest, desert and rock have
@@ -300,7 +307,7 @@ Coverage is generated alongside the existing land masks, using nearest-palette
 classification and the same 1.5 m Gaussian sigma. `biome-beach-9.png` is a saved
 linear grayscale8 2049 by 1537 mask with source-image orientation. It is also
 exposed as CPU `beachAt(x,z)` after coordinate conversion. `ground-detail-coverage-9.png`
-packs rock/beach into R/G, with B reserved. Their combined coverage and the
+packs rock/beach into R/G, with B now holding the Iron Mountains subset of rock. Their combined coverage and the
 existing grass/forest/desert weights never exceed one. Roads retain their final
 material overlay. Source/output hashes are recorded in `ground-coverage-9.json`.
 Regenerate all masks with `node --import tsx scripts/prepare-ground-coverage.mts`.

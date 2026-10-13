@@ -9,6 +9,19 @@ water, atmosphere, props, collisions, UI, and other player-facing systems.
 Work should be evaluated by how it supports the quality, performance, and
 maintainability of this main application.
 
+## Iron Mountains layered material
+
+The supplied Rocky Terrain / Rocky Terrain 03 sets now cover the dedicated
+Iron Mountains region at 90 m scale, with triplanar normals, slope/height blends,
+fine detail, subtle rust and darker crevices. Other rock regions retain the river
+set. Three texture arrays preserve the 27-binding budget; F1 includes a material
+comparison toggle. The silhouette pass adds 12 ridge outcrops and 32 smaller boulders using the
+prepared plain boulder, with thin-instance cell batching, matched camera-depth
+passes, road/teleport clearances and independent rock collision. F1 toggles
+material and accents separately; Ctrl+Shift+P includes the accents. Costs and
+asset limitations are recorded in IRON_MOUNTAINS.md. Iron Mountains terrain
+no longer receives cast shadows; its rock accents neither cast nor receive them.
+
 ## Removed legacy viewers
 
 On 2026-10-12, halved.html, forest.html, forest_road.html and snow_mountain.html

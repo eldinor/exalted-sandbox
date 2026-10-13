@@ -253,7 +253,7 @@ export class Terrain {
                     'desertU','desertV','desertBaseMatrix','desertNormalMatrix','desertColor','desertRoughness','desertNormalScale','desertGamma','useDesertTextures',
                     'roadTextureScale','roadNormalStrength','roadGamma','meadowTextureScale','meadowGamma',
                     'forestTextureScale','forestGamma',
-                    'rockTextureScale','rockGamma','beachTextureScale','beachGamma',
+                    'rockTextureScale','rockGamma','ironMountainsEnabled','beachTextureScale','beachGamma',
                     'surfaceOrigin','surfaceExtent','useRoadSurfaceMap',
                     "baseSpacing", "gridHalfN",
                     "worldOrigin", "worldSize", "heightRes",
@@ -299,7 +299,8 @@ export class Terrain {
             mat.setTexture('rockArmTex', this.rockTextures.arm);
             mat.setTexture('detailCoverageTex', this.detailCoverageTex);
             mat.setFloat('rockTextureScale', 1 / ROCK_TILE_METRES);
-            mat.setFloat('rockGamma', this.rockTextures.baseColor.gammaSpace && !this.rockTextures.baseColor._texture?._useSRGBBuffer ? 1 : 0);
+            mat.setFloat('rockGamma', 1); // Raw array stores encoded sRGB without hardware decoding.
+            mat.setFloat('ironMountainsEnabled', S.ironMountainsMaterial ? 1 : 0);
         }
         if (this.beachTextures) {
             mat.setTexture('beachBaseTex', this.beachTextures.baseColor);
@@ -510,7 +511,10 @@ export class Terrain {
         }
         if (this.groundCoverageTex) await whenReady(this.groundCoverageTex, 'ground coverage');
         if (this.beachTextures) await Promise.all(Object.values(this.beachTextures).map(texture => whenReady(texture, texture.name)));
-        if (this.rockTextures) await Promise.all(Object.values(this.rockTextures).map(texture => whenReady(texture, texture.name)));
+        if (this.rockTextures) {
+            await this.rockTextures.ready;
+            await Promise.all([this.rockTextures.baseColor,this.rockTextures.normal,this.rockTextures.arm].map(texture => whenReady(texture, texture.name)));
+        }
         if (this.detailCoverageTex) await whenReady(this.detailCoverageTex, 'rock/beach detail coverage');
         await whenReady(this.material, "snow material", [this.mesh, false]);
         if (this.local) {
@@ -581,6 +585,7 @@ export class Terrain {
         _lod.set(focus.x, focus.z);
 
         for (const m of this.materials) {
+            m.setFloat('ironMountainsEnabled', S.ironMountainsMaterial ? 1 : 0);
         m.setFloat('useDesertTextures',this.useDesertTextures ? 1 : 0);
         if (this.local) m.setVector2('patchCenter', this.local.focus);
         m.setVector3("cameraPos", cameraPos);
@@ -732,7 +737,7 @@ export class Terrain {
         if (this.meadowTextures) for (const texture of Object.values(this.meadowTextures)) texture.dispose();
         if (this.forestTextures) for (const texture of Object.values(this.forestTextures)) texture.dispose();
         this.groundCoverageTex?.dispose();
-        if (this.rockTextures) for (const texture of Object.values(this.rockTextures)) texture.dispose();
+        if (this.rockTextures) for (const texture of [this.rockTextures.baseColor,this.rockTextures.normal,this.rockTextures.arm]) texture.dispose();
         this.detailCoverageTex?.dispose();
         if (this.beachTextures) for (const texture of Object.values(this.beachTextures)) texture.dispose();
         this.deform.dispose();

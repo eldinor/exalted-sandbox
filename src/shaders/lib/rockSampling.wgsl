@@ -17,10 +17,10 @@ fn rockPatch(vertex: vec2f, uv: vec2f, dx: vec2f, dy: vec2f) -> RockSample {
     let offset = vec2f(rockHash(vertex + vec2f(17.0, 43.0)), rockHash(vertex + vec2f(59.0, 11.0)));
     let sampleUV = rotation * uv + offset;
     let sampleDx = rotation * dx; let sampleDy = rotation * dy;
-    let base = textureSampleGrad(rockBaseTex, meadowBaseTexSampler, sampleUV, sampleDx, sampleDy).rgb;
+    let base = textureSampleGrad(rockBaseTex, meadowBaseTexSampler, sampleUV, 0, sampleDx, sampleDy).rgb;
     let decoded = select(base / 12.92, pow((base + vec3f(.055)) / 1.055, vec3f(2.4)), base > vec3f(.04045));
-    let arm = textureSampleGrad(rockArmTex, meadowOrmTexSampler, sampleUV, sampleDx, sampleDy).rgb;
-    let bump = textureSampleGrad(rockNormalTex, meadowNormalTexSampler, sampleUV, sampleDx, sampleDy).xyz * 2.0 - 1.0;
+    let arm = textureSampleGrad(rockArmTex, meadowOrmTexSampler, sampleUV, 0, sampleDx, sampleDy).rgb;
+    let bump = textureSampleGrad(rockNormalTex, meadowNormalTexSampler, sampleUV, 0, sampleDx, sampleDy).xyz * 2.0 - 1.0;
     // Bring tangent normals back to the common UV frame before combining patches.
     let normal = vec3f(transpose(rotation) * bump.xy, max(bump.z, .1));
     return RockSample(mix(base, decoded, uniforms.rockGamma), arm, normal);

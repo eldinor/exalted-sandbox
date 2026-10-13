@@ -67,6 +67,13 @@ The default mode loads the authored Exalted world:
 - Water geometry is derived from the selected terrain triangles and water mask plus
   `world/waterReference.json`.
 - The spawn bar exposes named locations and texture and wind controls.
+- Iron Mountains is a subset of rock in the packed detail mask's B channel.
+  Three 3-layer raw texture arrays replace the original rock bindings: old
+  river rock, 90 m exposed rock and broken rock. ARM alpha supplies texture
+  height for slope/height blending; signed triplanar normals and distance-faded
+  fine detail stay in the existing terrain beauty pass. No geometry/depth/shadow
+  ordering changes; mask preparation stays offline. See IRON_MOUNTAINS.md for
+  the significant texture-memory/download cost and comparison toggle.
 - The interactive crystalline Cube is anchored to `FOREST_CUBE_SPAWN`, converted
   from chart coordinates once and grounded on the selected terrain. E dissolves
   it into a persistent portal; entry publishes `exalted:portal-entered` with the
@@ -496,3 +503,13 @@ is retained at sample birth. Wake colour blends forest olive/moss with matching
 geometry/depth/shadow passes; the shared spray pool distinguishes kind 6 green
 grass from kind 7 aged forest tufts. Both use identical silhouette/settling, and
 neither participates in opaque depth or custom shadow targets.
+
+
+Iron Mountains silhouette accents are owned by `world/ironRocks.ts`, with pure
+mask/terrain-based deterministic placement in `world/IronRockPlacement.ts`.
+Only authored heightmap mode loads the prepared plain boulder. Static 64 m
+thin-instance batches share production prop materials, camera-depth passes (no casting/reception of shadows); independent collision cylinders stay registered across the
+render comparison toggle. Explicit warm-up submits instanced variants during
+loading and removes its probe afterward. Disposal unregisters owned casters,
+meshes, source textures/materials and colliders. Whole-map prop snapshots include
+all accents. See IRON_MOUNTAINS.md for grounding and geometry budget.

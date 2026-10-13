@@ -73,12 +73,15 @@ test('saved beach coverage and packed rock/beach channels preserve hashes, orien
     assert.equal(createHash('sha256').update(beachBytes).digest('hex'), meta.beachSha256);
     assert.equal(createHash('sha256').update(detailBytes).digest('hex'), meta.detailSha256);
     assert.equal(beach.channels, 1); assert.equal(detail.channels, 3);
-    assert.deepEqual(meta.detailChannels, ['rock', 'beach', 'reserved']);
+    assert.deepEqual(meta.detailChannels, ['rock', 'beach', 'ironMountains']);
+    const iron=decodeAuthoredPng(readFileSync(`public/${meta.iron}`));
+    assert.equal(createHash('sha256').update(readFileSync(`public/${meta.iron}`)).digest('hex'),meta.ironSha256);
     assert.equal(beach.width, land.width); assert.equal(beach.height, land.height);
     for (let i = 0; i < beach.pixels.length; i++) {
         assert.equal(detail.pixels[i * 3], rock.pixels[i]);
         assert.equal(detail.pixels[i * 3 + 1], beach.pixels[i]);
-        assert.equal(detail.pixels[i * 3 + 2], 0);
+        assert.equal(detail.pixels[i * 3 + 2], iron.pixels[i]);
+        assert.ok(iron.pixels[i]<=rock.pixels[i]);
         assert.ok(land.pixels[i * 3] + land.pixels[i * 3 + 1] + land.pixels[i * 3 + 2] + rock.pixels[i] + beach.pixels[i] <= 255);
     }
     const worldBeach = readRoadDisplayMask(beach, beach.width, beach.height);

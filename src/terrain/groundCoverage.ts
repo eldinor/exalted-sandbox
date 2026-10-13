@@ -1,5 +1,6 @@
 import { HEIGHTMAP_WIDTH, HEIGHTMAP_DEPTH, sampleBiomeRgb, type AuthoredPng } from './authoredHeightmap.ts';
 import { forestOverlookGroundWeight } from './forestGroundCoverage.ts';
+import { buildIronMountainsMask } from './IronMountains.ts';
 
 export const GROUND_COVERAGE_MAP = 'assets/textures/ground-coverage-9.png';
 export const ROCK_COVERAGE_MAP = 'assets/textures/biome-rock-9.png';
@@ -25,7 +26,7 @@ export function buildGroundCoverage(image: AuthoredPng, width = 2049, height = 1
 }
 
 export function buildLandCoverage(image: AuthoredPng, width = 2049, height = 1537,
-    sigmaMetres = GROUND_BLEND_SIGMA_METRES): { ground: AuthoredPng; rock: AuthoredPng; beach: AuthoredPng; detail: AuthoredPng } {
+    sigmaMetres = GROUND_BLEND_SIGMA_METRES): { ground: AuthoredPng; rock: AuthoredPng; beach: AuthoredPng; detail: AuthoredPng; iron: AuthoredPng } {
     if (image.channels !== 3 || !(image.pixels instanceof Uint8Array)) throw new Error('Ground coverage requires RGB8 biome input.');
     if (width < 2 || height < 2 || !Number.isInteger(width) || !Number.isInteger(height) || sigmaMetres <= 0) {
         throw new Error('Ground coverage requires integer dimensions >= 2 and positive blend width.');
@@ -118,6 +119,8 @@ export function buildLandCoverage(image: AuthoredPng, width = 2049, height = 153
         detailPixels[i * 3] = rockPixels[i]; detailPixels[i * 3 + 1] = beachPixels[i];
         pixels[i * 3] = grass; pixels[i * 3 + 1] = forest; pixels[i * 3 + 2] = desert;
     }
-    return { ground: { width, height, channels: 3, pixels }, rock: { width, height, channels: 1, pixels: rockPixels },
+    const iron=buildIronMountainsMask({width,height,channels:1,pixels:rockPixels});
+    for(let i=0;i<rockPixels.length;i++)detailPixels[i*3+2]=iron.pixels[i];
+    return { iron, ground: { width, height, channels: 3, pixels }, rock: { width, height, channels: 1, pixels: rockPixels },
         beach: { width, height, channels: 1, pixels: beachPixels }, detail: { width, height, channels: 3, pixels: detailPixels } };
 }
