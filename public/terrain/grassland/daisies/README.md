@@ -20,7 +20,7 @@ SHA256, provenance, geometry counts and natural heights (0.53-0.59 m).
 The runtime loader bakes the full hierarchy and normalizes the root and height.
 
 Production uses 40/30/30% mix, nominal height .42 m (random range .27-.57 m),
-density .04, and seed 9001 independent of dandelions. This adds roughly half
+density .08, and seed 9001 independent of dandelions. This adds roughly half
 the dandelion placement budget rather than another full-density layer.
 All flower families use the Meadow flowers benchmark toggle. Daisies share
 pooled 16 m streaming, 35-50 m fade, root-anchored wind/walk/surf bending,

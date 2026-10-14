@@ -20,23 +20,24 @@ fn ironAxis(layer:i32,uv:vec2f,dx:vec2f,dy:vec2f,T:vec3f,B:vec3f,N:vec3f,fine:f3
 }
 
 fn ironLayer(layer:i32,p:vec3f,N:vec3f,dx:vec3f,dy:vec3f,fine:f32)->IronSample {
+    let tileMetres=select(90.0,8.0,layer>=3);
     var weights=pow(abs(N),vec3f(4.0));
     weights=select(weights,vec3f(0.0),weights<vec3f(.02));
     weights/=max(dot(weights,vec3f(1.0)),.000001);
     let s=select(vec3f(-1.0),vec3f(1.0),N>=vec3f(0.0));
     var result=IronSample(vec3f(0.0),vec3f(0.0),vec3f(0.0),0.0);
     if(weights.x>0.0){
-        let sample=ironAxis(layer,vec2f(-p.z*s.x,p.y)/90.0,vec2f(-dx.z*s.x,dx.y)/90.0,vec2f(-dy.z*s.x,dy.y)/90.0,
+        let sample=ironAxis(layer,vec2f(-p.z*s.x,p.y)/tileMetres,vec2f(-dx.z*s.x,dx.y)/tileMetres,vec2f(-dy.z*s.x,dy.y)/tileMetres,
             vec3f(0.0,0.0,-s.x),vec3f(0.0,1.0,0.0),N,fine);
         result.base+=sample.base*weights.x;result.arm+=sample.arm*weights.x;result.normal+=sample.normal*weights.x;result.height+=sample.height*weights.x;
     }
     if(weights.y>0.0){
-        let sample=ironAxis(layer,vec2f(-p.x,p.z*s.y)/90.0,vec2f(-dx.x,dx.z*s.y)/90.0,vec2f(-dy.x,dy.z*s.y)/90.0,
+        let sample=ironAxis(layer,vec2f(-p.x,p.z*s.y)/tileMetres,vec2f(-dx.x,dx.z*s.y)/tileMetres,vec2f(-dy.x,dy.z*s.y)/tileMetres,
             vec3f(-1.0,0.0,0.0),vec3f(0.0,0.0,s.y),N,fine);
         result.base+=sample.base*weights.y;result.arm+=sample.arm*weights.y;result.normal+=sample.normal*weights.y;result.height+=sample.height*weights.y;
     }
     if(weights.z>0.0){
-        let sample=ironAxis(layer,vec2f(p.x*s.z,p.y)/90.0,vec2f(dx.x*s.z,dx.y)/90.0,vec2f(dy.x*s.z,dy.y)/90.0,
+        let sample=ironAxis(layer,vec2f(p.x*s.z,p.y)/tileMetres,vec2f(dx.x*s.z,dx.y)/tileMetres,vec2f(dy.x*s.z,dy.y)/tileMetres,
             vec3f(s.z,0.0,0.0),vec3f(0.0,1.0,0.0),N,fine);
         result.base+=sample.base*weights.z;result.arm+=sample.arm*weights.z;result.normal+=sample.normal*weights.z;result.height+=sample.height*weights.z;
     }

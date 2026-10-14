@@ -253,7 +253,7 @@ export class Terrain {
                     'desertU','desertV','desertBaseMatrix','desertNormalMatrix','desertColor','desertRoughness','desertNormalScale','desertGamma','useDesertTextures',
                     'roadTextureScale','roadNormalStrength','roadGamma','meadowTextureScale','meadowGamma',
                     'forestTextureScale','forestGamma',
-                    'rockTextureScale','rockGamma','ironMountainsEnabled','beachTextureScale','beachGamma',
+                    'rockTextureScale','rockGamma','ironMountainsEnabled','snowMountainsEnabled','beachTextureScale','beachGamma',
                     'surfaceOrigin','surfaceExtent','useRoadSurfaceMap',
                     "baseSpacing", "gridHalfN",
                     "worldOrigin", "worldSize", "heightRes",
@@ -301,6 +301,7 @@ export class Terrain {
             mat.setFloat('rockTextureScale', 1 / ROCK_TILE_METRES);
             mat.setFloat('rockGamma', 1); // Raw array stores encoded sRGB without hardware decoding.
             mat.setFloat('ironMountainsEnabled', S.ironMountainsMaterial ? 1 : 0);
+            mat.setFloat('snowMountainsEnabled', S.snowMountainsMaterial ? 1 : 0);
         }
         if (this.beachTextures) {
             mat.setTexture('beachBaseTex', this.beachTextures.baseColor);
@@ -586,6 +587,7 @@ export class Terrain {
 
         for (const m of this.materials) {
             m.setFloat('ironMountainsEnabled', S.ironMountainsMaterial ? 1 : 0);
+            m.setFloat('snowMountainsEnabled', S.snowMountainsMaterial ? 1 : 0);
         m.setFloat('useDesertTextures',this.useDesertTextures ? 1 : 0);
         if (this.local) m.setVector2('patchCenter', this.local.focus);
         m.setVector3("cameraPos", cameraPos);

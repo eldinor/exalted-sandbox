@@ -1,5 +1,11 @@
 # Exalted Current Work
 
+## Stone Gate end wall
+
+Added a grounded, collidable wall of 13 varied stone boulders across the northern
+road end, connecting the two existing endpoint rocks. Reuses three shared rock
+texture layers and the existing boulder geometry. See IRON_MOUNTAINS.md.
+
 ## Product Direction
 
 The playable **Exalted application** remains the main product under development.
@@ -8,6 +14,37 @@ water, atmosphere, props, collisions, UI, and other player-facing systems.
 
 Work should be evaluated by how it supports the quality, performance, and
 maintainability of this main application.
+
+## Rock-array mipmap correction
+
+Explicit per-layer mip uploads fix black rock textures at distance/oblique
+angles. Native WebGPU albedo diagnosis and coarsest-mip readback confirmed the
+missing mips and the fix; the supplied cliff pose now shows the intended texture.
+GPU memory/bindings are unchanged; startup CPU filtering/mip buffers add about
+80 MiB. See SNOW_MOUNTAINS.md.
+
+## Stone Gate left cliff material and triangle correction
+
+The supplied rock/snow/snow_03 colour/normal/ARM/displacement set now covers the
+whole Stone Gate pass terrain (60 m full / 90 m feathered radius), with its
+original road restored as the final material overlay,
+and the left cliff through an isolated soft region. Other
+cliffs retain Rock Face 03. The fifth shared-array layer adds about 64 MiB GPU
+storage without extra bindings/draws. A diagonal correction improves 77 steep
+cells with no added vertices/triangles, shared by rendering and grounding;
+steep-face shadow bias uses geometric normals. See SNOW_MOUNTAINS.md.
+
+## Snow Mountains material trial
+
+Authored heightmap snow mountains now retain snowy ledges and expose cool matte
+rock on steep faces, with texture-height transitions and subtle wind variation.
+Rock Face 03 occupies the fourth shared-array layer (restored after the
+snow_01 cliff trial); exposed rock is limited
+to steeper faces and a 70 m Palecrown snow reserve feathers to 105 m. The trial
+adds no geometry or bindings (+64 MiB GPU array storage) and leaves
+snow gameplay/deformation intact. Shadows remain enabled with readable ambient
+fill. F1 offers a comparison toggle; see SNOW_MOUNTAINS.md for thresholds, cost,
+source-texture limitations and required visual review.
 
 ## Iron Mountains layered material
 
@@ -473,3 +510,10 @@ material pipeline.
 6. Continue grass, forest, avatar, and editor research in isolated utilities.
 7. Move successful utility systems into the main application through measured,
    reviewable integration stages.
+
+
+## Snow Mountain cliff cover
+
+Added a separate snow_03 rock-snow facing over the jagged northern Stone Gate cliff.
+It follows terrain contours and reuses the rock array; 1,152 triangles and one
+colour/depth batch. Grounding remains on the terrain. See SNOW_MOUNTAINS.md.

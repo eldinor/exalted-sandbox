@@ -9,6 +9,7 @@ import type { Sky } from '../render/sky.ts';
 import type { ShadowSystem } from '../render/shadows.ts';
 import { S } from '../core/settings.ts';
 import { bindMatrixArray } from '../core/gpuUtil.ts';
+import type { RockGroundTextures } from '../terrain/RockGround.ts';
 interface TextureSrgbState { _texture?: { _useSRGBBuffer?: boolean } | null; }
 export class ForestMaterials {
     readonly entries: { mat: ShaderMaterial; pass?: 'PROP_PREPASS' | 'PROP_SHADOW' }[] = [];
@@ -20,12 +21,12 @@ export class ForestMaterials {
         this.white = RawTexture.CreateRGBATexture(new Uint8Array([255,255,255,255]), 1, 1, scene, false, false);
         this.flat = RawTexture.CreateRGBATexture(new Uint8Array([128,128,255,255]), 1, 1, scene, false, false);
     }
-    create(source: PBRMaterial, pass?: 'PROP_PREPASS' | 'PROP_SHADOW', impostor = false, batch = false): ShaderMaterial {
+    create(source: PBRMaterial, pass?: 'PROP_PREPASS' | 'PROP_SHADOW', impostor = false, batch = false, rock?: {textures:RockGroundTextures;layer:number}): ShaderMaterial {
         const mat = new ShaderMaterial(`forest:${pass || 'beauty'}:${source.name}`, this.scene, 'desertProp', {
             shaderLanguage: ShaderLanguage.WGSL,
             attributes: ['position','normal','uv', ...(batch ? ['impostorYaw'] : [])],
-            defines: [...(this.matteRock ? ['#define PROP_MATTE_ROCK'] : []), ...(!this.receiveShadows ? ['#define PROP_NO_SHADOWS'] : []), ...(pass ? [`#define ${pass}`] : []), ...(source.unlit ? ['#define PROP_UNLIT'] : []), ...(impostor ? ['#define PROP_IMPOSTOR'] : []), ...(batch ? ['#define PROP_IMPOSTOR_BATCH'] : [])],
-            uniforms: ['world','viewProjection','lightViewProjection','uvMatrix','baseColor','alphaCutoff','gammaDecode','roughness','normalStrength',
+            defines: [...(rock ? ['#define PROP_ROCK_ARRAY'] : []), ...(this.matteRock ? ['#define PROP_MATTE_ROCK'] : []), ...(!this.receiveShadows ? ['#define PROP_NO_SHADOWS'] : []), ...(pass ? [`#define ${pass}`] : []), ...(source.unlit ? ['#define PROP_UNLIT'] : []), ...(impostor ? ['#define PROP_IMPOSTOR'] : []), ...(batch ? ['#define PROP_IMPOSTOR_BATCH'] : [])],
+            uniforms: ['rockLayer','world','viewProjection','lightViewProjection','uvMatrix','baseColor','alphaCutoff','gammaDecode','roughness','normalStrength',
                 'cameraPos','cullCenter','cullDistance','sunDir','sunRadiance','shR','cascadeMatrices','cascadeSplits','cascadeParams','shadowTexel','shadowSoftness','shadowBias',
                 'ambientIntensity','fogDensity','fogHeightFalloff','fogStart','aerialStrength','spellLightPos','spellLightCol','spellLightCount',
                 'propWind','windTime','windBounds','emissiveMatrix','emissiveColor','emissiveGamma','impostorNormalMatrix'],
@@ -53,6 +54,16 @@ export class ForestMaterials {
         mat.setFloat('gammaDecode', albedoState?.gammaSpace && !albedoState._texture?._useSRGBBuffer ? 1 : 0);
         mat.setFloat('roughness', source.roughness ?? 1);
         mat.setFloat('normalStrength', source.bumpTexture ? (source.bumpTexture.level ?? 1) : 0);
+        if (rock) {
+            mat.setTexture('baseTex',rock.textures.baseColor);
+            mat.setTexture('normalTex',rock.textures.normal);
+            mat.setTexture('roughTex',rock.textures.arm);
+            mat.setFloat('rockLayer',rock.layer);
+            mat.setFloat('gammaDecode',1);
+            mat.setFloat('normalStrength',.7);
+            mat.setVector4('baseColor',new Vector4(.85,.85,.85,1));
+            mat.setMatrix('uvMatrix',Matrix.Identity());
+        }
         if (impostor) mat.setMatrix('impostorNormalMatrix', Matrix.Identity());
         mat.setFloat('cullDistance', 2000);
         mat.setFloat('spellLightCount', 0);

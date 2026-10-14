@@ -44,7 +44,9 @@ structure remains visible. More suitable cliff assets can improve this later.
 
 ## Resources and benchmark
 
-Layer 0 retains the old river-rock set at 4 m; layers 1/2 hold the new sets.
+Layer 0 retains the old river-rock set at 4 m; layers 1/2 hold the Iron sets.
+Layer 3 holds Rock Face 03 for Snow Mountains; layer 4 holds Stone Gate snow_03.
+Both use a trial 8 m repeat.
 Three RGBA8 texture arrays replace the three former rock textures, so terrain
 still requests **27 sampled-texture bindings**. Displacement shares ARM alpha.
 The generated arrays retain full 2K dimensions; numeric 16-bit PNG maps are
@@ -57,9 +59,10 @@ horizontal byte prediction followed by gzip. Loading handles both HTTP servers
 that supply Content-Encoding:gzip and hosts serving the compressed file directly.
 Arrays load/upload/mipmap before shader warm-up and dispose with Terrain.
 
-Compressed runtime payload is approximately **77 MiB**. The three arrays occupy
-about **192 MiB GPU storage including mipmaps**, versus about 64 MiB for the old
-three 2K rock textures: roughly **128 MiB additional GPU texture memory**.
+Before the Snow Mountains layer, compressed runtime payload was approximately
+77 MiB and GPU storage 192 MiB. With the fourth and fifth layers, the three arrays occupy
+about **320 MiB GPU storage including mipmaps**, including Stone Gate snow_03, versus about 64 MiB for the old
+three 2K rock textures. Current payload sizes/hashes are in textures.json.
 Babylon may also retain CPU upload buffers for context restoration.
 
 Iron pixels use 6 texture reads per selected projection, plus 2 fine-detail
@@ -166,3 +169,42 @@ existing ambient-intensity control and only lifts darker faces; direct lighting,
 normal detail, matte specular and shadow exclusions stay active. Other biomes
 and prop materials keep their existing lighting. Typecheck passed; no build or
 visual verification was performed for this adjustment.
+
+
+### Shared-array mip correction
+
+The shared arrays now upload all mip levels of every layer explicitly. Babylon
+9.18's automatic WebGPU Raw2DArray generation only populated layer 0, causing
+other rock textures to become black at filtered viewing angles/distances.
+CPU box-filtering/upload happens before warm-up, using the public per-mip API;
+GPU allocation and samplers are unchanged. See SNOW_MOUNTAINS.md for the native
+WebGPU diagnosis, readback and validation. Startup/context-restoration buffers
+retain approximately 80 MiB of additional CPU mip data across the three arrays.
+
+
+## Stone Gate end wall (14 October 2026)
+
+The northern road end is closed by 13 overlapping boulders between its existing
+endpoint rocks at (-57.10, -278.10) and (-23.33, -269.90) in Babylon X/Z metres.
+`src/world/StoneGateWall.ts` owns this small authored placement contract; heights
+are sampled from the production terrain triangles, with buried foundations.
+Widths, heights and rotations vary. This is an intentional local exception to
+normal Iron Mountains prop road exclusion: the requested wall crosses the road.
+
+The wall reuses the attributed coniferous plain-boulder geometry and three
+already-loaded stone layers: Rocky Terrain, Rocky Terrain 03, and Rock Face 03.
+An opt-in array branch of the existing prop shader uses their colour, normal and
+roughness maps, with matching camera depth. Terrain owns the shared textures;
+the wall adds no texture downloads or GPU texture allocations. Existing rocks
+and ground/road materials remain unchanged. As with other Iron rock accents,
+the wall neither casts nor receives cascade shadows.
+
+The 13 rocks add 9,984 triangles and three instanced batches (three colour draws
+and three opaque depth draws when visible). Each owns a rock cylinder in the
+shared collision grid. Colliders remain active when the rock-render toggle is
+off and are removed on disposal. All four rock material variants are submitted
+behind the loading screen; map screenshots and diagnostics include the wall.
+
+Validation: typecheck, all 175 Node tests (including placement/collision), and native Chrome WebGPU
+startup and screenshot inspection. The wall joins the endpoint rocks, shows
+three varied stone surfaces and blocks the road end. No Playwright or build.

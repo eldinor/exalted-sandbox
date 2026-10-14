@@ -9,9 +9,16 @@ varying vViewZ: f32;
 #ifdef PROP_IMPOSTOR_BATCH
 varying vImpostorYaw: vec2f;
 #endif
+#ifdef PROP_ROCK_ARRAY
+var baseTex: texture_2d_array<f32>;
+#else
 var baseTex: texture_2d<f32>;
+#endif
 var baseTexSampler: sampler;
 uniform baseColor: vec4f;
+#ifdef PROP_ROCK_ARRAY
+uniform rockLayer: f32;
+#endif
 uniform alphaCutoff: f32;
 uniform gammaDecode: f32;
 uniform cameraPos: vec3f;
@@ -22,13 +29,21 @@ uniform cullDistance: f32;
 #include<snowShading>
 #include<snowAtmosphere>
 #include<snowSpellLights>
+#ifdef PROP_ROCK_ARRAY
+var normalTex: texture_2d_array<f32>;
+#else
 var normalTex: texture_2d<f32>;
+#endif
 var emissiveTex: texture_2d<f32>;
 var emissiveTexSampler: sampler;
 uniform emissiveColor: vec3f;
 uniform emissiveGamma: f32;
 var normalTexSampler: sampler;
+#ifdef PROP_ROCK_ARRAY
+var roughTex: texture_2d_array<f32>;
+#else
 var roughTex: texture_2d<f32>;
+#endif
 var roughTexSampler: sampler;
 var skyLUT: texture_2d<f32>;
 var skyLUTSampler: sampler;
@@ -67,7 +82,11 @@ uniform spellLightCount: f32;
 fn main(input: FragmentInputs) -> FragmentOutputs {
     let du = dpdx(input.vUV); let dv = dpdy(input.vUV);
     let dx = dpdx(input.vWorld); let dy = dpdy(input.vWorld);
+#ifdef PROP_ROCK_ARRAY
+    let texel = textureSampleGrad(baseTex, baseTexSampler, input.vUV, i32(uniforms.rockLayer), du, dv);
+#else
     let texel = textureSampleGrad(baseTex, baseTexSampler, input.vUV, du, dv);
+#endif
     // Stable world-space stippling avoids sorted transparent instance batches.
     let noise = fract(sin(dot(floor(input.vWorld * 180.0), vec3f(12.9898,78.233,39.425))) * 43758.5453);
     let fade = 1.0 - smoothstep(uniforms.cullDistance * 0.8, uniforms.cullDistance, distance(input.vWorld.xz, uniforms.cullCenter));
@@ -108,10 +127,18 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     if (dot(N, V) < 0.0) { N = -N; }
     geoN = N;
 #else
+#ifdef PROP_ROCK_ARRAY
+    let bump = textureSampleGrad(normalTex, normalTexSampler, input.vUV, i32(uniforms.rockLayer), du, dv).xyz * 2.0 - 1.0;
+#else
     let bump = textureSampleGrad(normalTex, normalTexSampler, input.vUV, du, dv).xyz * 2.0 - 1.0;
+#endif
     N = normalize(N * max(bump.z, 0.1) + (T * bump.x - B * bump.y) * inv * uniforms.normalStrength);
 #endif
+#ifdef PROP_ROCK_ARRAY
+    var rough = clamp(textureSampleGrad(roughTex, roughTexSampler, input.vUV, i32(uniforms.rockLayer), du, dv).g * uniforms.roughness, 0.25, 1.0);
+#else
     var rough = clamp(textureSampleGrad(roughTex, roughTexSampler, input.vUV, du, dv).g * uniforms.roughness, 0.25, 1.0);
+#endif
 #ifdef PROP_MATTE_ROCK
     rough = max(rough, .90);
     let surfaceSpecularScale = .18;

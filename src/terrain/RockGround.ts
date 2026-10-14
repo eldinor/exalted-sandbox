@@ -3,11 +3,12 @@ import { RawTexture2DArray } from '@babylonjs/core/Materials/Textures/rawTexture
 import '@babylonjs/core/Engines/WebGPU/Extensions/engine.rawTexture';
 import { Constants } from '@babylonjs/core/Engines/constants';
 import type { Scene } from '@babylonjs/core/scene';
+import { downsampleRockArray } from './RockArrayMipmaps.ts';
 export const ROCK_TILE_METRES = 4;
 export interface RockGroundTextures { baseColor: RawTexture2DArray; normal: RawTexture2DArray; arm: RawTexture2DArray; ready: Promise<void>; }
 export function loadRockGroundTextures(scene: Scene): RockGroundTextures {
     const load = (map: string): RawTexture2DArray => {
-        const texture=new RawTexture2DArray(null,2048,2048,3,Constants.TEXTUREFORMAT_RGBA,scene,true,false,Texture.TRILINEAR_SAMPLINGMODE);
+        const texture=new RawTexture2DArray(null,2048,2048,5,Constants.TEXTUREFORMAT_RGBA,scene,true,false,Texture.TRILINEAR_SAMPLINGMODE);
         texture.name=`rock-array:${map}`;texture.gammaSpace=false;
         texture.wrapU = texture.wrapV = Texture.WRAP_ADDRESSMODE;
         texture.anisotropicFilteringLevel = 8;
@@ -21,10 +22,21 @@ export function loadRockGroundTextures(scene: Scene): RockGroundTextures {
         const stream=response.headers.get('content-encoding')?.includes('gzip')
             ? response.body : response.body.pipeThrough(new DecompressionStream('gzip'));
         const data=new Uint8Array(await new Response(stream).arrayBuffer());
-        if(data.length!==2048*2048*3*4)throw new Error(`Invalid ${name} rock array size.`);
+        if(data.length!==2048*2048*5*4)throw new Error(`Invalid ${name} rock array size.`);
         const stride=2048*4;
         for(let row=0;row<data.length;row+=stride)for(let x=4;x<stride;x++)data[row+x]=(data[row+x]+data[row+x-4])&255;
-        if(!scene.isDisposed&&texture.getInternalTexture())texture.update(data);
+        if(!scene.isDisposed&&texture.getInternalTexture()){
+            // Raw2DArray automatic WebGPU generation populates only array layer 0.
+            // Supply all mip levels for all layers through the public upload API.
+            let mip:Uint8Array=data,width=2048,height=2048,level=0;
+            while(width>1||height>1){
+                mip=downsampleRockArray(mip,width,height,5);
+                width=Math.max(1,width>>1);height=Math.max(1,height>>1);
+                texture.updateMipLevel(mip,++level);
+            }
+            // Upload the base last so Babylon's context-loss base buffer remains correct.
+            texture.update(data);
+        }
     };
     const ready=Promise.all([upload('base',baseColor),upload('normal',normal),upload('arm-height',arm)]).then(()=>{});
     // Warm-up awaits/reports failures; attach a handler while other startup assets load.

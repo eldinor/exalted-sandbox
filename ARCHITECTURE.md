@@ -66,12 +66,13 @@ The default mode loads the authored Exalted world:
   shares the rock implementation and existing repeat samplers.
 - Water geometry is derived from the selected terrain triangles and water mask plus
   `world/waterReference.json`.
-- The spawn bar exposes named locations and texture and wind controls.
+- The spawn bar exposes named locations; the texture/wind sidebar stays hidden.
 - Iron Mountains is a subset of rock in the packed detail mask's B channel.
-  Three 3-layer raw texture arrays replace the original rock bindings: old
-  river rock, 90 m exposed rock and broken rock. ARM alpha supplies texture
-  height for slope/height blending; signed triplanar normals and distance-faded
-  fine detail stay in the existing terrain beauty pass. No geometry/depth/shadow
+  Three 5-layer raw texture arrays replace the original rock bindings: old
+  river rock, 90 m exposed rock and broken rock, plus Snow Mountains Rock Face
+  03 and Stone Gate snow_03. ARM alpha supplies texture height for the two Iron layers; Snow Mountains
+  uses AO as an approximate crevice proxy. Signed triplanar normals support
+  material projection. Slope/height blending and distance-faded fine detail stay in the existing terrain beauty pass. No geometry/depth/shadow
   ordering changes; mask preparation stays offline. See IRON_MOUNTAINS.md for
   the significant texture-memory/download cost and comparison toggle.
 - The interactive crystalline Cube is anchored to `FOREST_CUBE_SPAWN`, converted
@@ -342,7 +343,7 @@ history work subscribe through `onChange`.
 transitions. `CameraRig` owns the third-person spring arm and obstacle response.
 
 `Overlay` builds tuning and performance controls. `SpawnBar` owns biome
-navigation plus compact texture and wind controls. `Ctrl+I` dynamically imports
+navigation and the currently hidden texture/wind sidebar. `Ctrl+I` dynamically imports
 the matching Babylon Inspector version and docks it on the right. The app uses
 `node_modules/.vite-exalted` for its prepared dependencies; SSR tests use separate
 caches so running tests cannot invalidate lazy Inspector chunks in the dev server.
@@ -513,3 +514,34 @@ render comparison toggle. Explicit warm-up submits instanced variants during
 loading and removes its probe afterward. Disposal unregisters owned casters,
 meshes, source textures/materials and colliders. Whole-map prop snapshots include
 all accents. See IRON_MOUNTAINS.md for grounding and geometry budget.
+
+
+The authored heightmap snow-mountain trial uses `terrain/SnowMountains.ts`
+coverage/height-blend functions through an explicit WGSL include. It reuses the
+shared texture array's dedicated Rock Face 03 layer on steep snow faces and binds only one
+new comparison uniform. The final road overlay is excluded; geometry, gameplay
+surface channels, depth/shadow passes and frame order remain unchanged. See
+SNOW_MOUNTAINS.md for scope and material cost.
+
+
+`StoneGateTriangles.ts` corrects selected steep heightmap cell diagonals before
+ExaltedWorld constructs its mesh/surface index. The vertices and triangle budget
+remain fixed; all grounding and render/depth passes consume the same indices.
+The material's left-pass region uses shared array layer 4 with snow_03 colour,
+normal, ARM and real texture height in ARM alpha. The scalar height PNG decoder
+supports grayscale-alpha 16-bit input for this source. Geometry still represents
+the authored world heightmap; texture displacement is used for material blending.
+
+
+RockGround's readiness promise now includes explicit RGBA mip uploads for all
+five layers via `RockArrayMipmaps.ts` and RawTexture2DArray.updateMipLevel.
+Babylon 9.18 WebGPU auto-generation covers only layer 0. The base is uploaded
+last so context-restoration base/mip buffers remain consistent. Filtering stays
+trilinear/anisotropic; the fix adds startup CPU work/buffers, not frame work,
+GPU allocation or bindings. It also repairs filtered sampling of Iron layers.
+
+
+The visual Stone Gate pass overlay uses a shared authored spawn anchor, full
+60 m coverage and a 90 m outer feather, plus the existing left-cliff coverage.
+It applies snow_03 before the final road overlay, excludes water and keeps the CPU gameplay
+surface channels intact. The same five-layer mipmapped arrays remain in use.

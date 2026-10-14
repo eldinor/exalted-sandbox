@@ -4,12 +4,16 @@
   "layers": [
     "river",
     "exposedRock",
-    "brokenRock"
+    "brokenRock",
+    "snowCliff",
+    "stoneGateSnowRock"
   ],
   "textureMetres": [
     4,
     90,
-    90
+    90,
+    8,
+    8
   ],
   "format": "RGBA8; horizontal delta (4-byte pixel), then gzip; sRGB-encoded base, linear normal/ARM/height",
   "heightChannel": "ARM alpha, normalized source displacement",
@@ -57,26 +61,54 @@
     {
       "file": "public/terrain/rock/rocky_terrain_03_2k/textures/rocky_terrain_03_disp_2k.png",
       "sha256": "c6d112b6d5ea0d2d168dd2e1b240e80667abf94d881921ae37c5ab022f874ebb"
+    },
+    {
+      "file": "public/terrain/rock/03/rock_face_03_diff_2k.png",
+      "sha256": "09c30549220c8297c06eabcb25d272fcc1b514548be712221bd9d47f010def8b"
+    },
+    {
+      "file": "public/terrain/rock/03/rock_face_03_nor_gl_2k.png",
+      "sha256": "53044f276b4f1c3041b91c7d4767bda0d75cb4b2d237f08b64eb4e95ee456a93"
+    },
+    {
+      "file": "public/terrain/rock/03/rock_face_03_arm_2k.png",
+      "sha256": "8b306caf9c78d7293cc2baf4caa6214612e1f0be70660771b85cbb3faafe9c2d"
+    },
+    {
+      "file": "public/terrain/rock/snow/snow_03_diff_2k.png",
+      "sha256": "f06c54110c36c0bde5eeec7404669bb1e564b8d21f7657451eb7098a94483132"
+    },
+    {
+      "file": "public/terrain/rock/snow/snow_03_nor_gl_2k.png",
+      "sha256": "561da4bcab1e804d19c62dd065b0e51f368a73637e05d0b69532cabd501762e9"
+    },
+    {
+      "file": "public/terrain/rock/snow/snow_03_arm_2k.png",
+      "sha256": "0eb5678f793224d7534469c34edb9cba479980f1b94884e3ee7f16b5bd89f2fb"
+    },
+    {
+      "file": "public/terrain/rock/snow/snow_03_disp_2k.png",
+      "sha256": "ab3da6a803ed31b3016674694ca37ec381284c939d4727c4bba085332bdfcbff"
     }
   ],
   "outputs": [
     {
       "file": "base.rgba.gz",
-      "bytes": 27046997,
-      "rawBytes": 50331648,
-      "sha256": "b2a647ad1154fbd7574dc0cbe92ef18067e486a12b52cbdd9af9c96701b2d524"
+      "bytes": 43990069,
+      "rawBytes": 83886080,
+      "sha256": "8a9402459b1b05757e0c194dc05cb8d9f3fa2bbf9a6e98008bbf5714ab71c6ab"
     },
     {
       "file": "normal.rgba.gz",
-      "bytes": 33063445,
-      "rawBytes": 50331648,
-      "sha256": "df3aba2b8ffdd3f8c5ef5da89d30594ec1a26aa5b343ea96c998db74a36159dc"
+      "bytes": 55818637,
+      "rawBytes": 83886080,
+      "sha256": "4919c36b02b42c19999ed4e62c0d0664e4e411d4f8a7275282c01f9074b7362a"
     },
     {
       "file": "arm-height.rgba.gz",
-      "bytes": 20609248,
-      "rawBytes": 50331648,
-      "sha256": "851ab092b3f9e0d3a9e487acc838d1c512bc3c90236e44febf14f17098f52d6c"
+      "bytes": 36247590,
+      "rawBytes": 83886080,
+      "sha256": "ffcdefc6d0b0b89e3bcdffaa7c8ab3b268f3b101a5d0e7b033846caab98303ee"
     }
   ]
 }

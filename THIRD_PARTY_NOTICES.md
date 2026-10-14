@@ -112,6 +112,8 @@ license or ownership record before treating their distribution rights as clear.
 | `public/terrain/sand/beach/aerial_beach_01_*` | User-supplied beach set; filename alone does not verify asset origin/license. |
 | `public/terrain/rock/03/rock_face_03_*`, `public/terrain/rock/river/river_small_rocks*` | User-supplied rock sets; source/license unverified. |
 | `public/terrain/rock/rocky_terrain_2k/`, `rocky_terrain_03_2k/`; derived `iron-mountains/` arrays | Added 2026-10-13; user supplied 90 m rocky-ground scans. No creator/source/license grant supplied or embedded. Arrays repack and quantize maps; original files remain unchanged. Licensing correction remains deferred. |
+| `public/terrain/snow/aer1/snow_01_*` (unused reference) | Tested as rock-snow cliffs on 14 October 2026, then reverted to Rock Face 03; source/creator/licence unverified. Originals preserved. |
+| `public/terrain/rock/snow/snow_03_*`; derived rock-array layer 4 | User-selected Stone Gate left cliff/approach set (14 October 2026); source/creator/licence unverified. Maps repacked/quantized, including grayscale-alpha displacement; originals preserved. |
 | `public/terrain/road/asp1/*` | User-supplied asphalt/snow road maps; source/license unverified. |
 | Sparse grass reference files in `public/terrain/grassland/` | Parent notes retain a comparison candidate but do not itemize its original source/license. |
 | Authored heightmaps/biome maps and derived masks under `public/assets/textures/` | User-supplied/generated world maps; source notes record provenance but do not provide an explicit copyright/license declaration. Confirm which are owned by Andrei Stepanov. |

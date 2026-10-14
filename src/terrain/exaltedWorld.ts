@@ -13,6 +13,7 @@ import { DEFAULT_SPAWN } from '../world/spawnPoints.ts';
 import { AUTHORED_WORLD_SCALE } from '../world/worldScale.ts';
 import { AuthoredSurfaceMap, buildAuthoredHeightmap, decodeAuthoredPng, ROADS_HEIGHTMAP, ROADS_BIOME_MAP } from './authoredHeightmap.ts';
 import { GROUND_COVERAGE_MAP, ROCK_COVERAGE_MAP, BEACH_COVERAGE_MAP } from './groundCoverage.ts';
+import { correctStoneGateTriangles } from './StoneGateTriangles.ts';
 import { ROAD_DISPLAY_MAP } from './roadBlending.ts';
 
 export type AuthoredTerrainSource = 'glb' | 'heightmap';
@@ -147,11 +148,12 @@ export class ExaltedWorld {
             return decodeAuthoredPng(new Uint8Array(await response.arrayBuffer()));
         }));
         const data = buildAuthoredHeightmap(height, biome);
+        const correctedCliffCells = correctStoneGateTriangles(data);
         if (!data.positions || !data.normals || !data.colors || !data.indices) throw new Error('Incomplete heightmap geometry.');
         data.applyToMesh(target);
         // Generated Babylon ground keeps the mesh's left-handed default winding.
         target.useVertexColors = true; target.hasVertexAlpha = false;
-        target.metadata = { triangles: data.indices.length / 3, source: `${base}${ROADS_HEIGHTMAP}`, precision: 16 };
+        target.metadata = { triangles: data.indices.length / 3, source: `${base}${ROADS_HEIGHTMAP}`, precision: 16, correctedCliffCells };
         this.data = data as LoadedTerrainData;
         this.surface = new MeshSurface(data.positions, data.indices, 16, data.colors);
         this.minHeight = this.surface.minHeight; this.maxHeight = this.surface.maxHeight;

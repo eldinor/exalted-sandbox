@@ -20,6 +20,8 @@ import { ExaltedWorld } from '../terrain/exaltedWorld.ts';
 import { decodeAuthoredPng } from '../terrain/authoredHeightmap.ts';
 import { IRON_MOUNTAINS_MASK } from '../terrain/IronMountains.ts';
 import { ROAD_DISPLAY_MAP } from '../terrain/roadBlending.ts';
+import { buildStoneGateCliff } from './StoneGateCliff.ts';
+import { placeStoneGateWall } from './StoneGateWall.ts';
 import { maskWeightAt, placeIronRocks } from './IronRockPlacement.ts';
 import { PropCollisions, type PropCollider } from './propCollisions.ts';
 import { S } from '../core/settings.ts';
@@ -27,7 +29,7 @@ import { whenReady } from '../core/gpuUtil.ts';
 
 interface RockBatch {mesh:Mesh;geometry:VertexData;all:Float32Array;beauty:ShaderMaterial;prepass:ShaderMaterial;}
 export class IronRocks {
-    readonly stats={placed:0,cliffs:0,boulders:0,triangles:0,batches:0,colliders:0};
+    readonly stats={placed:0,cliffs:0,boulders:0,triangles:0,batches:0,colliders:0,wallRocks:0,cliffFacingTriangles:0};
     private container:AssetContainer|null=null;
     private readonly batches:RockBatch[]=[];
     private readonly colliders:PropCollider[]=[];
@@ -35,7 +37,7 @@ export class IronRocks {
     private readonly collisions:PropCollisions;
     private disposed=false;
     private enabled=true;
-    private probe:Mesh|null=null;
+    private readonly probes:Mesh[]=[];
     constructor(private readonly scene:Scene,private readonly terrain:Terrain,sky:Sky,
         shadows:ShadowSystem,private readonly depth:DepthPass){
         this.shading=new ForestMaterials(scene,sky,shadows,false,true);
@@ -67,21 +69,44 @@ export class IronRocks {
             const normals=new Float32Array(positions.length);VertexData.ComputeNormals(positions,indices,normals);geometry.normals=normals;
             material.albedoColor.multiplyInPlace(new Color3(.42,.46,.48));material.roughness=.98;
             const beauty=this.shading.create(material),prepass=this.shading.create(material,'PROP_PREPASS');
-            const grouped=new Map<string,typeof sites>();
-            for(const site of sites){const key=`${Math.floor(site.x/64)},${Math.floor(site.z/64)}`;const list=grouped.get(key)??[];list.push(site);grouped.set(key,list);
+            const rockTextures=this.terrain.rockTextures;
+            if(!rockTextures)throw new Error('Stone Gate wall requires shared stone textures.');
+            const wall=placeStoneGateWall((x,z)=>surface.sample(x,z));
+            const variants=new Map<number,{beauty:ShaderMaterial;prepass:ShaderMaterial}>([[0,{beauty,prepass}]]);
+            for(const layer of [1,2,3])variants.set(layer,{
+                beauty:this.shading.create(material,undefined,false,false,{textures:rockTextures,layer}),
+                prepass:this.shading.create(material,'PROP_PREPASS',false,false,{textures:rockTextures,layer})});
+            const grouped=new Map<string,{list:typeof sites;layer:number}>();
+            for(const site of [...sites.map(site=>({...site,layer:0})),...wall]){
+                const layer=site.layer;
+                const key=layer ? `wall:${layer}` : `${Math.floor(site.x/64)},${Math.floor(site.z/64)}`;
+                const group=grouped.get(key)??{list:[],layer};group.list.push(site);grouped.set(key,group);
                 const collider:PropCollider={x:site.x,z:site.z,radius:Math.max(site.width,site.depth)*.46,minY:site.y,maxY:site.y+site.height,name:`iron-${site.kind}`,kind:'rock'};
                 this.collisions.add(collider);this.colliders.push(collider);
             }
             const matrix=new Matrix();
-            for(const [key,list] of grouped){
+            for(const [key,{list,layer}] of grouped){
+                const variant=variants.get(layer);if(!variant)throw new Error('Missing rock material variant.');
+                const {beauty,prepass}=variant;
                 const all=new Float32Array(list.length*16);
                 for(let i=0;i<list.length;i++){const s=list[i];Matrix.ComposeToRef(new Vector3(s.width,s.height,s.depth),Quaternion.RotationYawPitchRoll(s.yaw,0,0),new Vector3(s.x,s.y,s.z),matrix);matrix.copyToArray(all,i*16);}
                 const mesh=new Mesh(`iron-rocks:${key}`,this.scene);geometry.applyToMesh(mesh);mesh.sideOrientation=source.sideOrientation;
                 mesh.material=beauty;mesh.isPickable=false;mesh.thinInstanceSetBuffer('matrix',all,16,true);mesh.thinInstanceRefreshBoundingInfo();mesh.freezeWorldMatrix();
                 this.batches.push({mesh,geometry,all,beauty,prepass});this.depth.registerCaster(mesh,prepass);
             }
-            Object.assign(this.stats,{placed:sites.length,cliffs:sites.filter(s=>s.kind==='cliff').length,boulders:sites.filter(s=>s.kind==='boulder').length,
-                triangles:sites.length*(geometry.indices?.length??0)/3,batches:this.batches.length,colliders:this.colliders.length});
+            // The Snow Mountain facing is visual geometry; terrain remains the
+            // grounding/collision authority. Its footprint stays well off the road.
+            const facing=buildStoneGateCliff((x,z)=>surface.sample(x,z));
+            const faceBeauty=this.shading.create(material,undefined,false,false,{textures:rockTextures,layer:4});
+            const faceDepth=this.shading.create(material,'PROP_PREPASS',false,false,{textures:rockTextures,layer:4});
+            const faceMesh=new Mesh('stone-gate:rock-cliff-facing',this.scene);facing.applyToMesh(faceMesh);
+            faceMesh.material=faceBeauty;faceMesh.isPickable=false;
+            const identity=new Float32Array(Matrix.Identity().asArray());
+            faceMesh.thinInstanceSetBuffer('matrix',identity,16,true);faceMesh.thinInstanceRefreshBoundingInfo();faceMesh.freezeWorldMatrix();
+            this.batches.push({mesh:faceMesh,geometry:facing,all:identity,beauty:faceBeauty,prepass:faceDepth});this.depth.registerCaster(faceMesh,faceDepth);
+            const facingTriangles=(facing.indices?.length??0)/3;
+            Object.assign(this.stats,{cliffFacingTriangles:facingTriangles,placed:sites.length+wall.length,wallRocks:wall.length,cliffs:sites.filter(s=>s.kind==='cliff').length,boulders:sites.filter(s=>s.kind==='boulder').length+wall.length,
+                triangles:(sites.length+wall.length)*(geometry.indices?.length??0)/3+facingTriangles,batches:this.batches.length,colliders:this.colliders.length});
         }catch(error){this.dispose();throw error;}
     }
     update(camera:Vector3):void{
@@ -90,15 +115,22 @@ export class IronRocks {
     }
     async warmUp():Promise<void>{
         for(const entry of this.shading.entries)for(const texture of entry.mat.getActiveTextures())await whenReady(texture,'Iron rock texture');
-        const batch=this.batches[0],camera=this.scene.activeCamera;if(!batch||!camera)return;
-        for(const entry of this.shading.entries)await whenReady(entry.mat,'Iron rock pipeline',[batch.mesh,true]);
-        // Submit instanced colour/depth variants in the existing loading frames.
-        const probe=this.probe=new Mesh('iron-rocks:warm-up',this.scene);batch.geometry.applyToMesh(probe);probe.sideOrientation=batch.mesh.sideOrientation;
-        probe.material=batch.beauty;const matrix=Matrix.Scaling(.15,.15,.15);matrix.setTranslation(camera.position.add(camera.getForwardRay().direction.scale(3)));
-        probe.thinInstanceSetBuffer('matrix',new Float32Array(matrix.asArray()),16,true);probe.thinInstanceRefreshBoundingInfo();
-        this.depth.registerCaster(probe,batch.prepass);
+        const camera=this.scene.activeCamera;if(!camera)return;
+        const warmed=new Set<ShaderMaterial>();
+        for(const batch of this.batches){
+            if(warmed.has(batch.beauty))continue;warmed.add(batch.beauty);
+            await whenReady(batch.beauty,'Iron rock pipeline',[batch.mesh,true]);
+            await whenReady(batch.prepass,'Iron rock depth pipeline',[batch.mesh,true]);
+            // Submit every instanced colour/depth variant behind the loading screen.
+            const probe=new Mesh('iron-rocks:warm-up',this.scene);this.probes.push(probe);
+            batch.geometry.applyToMesh(probe);probe.sideOrientation=batch.mesh.sideOrientation;
+            probe.material=batch.beauty;const matrix=Matrix.Scaling(.15,.15,.15);
+            matrix.setTranslation(camera.position.add(camera.getForwardRay().direction.scale(3)));
+            probe.thinInstanceSetBuffer('matrix',new Float32Array(matrix.asArray()),16,true);probe.thinInstanceRefreshBoundingInfo();
+            this.depth.registerCaster(probe,batch.prepass);
+        }
     }
-    finishWarmUp():void{if(this.probe){this.depth.unregisterCaster(this.probe);this.probe.dispose();this.probe=null;}}
+    finishWarmUp():void{for(const probe of this.probes){this.depth.unregisterCaster(probe);probe.dispose();}this.probes.length=0;}
     addMapSnapshot(snapshot:MapPropSnapshot):void{for(const b of this.batches)snapshot.add(b.mesh.name,b.geometry,b.beauty,b.all,b.mesh.sideOrientation);}
     dispose():void{if(this.disposed)return;this.disposed=true;this.finishWarmUp();for(const {mesh} of this.batches){this.depth.unregisterCaster(mesh);mesh.dispose();}
         this.batches.length=0;for(const collider of this.colliders)this.collisions.remove(collider);this.colliders.length=0;this.shading.dispose();this.container?.dispose();this.container=null;}

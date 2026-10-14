@@ -28,7 +28,7 @@ geometry normals with the existing matte vegetation lighting.
 Colony centres are deterministic on a jittered 14 m grid: 80% active cells,
 1.8-2.6 m radii and soft edges. This covers roughly 6% of meadow in footprints
 (about 4% weighted coverage), usually a handful of plants per colony rather
-than a continuous carpet. Density .08 supplies approximately .4 candidates/m2
+than a continuous carpet. Density .16 supplies approximately .8 candidates/m2
 before colony/biome exclusions. Height is nominally .35 m, varying .23-.47 m.
 Flower instances stay upright and use exact triangle height without the grass
 15 mm offset; roads, water, non-grass and slopes above .7 rise/run are excluded.
@@ -51,15 +51,21 @@ and their depth registrations. Teleport/automatic routes reset both interactions
 automatic route preparation waits for both enabled streaming queues. Procedural
 mode has no flowers; authored heightmap and GLB comparison modes do.
 
-Daisies now use the three individual LOD1 models at 40/30/30%, density .04
+Daisies now use the three individual LOD1 models at 40/30/30%, density .08
 (half the dandelion budget), nominal height .42 m and independent seed 9001.
 The prepared subset retains the source low alpha cutoff for delicate petals;
 see [daisy asset notes](public/terrain/grassland/daisies/README.md). Dandelion
-sites/mix remain stable. Grass thinning uses the maximum species coverage,
+colony centres and model mix remain stable. Grass thinning uses the maximum species coverage,
 so overlapping colonies never compound the 35% reduction. Both families share
 the Meadow flowers toggle and aggregate flower CPU/instance metrics; snapshots
 record each family's settings and statistics separately. Both load/warm/reset
 with the ordered startup/frame loop and automatic route preparation.
+
+Flower density was doubled on 14 October 2026: dandelions .08 to .16 and daisies
+.04 to .08. This fills the existing colonies more densely, retaining their
+footprints, species mixes, grass density, rendering distances and exclusions.
+No new assets or shader variants are introduced. Performance cost has not been
+remeasured for this density increase.
 
 Validation (2026-10-12): typecheck and 171 Node tests passed. Native Chrome/WebGPU
 loaded/warmed flowers without shader errors; screenshots checked the yellow

@@ -23,12 +23,12 @@ export interface MeadowFlowerFamily {
 }
 export const DANDELIONS: MeadowFlowerFamily = {
     id: 'dandelions', asset: 'terrain/grassland/dandelions/dandelions.glb', seed: 4117,
-    height: .35, density: .08, alphaCutoff: .35,
+    height: .35, density: .16, alphaCutoff: .35,
     mix: [{variant:'Dandelion_001',percentage:45},{variant:'Dandelion_002',percentage:35},{variant:'Dandelion_003',percentage:20}],
 };
 export const DAISIES: MeadowFlowerFamily = {
     id: 'daisies', asset: 'terrain/grassland/daisies/daisies.glb', seed: 9001,
-    height: .42, density: .04, alphaCutoff: .08597224407957241,
+    height: .42, density: .08, alphaCutoff: .08597224407957241,
     mix: [{variant:'Daisy_1',percentage:40},{variant:'Daisy_2',percentage:30},{variant:'Daisy_3',percentage:30}],
 };
 

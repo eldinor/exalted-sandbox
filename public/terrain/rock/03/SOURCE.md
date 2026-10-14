@@ -14,12 +14,14 @@ overlay the land. The forest overlook retains its forest floor. Terrain owns
 the textures, waits for readiness before shader warm-up and disposes them.
 GLB comparison and procedural modes retain their previous materials.
 
-The active rock material now uses the `river_small_rocks` set from `../river/`
-with stochastic sampling to remove the visible regular repeat. The `rock/03`
-files remain as source/reference assets and are not loaded at runtime. See
-[current material notes](../river/SOURCE.md).
+The general rock material uses the `river_small_rocks` set from `../river/`.
+Snow Mountains exposed cliffs use Rock Face 03 packed into shared array layer 3
+at a trial 8 m triplanar repeat. The tested snow/aer1/snow_01 cliff replacement
+was reverted at the user's latest instruction. Other rock regions retain their
+existing materials, and the Palecrown snow reserve stays fully snowy.
+No displacement map is supplied; Snow Mountains uses ARM AO as an approximate
+crevice proxy, not physical height. Source physical width remains unknown.
 
-Regenerate land and rock coverage together with
-`node --import tsx scripts/prepare-ground-coverage.mts`. This also corrects the
-sandy-painted northern road corridor to rock and removes sand softness there.
-See [BIOMES_MAPS.md](../../../../BIOMES_MAPS.md) for the mask contract and provenance.
+Regenerate coverage with `node --import tsx scripts/prepare-ground-coverage.mts`
+and arrays with `node scripts/prepare-iron-textures.mjs`.
+See root SNOW_MOUNTAINS.md and BIOMES_MAPS.md for the current contracts.

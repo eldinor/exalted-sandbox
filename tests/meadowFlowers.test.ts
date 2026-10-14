@@ -27,7 +27,7 @@ test('flower colonies are sparse, deterministic and independently seedable for f
     const settings=flowerSettings(DANDELIONS);
     assert.deepEqual(settings.grassMix.map(v=>v.percentage),[45,35,20]);
     assert.equal(settings.distantLodDistance,50);assert.equal(settings.groundOffset,0);
-    assert.equal(settings.upright,true);assert.equal(settings.density,.08);
+    assert.equal(settings.upright,true);assert.equal(settings.density,.16);
 });
 test('flower streaming preserves exact grounding, exclusions and deterministic model selection',()=>{
     const samplers=flowerSamplers({...ground,

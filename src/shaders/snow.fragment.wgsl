@@ -86,6 +86,8 @@ uniform beachGamma: f32;
 uniform rockTextureScale: f32;
 uniform rockGamma: f32;
 uniform ironMountainsEnabled: f32;
+uniform snowMountainsEnabled: f32;
+#include<snowMountains>
 #include<rockSampling>
 #include<beachSampling>
 #include<ironMountains>
@@ -323,6 +325,8 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     let rockCover = detailWeights.r * (1.0 - otherCover);
     let beachCover = detailWeights.g * (1.0 - otherCover);
     let ironCover = detailWeights.b * (1.0 - otherCover) * uniforms.ironMountainsEnabled;
+    let stoneGateAreaCover = stoneGateAreaWeight(world.xz) * (1.0-materialData.a) * uniforms.snowMountainsEnabled;
+    let stoneGateCover = max(stoneGateLeftWeight(world.xz) * uniforms.snowMountainsEnabled,stoneGateAreaCover);
 #else
     let rockCover = 0.0;
     let beachCover = 0.0;
@@ -423,7 +427,16 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 
     var N = normalFromGradient(grad);
 #ifdef EXALTED_TERRAIN
-    N = normalize(importedNormal - vec3f(grad.x - aux.x, 0.0, grad.y - aux.y));
+#ifdef HEIGHTMAP_TERRAIN
+    // A heightfield gradient is not a unit-normal offset. Its contribution to
+    // the normalized authored normal is scaled by the original upward component.
+    // Otherwise small snow ripples can rotate near-vertical triangle normals
+    // almost arbitrarily and produce long alternating dark/light cliff bands.
+    let snowGradientScale = mix(1.0, max(importedNormal.y, .0001), snowCover * uniforms.snowMountainsEnabled);
+#else
+    let snowGradientScale = 1.0;
+#endif
+    N = normalize(importedNormal - vec3f(grad.x - aux.x, 0.0, grad.y - aux.y) * snowGradientScale);
 #endif
 
     // The surface the *depth pass* rendered: macro landform, the analytic fine
@@ -434,7 +447,15 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // different direction on every pixel and reintroduce the noise it exists to
     // remove.
 #ifdef EXALTED_TERRAIN
+#ifdef HEIGHTMAP_TERRAIN
+    let rawFaceNormal=normalize(cross(ddxW,ddyW));
+    let faceNormal=select(rawFaceNormal,-rawFaceNormal,dot(rawFaceNormal,importedNormal)<0.0);
+    // On the steep pass face, shadow bias must follow the rendered triangle,
+    // rather than its interpolated/perturbed snow normal.
+    let geoN=normalize(mix(N,faceNormal,stoneGateCover*(1.0-smoothstep(.25,.65,importedNormal.y))));
+#else
     let geoN = N;
+#endif
 #else
     let geoN = N;
 #endif
@@ -484,6 +505,15 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     var f0 = vec3f(0.028);
     var groundAO = 1.0;
     var thickness = 1.0; // 1 = deep drift, 0 = thin crust
+    var snowMountainRegion = 0.0;
+    var mountainRockCover = 0.0;
+#ifdef HEIGHTMAP_TERRAIN
+    let stoneGateRockCoverage = max(stoneGateCover * rockCover,stoneGateAreaCover) * (1.0-roadCover);
+#else
+    let stoneGateRockCoverage = 0.0;
+#endif
+
+
 #ifdef EXALTED_TERRAIN
     // Biomes without dedicated PBR sets use the softened 4K authored color.
     albedo = mix(biomeColor, albedo, snowCover);
@@ -555,7 +585,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         N = normalize(mix(N, mapped, forestBlend));
     }
 #ifdef HEIGHTMAP_TERRAIN
-    if (rockCover > 0.001) {
+    if (rockCover > 0.001 && stoneGateAreaCover < .999) {
         let rockBlend = clamp(rockCover / max(1.0 - beachCover, 1e-5), 0.0, 1.0);
         let uv = vec2f(-world.x, world.z) * uniforms.rockTextureScale;
         let dx = vec2f(-ddxW.x, ddxW.z) * uniforms.rockTextureScale;
@@ -574,6 +604,12 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
             let iron=sampleIronMountains(world,N,ddxW,ddyW,uniforms.cameraPos);
             rockAlbedo=mix(rockAlbedo,iron.base,ironWeight);arm=mix(arm,iron.arm,ironWeight);
             mapped=normalize(mix(mapped,iron.normal,ironWeight));
+        }
+        if(stoneGateCover>.001){
+            let snowRock=ironLayer(4,world,normalize(input.vTerrainNormal),ddxW,ddyW,0.0);
+            rockAlbedo=mix(rockAlbedo,snowRock.base,stoneGateCover);
+            arm=mix(arm,vec3f(max(snowRock.arm.r,.75),clamp(snowRock.arm.g,.90,.98),0.0),stoneGateCover);
+            mapped=normalize(mix(mapped,snowRock.normal,stoneGateCover));
         }
         albedo = mix(albedo, rockAlbedo, rockBlend);
         roughness = mix(roughness, clamp(arm.g, .045, 1.0), rockBlend);
@@ -598,6 +634,21 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         let scale = inverseSqrt(max(max(dot(T,T), dot(B,B)), 1e-12));
         let mapped = normalize(N * max(bump.z, .1) + (T * bump.x + B * bump.y) * scale);
         N = normalize(mix(N, mapped, beachCover));
+    }
+#endif
+#ifdef HEIGHTMAP_TERRAIN
+    // Stone Gate rock-snow is the land layer; the road overlays it exactly once
+    // afterward, preserving its authored coverage and feathered edges.
+    let passCover=stoneGateAreaCover*(1.0-iceAmount);
+    if(passCover>.001){
+        let passRock=ironLayer(4,world,normalize(input.vTerrainNormal),ddxW,ddyW,0.0);
+        albedo=mix(albedo,passRock.base,passCover);
+        roughness=mix(roughness,clamp(passRock.arm.g,.90,.98),passCover);
+        f0=mix(f0,vec3f(.025),passCover);
+        groundAO=mix(groundAO,max(passRock.arm.r,.75),passCover);
+        N=normalize(mix(N,passRock.normal,passCover*(1.0-roadCover)));
+        thickness*=1.0-passCover;
+        mountainRockCover=max(mountainRockCover,passCover*(1.0-roadCover));
     }
 #endif
     if (roadCover > 0.001) {
@@ -642,10 +693,46 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     f0 = mix(f0, vec3f(0.045), iceAmount);
     thickness = mix(thickness, 0.15, iceAmount);
 
+#ifdef HEIGHTMAP_TERRAIN
+    snowMountainRegion = snowMountainRegionWeight(snowCover, roadCover, world.y) * uniforms.snowMountainsEnabled * (1.0-stoneGateAreaCover);
+    if (snowMountainRegion > .001) {
+        // Coverage follows authoritative triangle normals, never view-dependent grain normals.
+        let mountainNormal = normalize(input.vTerrainNormal);
+        let windDirection = vec2f(cos(uniforms.windAngle), sin(uniforms.windAngle));
+        let windVariation = noise2(vec2f(dot(world.xz, windDirection) * .035, dot(world.xz, vec2f(-windDirection.y, windDirection.x)) * .012));
+        let cliffExposure = snowCliffExposure(mountainNormal.y, windVariation);
+        // snow_03 is already snow-covered rock: use it on the left cliff, while
+        // the Palecrown reserve continues to exclude bare Rock Face 03.
+        let exposure = cliffExposure * mix(palecrownRockAllowance(world.xz),1.0,stoneGateCover);
+        // Rock Face 03 uses AO as a proxy; snow_03 carries its real height in ARM alpha.
+        // Broad wind-shaped colour stays subtle; existing near ripples/grain are retained.
+        albedo *= mix(1.0, .985 + .015 * windVariation, snowMountainRegion * (1.0 - exposure));
+        if (exposure > .001) {
+            var cliff=IronSample(vec3f(0.0),vec3f(0.0),mountainNormal,0.0);
+            if(stoneGateCover<.999){cliff=ironLayer(3,world,mountainNormal,ddxW,ddyW,0.0);cliff.height=cliff.arm.r;}
+            if(stoneGateCover>.001){
+                let snowRock=ironLayer(4,world,mountainNormal,ddxW,ddyW,0.0);
+                cliff=IronSample(mix(cliff.base,snowRock.base,stoneGateCover),mix(cliff.arm,snowRock.arm,stoneGateCover),
+                    normalize(mix(cliff.normal,snowRock.normal,stoneGateCover)),mix(cliff.height,snowRock.height,stoneGateCover));
+            }
+            mountainRockCover = snowMountainRegion * snowRockHeightBlend(exposure, cliff.height) * (1.0 - iceAmount);
+            let rockLuma = dot(cliff.base, vec3f(.2126, .7152, .0722));
+            let coldRock = mix(mix(cliff.base, vec3f(rockLuma) * vec3f(.72, .76, .82), .9),cliff.base,stoneGateCover);
+            albedo = mix(albedo, coldRock, mountainRockCover);
+            roughness = mix(roughness, clamp(cliff.arm.g, .90, .98), mountainRockCover);
+            f0 = mix(f0, vec3f(.025), mountainRockCover);
+            groundAO = mix(groundAO, max(cliff.arm.r, .75), mountainRockCover);
+            N = normalize(mix(N, cliff.normal, mountainRockCover));
+            thickness *= 1.0 - mountainRockCover;
+        }
+    }
+
+#endif
+
     // Exposed rock. Snow keeps its grip on the flatter faces, so the mask is
     // gated by slope rather than applied flat.
 #ifdef EXALTED_TERRAIN
-    let rockExposed = 1.0 - snowCover;
+    let rockExposed = clamp(1.0 - snowCover + mountainRockCover, 0.0, 1.0);
 #else
     let rockExposed = rockMask * smoothstep(0.32, 0.66, 1.0 - N.y);
     if (rockExposed > 0.001) {
@@ -712,7 +799,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     let ironLightingWeight = 0.0;
 #endif
     // Keep mountain crevices readable without flattening all surface variation.
-    ao = mix(ao, max(ao, .78), ironLightingWeight);
+    ao = mix(ao, max(ao, .78), max(ironLightingWeight, max(snowMountainRegion,stoneGateRockCoverage) * .65));
 
     // ------------------------------------------------------------- lighting
     let NdotL = dot(N, L);
@@ -725,15 +812,17 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 
     var shadow = 1.0;
     if (NdotL > -0.35) {
-        // Iron Mountains retain direct/surface lighting without cast-shadow darkening.
+        // Iron Mountains and the left Stone Gate cliff retain surface lighting without cast-shadow darkening.
         // Use the region mask independently of the layered material comparison toggle.
 #ifdef HEIGHTMAP_TERRAIN
         let ironShadowExclusion = clamp(detailWeights.b * (1.0 - otherCover), 0.0, 1.0);
+        let leftCliffShadowExclusion = stoneGateLeftWeight(world.xz) * clamp(snowCover + rockCover, 0.0, 1.0) * (1.0-roadCover);
+        let shadowExclusion = max(max(ironShadowExclusion, leftCliffShadowExclusion),stoneGateAreaCover*(1.0-roadCover));
 #else
-        let ironShadowExclusion = 0.0;
+        let shadowExclusion = 0.0;
 #endif
-        if (ironShadowExclusion < .999) {
-            shadow = mix(sunShadow(world, geoN, viewDist, noiseRot), 1.0, ironShadowExclusion);
+        if (shadowExclusion < .999) {
+            shadow = mix(sunShadow(world, geoN, viewDist, noiseRot), 1.0, shadowExclusion);
         }
     }
 
@@ -761,7 +850,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // Dry Iron Mountains rock: attenuate sun and sky specular together.
     // Keep the final road overlay and all other biomes at their existing response.
 #ifdef HEIGHTMAP_TERRAIN
-    let surfaceSpecularScale = mix(1.0, .18, clamp(ironCover * (1.0 - roadCover), 0.0, 1.0));
+    let surfaceSpecularScale = mix(1.0, .18, max(clamp(ironCover * (1.0 - roadCover), 0.0, 1.0), max(mountainRockCover,stoneGateRockCoverage)));
 #else
     let surfaceSpecularScale = 1.0;
 #endif
@@ -791,8 +880,8 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // Neutral sky fill supplies a floor on sun-facing-away mountain surfaces.
     // It follows ambient intensity and never adds to already brighter faces.
     let ironSkyLuma = max(dot(shIrradiance(vec3f(0.0, 1.0, 0.0), uniforms.shR), vec3f(.2126, .7152, .0722)), 0.0);
-    let ironAmbientFloor = vec3f(ironSkyLuma * uniforms.ambientIntensity * .55);
-    irradiance = mix(irradiance, max(irradiance, ironAmbientFloor), ironLightingWeight);
+    let mountainAmbientFloor = vec3f(ironSkyLuma * uniforms.ambientIntensity * mix(.35, .55, ironLightingWeight));
+    irradiance = mix(irradiance, max(irradiance, mountainAmbientFloor), max(ironLightingWeight, max(snowMountainRegion,stoneGateRockCoverage)));
     var ambient = albedo * INV_PI * irradiance;
 
     // Ambient specular from the sky, at a roughness-selected mip.
@@ -854,7 +943,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     //     is blue and not grey. The tint is the same `deepTint` the subsurface
     //     term uses, and tying it to the darkening rather than to `deformDepth`
     //     means the two can never drift apart.
-    let caveTint = mix(vec3f(1.0), vec3f(0.55, 0.72, 1.0), (1.0 - ao) * 0.95 * snowCover);
+    let caveTint = mix(vec3f(1.0), vec3f(0.55, 0.72, 1.0), (1.0 - ao) * 0.95 * snowCover * (1.0 - mountainRockCover));
     color *= ao * caveTint;
 
     // ------------------------------------------------------- aerial perspective

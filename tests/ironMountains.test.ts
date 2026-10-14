@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
 import {decodeAuthoredPng} from '../src/terrain/authoredHeightmap.ts';
+import {decodeTexturePng} from '../scripts/prepare-iron-textures.mjs';
 import {buildIronMountainsMask,ironScreeWeight,IRON_MOUNTAINS_MASK} from '../src/terrain/IronMountains.ts';
 
 test('Iron Mountains mask selects The Ironspine and northern corridor without western/southern rocks',()=>{
@@ -25,18 +26,29 @@ test('height blending favours exposed cliffs, accumulates scree on ledges and ne
 });
 test('prepared rock arrays retain original river RGB bytes and pack real displacement in mountain ARM alpha',()=>{
     const root='public/terrain/rock/iron-mountains/',meta=JSON.parse(readFileSync(root+'textures.json','utf8'));
-    assert.deepEqual(meta.textureMetres,[4,90,90]);
+    assert.deepEqual(meta.textureMetres,[4,90,90,8,8]);
     for(const source of meta.sources)assert.equal(createHash('sha256').update(readFileSync(source.file)).digest('hex'),source.sha256);
     for(const [m,map] of ['diff','nor_gl','arm'].entries()){
         const file=meta.outputs[m],compressed=readFileSync(root+file.file);
         assert.equal(createHash('sha256').update(compressed).digest('hex'),file.sha256);
         const bytes=gunzipSync(compressed),stride=meta.width*4;
         for(let row=0;row<bytes.length;row+=stride)for(let x=4;x<stride;x++)bytes[row+x]=(bytes[row+x]+bytes[row+x-4])&255;
-        assert.equal(bytes.length,meta.width*meta.height*3*4);
+        assert.equal(bytes.length,meta.width*meta.height*5*4);
         const original=decodeAuthoredPng(readFileSync(`public/terrain/rock/river/river_small_rocks_${map}_2k.png`));
         for(let i=0;i<original.width*original.height;i+=31){
             for(let c=0;c<3;c++)assert.equal(bytes[i*4+c],original.pixels[i*3+c]);
             assert.equal(bytes[i*4+3],255);
+        }
+        const snowCliff=decodeTexturePng(readFileSync(`public/terrain/rock/03/rock_face_03_${map}_2k.png`));
+        for(let i=0;i<snowCliff.width*snowCliff.height;i+=47){
+            for(let c=0;c<3;c++)assert.equal(bytes[(3*snowCliff.width*snowCliff.height+i)*4+c],snowCliff.pixels[i*snowCliff.channels+c]);
+            assert.equal(bytes[(3*snowCliff.width*snowCliff.height+i)*4+3],255);
+        }
+        const stoneGate=decodeTexturePng(readFileSync(`public/terrain/rock/snow/snow_03_${map}_2k.png`));
+        const stoneGateHeight=map==='arm'?decodeTexturePng(readFileSync('public/terrain/rock/snow/snow_03_disp_2k.png')):null;
+        for(let i=0;i<stoneGate.width*stoneGate.height;i+=47){
+            for(let c=0;c<3;c++)assert.equal(bytes[(4*stoneGate.width*stoneGate.height+i)*4+c],stoneGate.pixels[i*stoneGate.channels+c]);
+            assert.equal(bytes[(4*stoneGate.width*stoneGate.height+i)*4+3],stoneGateHeight?stoneGateHeight.pixels[i*stoneGateHeight.channels]:255);
         }
         if(map==='arm'){
             const h=decodeAuthoredPng(readFileSync('public/terrain/rock/rocky_terrain_03_2k/textures/rocky_terrain_03_disp_2k.png'));

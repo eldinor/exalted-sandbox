@@ -341,3 +341,14 @@ edge sample density. The level stays exactly 41.669526 m, dry island terrain
 remains excluded, and the island uses the beach PBR material at 30 m width.
 Typecheck/148 tests passed; native WebGPU found zero gaps at 768 submerged
 island-bank samples and checked ground/Ctrl+P views. See BIOMES_MAPS.md.
+
+
+## Stone Gate cliff diagonal correction (2026-10-14)
+
+Production heightmap loading applies `StoneGateTriangles.ts` after the base grid
+is generated. It changes 77 steep left-pass cell diagonals to reduce internal
+normal discontinuities, preserving all vertices, cell boundary edges and the
+320,000 triangle budget. Roads are excluded. CPU grounding and all production
+render/depth/shadow passes consume these same corrected indices. The hm.html
+preview retains its original diagonals, so interior grounding in corrected
+cells can differ slightly from that reference preview. See SNOW_MOUNTAINS.md.
