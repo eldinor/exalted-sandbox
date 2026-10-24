@@ -15,6 +15,7 @@ import { AuthoredSurfaceMap, buildAuthoredHeightmap, decodeAuthoredPng, ROADS_HE
 import { GROUND_COVERAGE_MAP, ROCK_COVERAGE_MAP, BEACH_COVERAGE_MAP } from './groundCoverage.ts';
 import { correctStoneGateTriangles } from './StoneGateTriangles.ts';
 import { ROAD_DISPLAY_MAP } from './roadBlending.ts';
+import { readAsset } from '../core/assetDownload.ts';
 
 export type AuthoredTerrainSource = 'glb' | 'heightmap';
 
@@ -143,9 +144,7 @@ export class ExaltedWorld {
     private async loadHeightmapInto(target: Mesh): Promise<void> {
         const base = import.meta.env.BASE_URL;
         const [height, biome, groundCoverage, roadDisplay, rockCoverage, beachCoverage] = await Promise.all([ROADS_HEIGHTMAP, ROADS_BIOME_MAP, GROUND_COVERAGE_MAP, ROAD_DISPLAY_MAP, ROCK_COVERAGE_MAP, BEACH_COVERAGE_MAP].map(async path => {
-            const response = await fetch(`${base}${path}`);
-            if (!response.ok) throw new Error(`Failed to load ${path}: ${response.status}`);
-            return decodeAuthoredPng(new Uint8Array(await response.arrayBuffer()));
+            return readAsset(`${base}${path}`,async response=>decodeAuthoredPng(new Uint8Array(await response.arrayBuffer())));
         }));
         const data = buildAuthoredHeightmap(height, biome);
         const correctedCliffCells = correctStoneGateTriangles(data);

@@ -15,6 +15,10 @@ export interface GrassSettings {
     distantLodDistance?: number;
     /** Fraction retained at the outer edge; full density at the main cutoff. */
     distantGrassDensity?: number;
+    /** Use lightweight silhouette prototypes in the outer imported band. */
+    cheapDistantGeometry?: boolean;
+    /** Width in metres of the per-root exchange between detailed and cheap tufts. */
+    distantTransitionWidth?: number;
     tightGrassBounds?: boolean;
     bladeHeight: number;
     bladeWidth: number;

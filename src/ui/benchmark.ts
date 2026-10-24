@@ -8,7 +8,7 @@ interface BenchmarkSources {
     captureState(): unknown;
     sample(values: BenchmarkValues): void;
     route?: BenchmarkRoute;
-    grassSettings?: { enabled: boolean };
+    grassSettings?: { enabled: boolean; cheapDistantGeometry?: boolean };
     flowerSettings?: { enabled: boolean };
     forestSettings?: { enabled: boolean };
 }
@@ -26,6 +26,7 @@ export class BenchmarkPanel {
     private readonly details = document.createElement('details');
     private readonly mode = document.createElement('select');
     private readonly grassEnabled = document.createElement('input');
+    private readonly cheapGrass = document.createElement('input');
     private readonly forestEnabled = document.createElement('input');
     private readonly flowerEnabled = document.createElement('input');
     private preparingSince: number | null = null;
@@ -80,6 +81,14 @@ export class BenchmarkPanel {
         this.grassEnabled.addEventListener('change', () => {
             if (sources.grassSettings) sources.grassSettings.enabled = this.grassEnabled.checked;
         });
+        const cheapLabel=document.createElement('label');
+        cheapLabel.className='benchmark-grass-toggle';cheapLabel.textContent='Cheaper distant grass';
+        cheapLabel.hidden=sources.grassSettings?.cheapDistantGeometry===undefined;
+        this.cheapGrass.type='checkbox';this.cheapGrass.checked=sources.grassSettings?.cheapDistantGeometry??false;
+        cheapLabel.append(this.cheapGrass);
+        this.cheapGrass.addEventListener('change',()=>{
+            if(sources.grassSettings)sources.grassSettings.cheapDistantGeometry=this.cheapGrass.checked;
+        });
         const flowerLabel = document.createElement('label');
         flowerLabel.className = 'benchmark-grass-toggle';
         flowerLabel.textContent = 'Meadow flowers';
@@ -114,7 +123,7 @@ export class BenchmarkPanel {
         this.results.setAttribute('aria-label', 'Benchmark results JSON');
         this.details.hidden = true;
         this.details.append(resultSummary, this.results);
-        controls.append(modeLabel, grassLabel, flowerLabel, forestLabel, label, this.startButton, this.stopButton, this.copyButton, this.status, this.details);
+        controls.append(modeLabel, grassLabel, cheapLabel, flowerLabel, forestLabel, label, this.startButton, this.stopButton, this.copyButton, this.status, this.details);
         details.append(summary, controls);
         this.root.append(details);
         this.stack.append(this.root, avatarPanel);
@@ -130,7 +139,7 @@ export class BenchmarkPanel {
         this.automatic = (this.mode.value === 'automatic' || (this.mode.value === 'forest' && !!this.sources.forestSettings)) && !!this.sources.route;
         this.preparationSeconds = 0; this.preparationTimedOut = false;
         this.mode.disabled = this.startButton.disabled = this.description.disabled = true;
-        this.grassEnabled.disabled = this.flowerEnabled.disabled = this.forestEnabled.disabled = true;
+        this.cheapGrass.disabled = this.grassEnabled.disabled = this.flowerEnabled.disabled = this.forestEnabled.disabled = true;
         this.copyButton.disabled = true; this.stopButton.disabled = false;
         this.results.value = ''; this.details.hidden = true;
         if (this.automatic) {
@@ -147,6 +156,7 @@ export class BenchmarkPanel {
     updateFrame(now: number): void {
         if (!this.recording && this.preparingSince === null) {
             this.grassEnabled.checked = this.sources.grassSettings?.enabled ?? false;
+            this.cheapGrass.checked = this.sources.grassSettings?.cheapDistantGeometry ?? false;
             this.flowerEnabled.checked = this.sources.flowerSettings?.enabled ?? false;
             this.forestEnabled.checked = this.sources.forestSettings?.enabled ?? false;
         }

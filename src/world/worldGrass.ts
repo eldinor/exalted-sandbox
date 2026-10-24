@@ -11,6 +11,8 @@ import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage';
 import type { Scene } from '@babylonjs/core/scene';
 import { GrassSystem } from '../grass/GrassSystem.ts';
 import { loadImportedGrass, type ImportedGrassPrototype } from '../grass/ImportedGrass.ts';
+import { distantGrassPrototype } from '../grass/DistantGrass.ts';
+import { grassTransitionEnd } from '../grass/GrassLod.ts';
 import { worldGrassSettings } from '../grass/WorldGrassSettings.ts';
 import { createAuthoredGrassSamplers } from '../grass/AuthoredGrassSamplers.ts';
 import { grassInteractionAllowed, MAX_GRASS_SURF_SEGMENTS } from '../grass/GrassInteraction.ts';
@@ -27,12 +29,12 @@ import type { SurfWake } from '../vfx/surfWake.ts';
 import type { SpellLights } from '../spells/spellLights.ts';
 
 type GrassPass = 'GRASS_PREPASS';
-interface MeshPasses { staticGrass: boolean; }
+interface MeshPasses { staticGrass: boolean; farGrass: boolean; }
 
 
 const UNIFORMS = ['world','viewProjection','lightViewProjection','time','wind','windFade','windDirection',
     'windCameraPosition','cameraPosition','interactionEnabled','impactCount','impactData','surfSegmentCount','surfSegments','surfBounds',
-    'visualization','lodKind','colorScale','rootColor','tipColor','flowerGamma','flowerCutoff','sunDir','sunRadiance','shR','cascadeMatrices',
+    'grassLodBand','grassLodCenter','grassEdgeDensity','visualization','lodKind','colorScale','rootColor','tipColor','flowerGamma','flowerCutoff','sunDir','sunRadiance','shR','cascadeMatrices',
     'cascadeSplits','cascadeParams','shadowTexel','shadowSoftness','shadowBias','ambientIntensity','fogDensity',
     'fogHeightFalloff','fogStart','aerialStrength','spellLightPos','spellLightCol','spellLightCount'];
 
@@ -48,6 +50,10 @@ export class WorldGrass {
     private readonly passMaterials: ShaderMaterial[] = [];
     private readonly passCache = new Map<string, ShaderMaterial>();
     private readonly registered = new Map<Mesh, MeshPasses>();
+    private readonly materialRoles = new Map<ShaderMaterial,boolean>();
+    private readonly grassLodBand = new Vector4();
+    private readonly grassFarLodBand = new Vector4();
+    private readonly grassLodCenter = new Vector2();
     private readonly splits = new Vector4();
     private readonly wind = new Vector2();
     private readonly windFade = new Vector2(40, 60);
@@ -81,7 +87,7 @@ export class WorldGrass {
                 this.thinFlowerColonies ? 1 - .35 * meadowFlowerColonyAt(x,z) : 1,
         };
         this.renderer = new GrassSystem(scene, samplers, this.settings, new Vector2(), 320, {
-            importedOnly: true, streaming: true,
+            importedOnly: true, streaming: true, continuousDistantLod: !flowerFamily,
             isMeshInView: mesh => !this.viewReady || mesh.getBoundingInfo().isInFrustum(this.viewPlanes),
             isTileInView: (x, z, size) => this.tileInView(x, z, size),
             createMaterial: (name, lod, staticGrass) => this.makeMaterial(name, lod, staticGrass),
@@ -103,12 +109,20 @@ export class WorldGrass {
                 material.setTexture('flowerAlbedo', this.flowerTexture);
                 material.setFloat('flowerGamma', this.flowerTexture.gammaSpace ? 2.2 : 1);
             }
-        } else prototypes = await loadImportedGrass(this.scene);
+        } else {
+            prototypes = await loadImportedGrass(this.scene);
+            for(const entry of this.settings.grassMix ?? []){
+                const source=prototypes.get(entry.variant);
+                if(!source)throw new Error(`Missing distant grass source: ${entry.variant}`);
+                const distant=distantGrassPrototype(source);prototypes.set(distant.name,distant);
+            }
+        }
         this.warmUpGeometry = prototypes.get(this.flowerFamily?.mix[0].variant ?? 'grass_medium_01_small_a_LOD1')?.geometry ?? null;
         this.renderer.setImportedPrototypes(prototypes);
         this.renderer.prepareStaticMaterials();
         for (const staticGrass of [false, true]) {
             this.passMaterial('GRASS_PREPASS', staticGrass);
+            this.passMaterial('GRASS_PREPASS', staticGrass, true);
         }
     }
 
@@ -126,6 +140,10 @@ export class WorldGrass {
             material.setTexture('flowerAlbedo', this.flowerTexture);
             material.setFloat('flowerGamma', this.flowerTexture.gammaSpace ? 2.2 : 1);
         }
+        this.materialRoles.set(material,lod===1);
+        material.setVector4('grassLodBand',Vector4.Zero());
+        material.setVector2('grassLodCenter',Vector2.Zero());
+        material.setFloat('grassEdgeDensity',1);
         material.setFloat('lodKind', lod);
         material.setFloat('spellLightCount', 0);
         material.setArray4('spellLightPos', new Array<number>(16).fill(0));
@@ -135,11 +153,11 @@ export class WorldGrass {
         return material;
     }
 
-    private passMaterial(pass: GrassPass, staticGrass: boolean): ShaderMaterial {
-        const key = `${pass}:${staticGrass}`;
+    private passMaterial(pass: GrassPass, staticGrass: boolean, farGrass=false): ShaderMaterial {
+        const key = `${pass}:${staticGrass}:${farGrass}`;
         let material = this.passCache.get(key);
         if (!material) {
-            material = this.makeMaterial(key, 0, staticGrass, pass);
+            material = this.makeMaterial(key, farGrass?1:0, staticGrass, pass);
             this.passCache.set(key, material);
             this.passMaterials.push(material);
         }
@@ -154,19 +172,28 @@ export class WorldGrass {
     private syncMesh(mesh: Mesh, visible: boolean, staticGrass: boolean): void {
         mesh.renderingGroupId = 1;
         if (this.flowerFamily && mesh.name.startsWith('grass:')) mesh.name = mesh.name.replace('grass:', this.flowerFamily.id + ':');
+        const farGrass=mesh.material instanceof ShaderMaterial && (this.materialRoles.get(mesh.material)??false);
         const previous = this.registered.get(mesh);
         if (!visible) { if (previous) this.unregister(mesh); return; }
-        if (previous && previous.staticGrass === staticGrass) return;
+        if (previous && previous.staticGrass === staticGrass && previous.farGrass === farGrass) return;
         if (previous) this.unregister(mesh);
         else if (!mesh.metadata?.grassDisposeHook) {
             mesh.metadata = { ...mesh.metadata, grassDisposeHook: true };
             mesh.onDisposeObservable.add(() => this.unregister(mesh));
         }
-        this.depth.registerCaster(mesh, this.passMaterial('GRASS_PREPASS', staticGrass));
-        this.registered.set(mesh, { staticGrass });
+        this.depth.registerCaster(mesh, this.passMaterial('GRASS_PREPASS', staticGrass, farGrass));
+        this.registered.set(mesh, { staticGrass,farGrass });
     }
 
     private bindMaterial(material: ShaderMaterial, context: GrassUpdateContext): void {
+        const continuous=!this.flowerFamily&&this.settings.cheapDistantGeometry&&(this.settings.distantLodDistance??0)>this.settings.farDistance;
+        const farGrass=this.materialRoles.get(material)??false;
+        const band=farGrass?this.grassFarLodBand:this.grassLodBand;
+        band.set(this.settings.farDistance,grassTransitionEnd(this.settings),continuous?this.settings.distantLodDistance??0:0,farGrass?1:0);
+        this.grassLodCenter.set(context.cameraPosition.x,context.cameraPosition.z);
+        material.setVector4('grassLodBand',band);
+        material.setVector2('grassLodCenter',this.grassLodCenter);
+        material.setFloat('grassEdgeDensity',this.settings.distantGrassDensity??1);
         material.setVector3('cameraPosition', context.windCameraPosition ?? context.cameraPosition);
         material.setVector3('windCameraPosition', context.windCameraPosition ?? context.cameraPosition);
         material.setVector2('windDirection', this.context.windDirection);
@@ -281,7 +308,8 @@ export class WorldGrass {
             for (const material of this.passMaterials) {
                 this.bindMaterial(material, this.context);
                 const probe = this.warmUpMeshes.find(mesh =>
-                    this.registered.get(mesh)?.staticGrass === material.options.defines?.includes('#define GRASS_STATIC'));
+                    this.registered.get(mesh)?.staticGrass === material.options.defines?.includes('#define GRASS_STATIC') &&
+                    this.registered.get(mesh)?.farGrass === this.materialRoles.get(material));
                 if (probe) await whenReady(material, material.name, [probe, true]);
             }
         } catch (error) { this.finishWarmUp(); throw error; }
@@ -300,7 +328,7 @@ export class WorldGrass {
         for (const mesh of this.registered.keys()) this.unregister(mesh);
         this.renderer.dispose();
         for (const material of this.passMaterials) material.dispose();
-        this.passMaterials.length = 0; this.passCache.clear(); this.warmUpGeometry = null;
+        this.passMaterials.length = 0; this.passCache.clear(); this.materialRoles.clear(); this.warmUpGeometry = null;
         this.flowerTexture?.dispose(); this.flowerTexture = null;
     }
 }

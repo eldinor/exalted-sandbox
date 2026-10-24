@@ -27,6 +27,41 @@ import { AuthoredSurfaceMap, roadsGrassWeight, decodeAuthoredPng, ROADS_BIOME_MA
 import { createAuthoredGrassSamplers } from '../src/grass/AuthoredGrassSamplers.ts';
 import { grassInteractionAllowed, writeSurfSegments, GRASS_SURF_LIFETIME } from '../src/grass/GrassInteraction.ts';
 import { worldGrassSettings } from '../src/grass/WorldGrassSettings.ts';
+import { distantGrassPrototype } from '../src/grass/DistantGrass.ts';
+import { grassTransitionEnd,grassTileMinDistance,grassTileMaxDistance } from '../src/grass/GrassLod.ts';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+
+test('grass transition uses exact tile extents without losing roots at corners',()=>{
+    assert.equal(grassTransitionEnd(worldGrassSettings()),30);
+    assert.equal(grassTileMinDistance(40,0,0,0),32);
+    assert.ok(40-Math.SQRT2*8<30,'Old enclosing-circle gate submitted this unnecessary near batch');
+    for(const x of [-8,0,8])for(const z of [-8,0,8]){
+        const distance=Math.hypot(24+x,8+z);
+        assert.ok(distance>=grassTileMinDistance(24,8,0,0));
+        assert.ok(distance<=grassTileMaxDistance(24,8,0,0));
+    }
+    assert.equal(grassTileMinDistance(0,0,3,-4),0);
+    assert.equal(grassTransitionEnd({farDistance:22,distantLodDistance:25,distantTransitionWidth:8}),25);
+});
+
+test('distant grass uses bounded opaque blade silhouettes and retains tiny geometry',()=>{
+    const geometry=new VertexData();geometry.positions=[-.3,0,-.2,.3,0,.2,0,1,0];geometry.indices=[0,1,2];
+    const source={name:'small_a_LOD2',geometry,triangles:493,authoredHeight:.23};
+    const distant=distantGrassPrototype(source);
+    assert.equal(distant.triangles,36);assert.equal(distant.authoredHeight,source.authoredHeight);
+    assert.ok(distant.geometry.positions&&distant.geometry.indices&&distant.geometry.normals);
+    assert.deepEqual(distant.geometry.positions,distantGrassPrototype(source).geometry.positions);
+    assert.equal(distant.geometry.uvs,undefined,'No alpha texture is required');
+    let maxHeight=0;
+    for(let i=0;i<distant.geometry.positions.length;i+=3){
+        const [x,y,z]=[distant.geometry.positions[i],distant.geometry.positions[i+1],distant.geometry.positions[i+2]];
+        assert.ok([x,y,z].every(Number.isFinite));assert.ok(Math.abs(x)<=.3&&Math.abs(z)<=.2);
+        assert.ok(y>=0&&y<=1);maxHeight=Math.max(maxHeight,y);
+    }
+    assert.equal(maxHeight,1);
+    assert.ok(distant.geometry.normals.every(Number.isFinite));
+    assert.equal(distantGrassPrototype({...source,triangles:14}).geometry,geometry);
+});
 import { DepthPass } from '../src/render/depthPass.ts';
 import { ShadowSystem } from '../src/render/shadows.ts';
 import { forestOverlookGroundWeight } from '../src/terrain/forestGroundCoverage.ts';
@@ -419,7 +454,7 @@ test('production adapter warms real draw variants and recycles depth registratio
         new FreeCamera('warm-up-camera', new Vector3(0, 2, -5), scene);
         grass.warmUpGeometry = geometry;
         grass.renderer.prepareStaticMaterials();
-        for (const staticGrass of [false, true]) grass.passMaterial('GRASS_PREPASS', staticGrass);
+        for (const staticGrass of [false, true])for(const farGrass of [false,true])grass.passMaterial('GRASS_PREPASS', staticGrass,farGrass);
         // NullEngine cannot compile WGSL. Exercise the real probe lifecycle;
         // native WebGPU remains responsible for validating pipeline creation.
         for (const material of [...grass.renderer.materials, ...grass.passMaterials]) {
@@ -432,7 +467,9 @@ test('production adapter warms real draw variants and recycles depth registratio
         assert.ok(probes.every(mesh => mesh.thinInstanceCount === 1));
         assert.deepEqual(new Set(probes.map(mesh => mesh.material)), new Set(grass.renderer.materials));
         assert.equal(depth.rtt.renderList!.length, probes.length);
-        assert.equal(new Set(depth.materials).size, 2, 'both static and dynamic depth variants participate');
+        assert.equal(new Set(depth.materials).size, 4, 'near/far roles warm with both static and dynamic depth variants');
+        assert.notEqual(grass.grassLodBand,grass.grassFarLodBand,'Near/far uniforms must not share a mutable vector');
+        assert.equal(grass.grassLodBand.w,0);assert.equal(grass.grassFarLodBand.w,1);
         assert.ok(shadows.maps.every(map => map.renderList!.length === 0));
         grass.finishWarmUp();
         grass.finishWarmUp();

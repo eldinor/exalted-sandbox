@@ -6,6 +6,33 @@ import {createHash} from 'node:crypto';
 import {decodeAuthoredPng} from '../src/terrain/authoredHeightmap.ts';
 import {decodeTexturePng} from '../scripts/prepare-iron-textures.mjs';
 import {buildIronMountainsMask,ironScreeWeight,IRON_MOUNTAINS_MASK} from '../src/terrain/IronMountains.ts';
+import {ROCK_ARRAY_SIZE,ROCK_ARRAY_LAYERS,ROCK_ARRAY_ROOT} from '../src/terrain/RockArrayProfile.ts';
+
+test('1024 trial arrays preserve originals and reduce every layer/channel to the first source mip',()=>{
+    const root=`public/${ROCK_ARRAY_ROOT}/`,meta=JSON.parse(readFileSync(root+'textures.json','utf8'));
+    const original=JSON.parse(readFileSync('public/terrain/rock/iron-mountains/textures.json','utf8'));
+    assert.equal(meta.width,ROCK_ARRAY_SIZE);assert.equal(meta.height,ROCK_ARRAY_SIZE);
+    assert.equal(meta.layers.length,ROCK_ARRAY_LAYERS);assert.deepEqual(meta.layers,original.layers);
+    assert.deepEqual(meta.textureMetres,original.textureMetres);
+    const decode=(file:string,size:number)=>{
+        const bytes=gunzipSync(readFileSync(file)),stride=size*4;
+        for(let row=0;row<bytes.length;row+=stride)for(let x=4;x<stride;x++)bytes[row+x]=(bytes[row+x]+bytes[row+x-4])&255;
+        return bytes;
+    };
+    for(let m=0;m<3;m++){
+        const source=meta.sources[m],output=meta.outputs[m];
+        assert.equal(source.sha256,original.outputs[m].sha256,'Original source checksum remains unchanged');
+        assert.equal(createHash('sha256').update(readFileSync(source.file)).digest('hex'),source.sha256);
+        assert.equal(createHash('sha256').update(readFileSync(root+output.file)).digest('hex'),output.sha256);
+        const big=decode(source.file,2048),small=decode(root+output.file,ROCK_ARRAY_SIZE);
+        assert.equal(small.length,ROCK_ARRAY_SIZE*ROCK_ARRAY_SIZE*ROCK_ARRAY_LAYERS*4);
+        for(let layer=0;layer<ROCK_ARRAY_LAYERS;layer++)for(let pixel=0;pixel<ROCK_ARRAY_SIZE*ROCK_ARRAY_SIZE;pixel+=997){
+            const x=pixel%ROCK_ARRAY_SIZE,y=Math.floor(pixel/ROCK_ARRAY_SIZE);
+            const a=(layer*2048*2048+y*2*2048+x*2)*4;
+            for(let c=0;c<4;c++)assert.equal(small[(layer*ROCK_ARRAY_SIZE*ROCK_ARRAY_SIZE+pixel)*4+c],Math.round((big[a+c]+big[a+4+c]+big[a+2048*4+c]+big[a+2048*4+4+c])*.25));
+        }
+    }
+});
 
 test('Iron Mountains mask selects The Ironspine and northern corridor without western/southern rocks',()=>{
     const rock=decodeAuthoredPng(readFileSync('public/assets/textures/biome-rock-9.png'));

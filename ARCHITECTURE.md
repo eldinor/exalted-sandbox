@@ -1,5 +1,11 @@
 # Exalted application architecture
 
+Production and lab packaging are separate: `npm run build` builds `index.html`
+and copies validated runtime assets into `dist/`; `npm run build:labs` retains
+the full lab inputs/public assets/generated bake in `dist-labs/`. Development
+still serves all sources and assets. See [BUILD_PACKAGING.md](BUILD_PACKAGING.md)
+for the explicit runtime inventory and external GLB dependency handling.
+
 This document describes the production world application served by `index.html`.
 It covers the TypeScript code under `src`, its runtime order, major data paths,
 and extension points. The supporting grass/forest labs and asset tools are utilities and
@@ -539,6 +545,12 @@ Babylon 9.18 WebGPU auto-generation covers only layer 0. The base is uploaded
 last so context-restoration base/mip buffers remain consistent. Filtering stays
 trilinear/anisotropic; the fix adds startup CPU work/buffers, not frame work,
 GPU allocation or bindings. It also repairs filtered sampling of Iron layers.
+
+The current loading trial selects five 1024-square layers through
+`RockArrayProfile.ts`, using separately derived files in `iron-mountains-1024`.
+The preserved 2048 arrays remain the authoring source. Runtime dimensions,
+delta row stride, byte checks and mip generation follow the selected profile;
+all colour/depth consumers share the same arrays. See BUILD_PACKAGING.md.
 
 
 The visual Stone Gate pass overlay uses a shared authored spawn anchor, full

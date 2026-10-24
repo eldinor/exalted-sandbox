@@ -123,14 +123,15 @@ textures are loaded before terrain shader warm-up and disposed by Terrain.
 Production density is 3: approximately 17 candidates per square metre
 before exclusions. Stream 16 m patches around the avatar, with a 2 ms/2,048
 candidate budget and one model-pair upload per frame. Recycle geometry and buffers.
-Production now uses LOD2 geometry at every distance for the benchmark comparison;
-distance LOD switching is disabled (`singleLod: 2`). The previous comparison used
+The baseline comparison uses LOD2 geometry at every distance;
+LOD1 switching is disabled (`singleLod: 2`). The previous comparison used
 LOD1 through 22 m and LOD2 beyond. Full density now extends through 22 m,
 then thins smoothly to 25% at the 90 m outer edge using the existing smoothstep
 curve and deterministic instance prefixes. `farDistance: 22` controls the end
 of full density; `distantLodDistance: 90` controls the outer visibility distance,
 reduced from 120 m for the next benchmark comparison.
-Both distance bands use LOD2 geometry. Selection uses
+The cheaper distant geometry trial below replaces the outer band's LOD2 tufts.
+Selection uses
 16 m patch-centre distance from the avatar. Density remains 3. Wind fades
 from 40 to 60 m and uses the world's wind direction/strength and simulation clock.
 
@@ -223,3 +224,115 @@ steady-state or hardware timing benchmark, and does not describe the current
 density-3 configuration without shadow casting. LOD distances are unchanged;
 Tall grass has since been removed from the mix. Current performance and visual feel need review on the target
 hardware.
+
+
+## Cheaper distant geometry trial (14 October 2026)
+
+Production grass keeps the existing Tiny D / Small A / Small B LOD2 models
+within the 22-metre patch-centre cutoff. The outer band now uses runtime-created
+opaque blade silhouettes: twelve bent tapered blades, 36 triangles for each
+small variant. Tiny D retains its existing 14-triangle geometry. These are
+geometric silhouettes, without alpha cards or new assets. Source bounds and
+normalized root/height define the derived shapes; authored model height and
+instance matrices are retained. Implementation: `src/grass/DistantGrass.ts`.
+
+Weighted prototype cost falls from 350.6 to 33.8 triangles per distant tuft
+(about 90%). Density remains 3, the 10/45/45 mix stays unchanged, and the existing
+22-to-90-metre thinning still reaches 25% at the outer edge. Patch streaming,
+frustum rejection, wind, interaction, lighting, camera depth and shadow reception
+keep their existing paths. Flowers opt out. Labs retain their existing defaults.
+The initial trial switched whole patches abruptly. The per-root transition
+correction below supersedes that selection and its original cost measurement.
+
+The benchmark panel has **Cheaper distant grass**, enabled by default, to compare
+the same automatic grassland route without console commands. Switching rebuilds
+streamed geometry while preserving deterministic placements. Automatic recording
+waits for its normal streaming preparation; settings snapshots include
+`cheapDistantGeometry`. Both animated and static material variants warm before
+loading ends; no additional shader variants are introduced by these prototypes.
+
+Native Chrome WebGPU loaded without new errors. Screenshots checked grass at
+The Long Green; this is not a complete walking/surfing/LOD visual review. A fixed
+764 x 429 view at avatar (-155, 64.72, 0), frozen simulation, completed visible
+streaming, and 60 captured frames per mode measured:
+
+| Metric | Existing geometry | Cheaper distant geometry |
+|---|---:|---:|
+| Grass submitted indices/frame, across passes | 178,351,018 | 60,175,827 |
+| Grass draws/frame | 231.37 | 231.38 |
+| Near instances | 24,249 | 24,249 |
+| Distant instances | 63,736 | 63,736 |
+
+Grass index submissions fall about 66%; this is geometry accounting, not an FPS
+or GPU execution-time result. View culling produces tiny draw-count variation.
+Run the same automatic route with the checkbox on/off for the next performance
+comparison. Typecheck and all 177 Node tests pass, including silhouette bounds,
+root/height preservation, deterministic placement, unchanged density/draw counts,
+outer-only substitution and restoring original geometry through the toggle.
+No production build or Playwright.
+
+
+## Removing square LOD patches
+
+The cheaper production mode now selects geometry per tuft root instead of
+switching every tuft in a 16 m tile at once. Deterministic integer root hashes
+progressively exchange complete tufts from original to cheap geometry across
+22?34 metres. Complementary decisions render one model per root, with no alpha
+blending. Density also follows each root's actual 22?90 m distance, retaining
+25% at the outer edge; tile-centre instance-prefix thinning is bypassed in this
+mode. Roots remain stable while wind and walking/surfing move the tips.
+
+Renderer batch gates include the tile half-diagonal around the overlap band and
+outer edge. Unselected tufts collapse outside the clip volume early in the shared
+vertex shader, before bending. Colour and depth use identical root decisions.
+Near/far depth materials have separate role uniforms for both static/dynamic
+variants; all warm during loading. Mutable near/far band vectors are separately
+owned to prevent one material overwriting the other's role. Flowers and labs
+retain their existing selection. The baseline toggle retains its prior path.
+
+This submits overlapping near/far batches and more matrices to the GPU. Runtime
+instance/triangle statistics count submitted geometry, including vertex-culled
+tufts, rather than only the surviving silhouettes. Both overlapping draws are
+now counted. No per-frame instance-buffer compaction or uploads are added.
+
+Native WebGPU screenshot inspection at The Long Green confirmed nearby grass
+remains intact and the transition no longer follows square tile edges in that
+view. Startup reported no new shader errors. Moving/flight review and automatic
+route performance comparison remain useful. Typecheck and all 177 Node tests
+pass, including overlapping-band scheduling, complete root buffers, separate
+near/far depth roles, warm-up and registration cleanup. No build or Playwright.
+
+A repeated fixed 764 x 429 view, 60 frames per mode, now submits about 135.47
+million grass indices/frame versus 178.35 million with original geometry: about
+24% fewer. Grass draws are about 336.73 versus 231.37. This supersedes the 66%
+reduction from the abrupt-switch trial; smoother transitions add submission
+cost. These counts do not measure GPU execution time or establish FPS gains.
+
+
+## Narrower transition and tighter batch gates
+
+The next trial reduces the per-root exchange width from 12 to 8 metres, keeping
+full original models through 22 m and completing the exchange at 30 m. Shared
+`GrassLod.ts` supplies the transition end to rendering and material binding.
+`distantTransitionWidth: 8` is recorded in benchmark settings snapshots.
+Density, root hashes, 90 m visibility, 25% outer density and tuft geometry stay
+unchanged. Square boundaries are still avoided through per-root selection.
+
+Batch gates now use the exact minimum/maximum root distance of the 16 m square,
+instead of expanding centre distance by its half-diagonal. This skips batches
+whose enclosing circle touched a band although their roots could not reach it.
+It adds no buffer compaction, per-frame allocations, texture loads or shaders.
+Flowers and the baseline toggle retain their previous paths.
+
+Native WebGPU checked the Long Green view and startup. Typecheck and all 178
+Node tests pass; tests check square distance bounds/corners and shared transition
+limits. No build or Playwright. Fixed-view 60-frame captures at 764 x 429 now
+submit 116.65 million grass indices and 312.73 grass draws/frame, compared with
+135.47 million and 336.73 for the previous smooth version: about 14% fewer
+indices and 7% fewer draws. Original geometry remains 178.35 million indices
+and 231.37 draws in that view. These are submission counts, not FPS claims.
+
+The user's preceding matched automatic-route runs at 1745 x 866 measured 84.3
+FPS with the previous smooth cheap mode versus 73.0 FPS with original geometry
+(about 15.5% higher FPS). This new narrower trial still needs that same route
+comparison; the preceding results do not measure the new trial.

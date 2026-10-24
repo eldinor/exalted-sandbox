@@ -48,12 +48,14 @@ export async function done(): Promise<void> {
 /**
  * Keep the loading overlay visible with a readable boot failure instead of leaving a blank canvas.
  */
-export function fail(message: string): void {
+export function fail(message: string, help?:string): void {
     root?.remove();
     const el = document.getElementById("nogpu");
     if (el) {
         el.classList.add("show");
         const b = el.querySelector("b");
         if (b && message) b.textContent = message;
+        const detail=document.getElementById('startup-help');
+        if(detail&&help)detail.textContent=help;
     }
 }

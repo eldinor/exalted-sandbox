@@ -26,11 +26,22 @@ uniform windDirection: vec2f;
 uniform surfSegmentCount: f32;
 uniform surfSegments: array<vec4f, 16>;
 uniform surfBounds: vec4f;
+uniform grassLodBand: vec4f;
+uniform grassLodCenter: vec2f;
+uniform grassEdgeDensity: f32;
 varying vViewZ: f32;
 #endif
 varying vNormal: vec3f;
 varying vHeight: f32;
 varying vWorld: vec3f;
+#ifdef GRASS_PRODUCTION
+fn grassRootHash(key:u32)->f32 {
+  var v=key;
+  v=((v>>16u)^v)*0x45d9f3bu;
+  v=((v>>16u)^v)*0x45d9f3bu;
+  return min(f32((v>>16u)^v)/4294967296.0,.99999994);
+}
+#endif
 @vertex
 fn main(input: VertexInputs)->FragmentInputs {
 #ifdef INSTANCES
@@ -39,6 +50,30 @@ fn main(input: VertexInputs)->FragmentInputs {
   let model=uniforms.world;
 #endif
   let root=model[3].xyz;
+#ifdef GRASS_PRODUCTION
+  if(uniforms.grassLodBand.z>0.0) {
+    // Select one complete tuft, identically in colour and camera depth. The
+    // decision follows its root, never the containing 16-metre patch centre.
+    let d=distance(root.xz,uniforms.grassLodCenter);
+    let farWeight=smoothstep(uniforms.grassLodBand.x,uniforms.grassLodBand.y,d);
+    let rootKey=bitcast<u32>(i32(floor(root.x*1000.0)))^(bitcast<u32>(i32(floor(root.z*1000.0)))*19349663u);
+    let choice=grassRootHash(rootKey);
+    let densityChoice=grassRootHash(rootKey^83492791u);
+    let densityWeight=1.0-smoothstep(uniforms.grassLodBand.x,uniforms.grassLodBand.z,d)*(1.0-uniforms.grassEdgeDensity);
+    let useFar=choice<farWeight;
+    if(d>uniforms.grassLodBand.z||densityChoice>=densityWeight||useFar!=(uniforms.grassLodBand.w>.5)) {
+      vertexOutputs.vWorld=root;
+      vertexOutputs.vNormal=vec3f(0.0,1.0,0.0);
+      vertexOutputs.vHeight=0.0;
+      vertexOutputs.vViewZ=0.0;
+#ifdef MEADOW_FLOWERS
+      vertexOutputs.vFlowerUV=vec2f(0.0);
+#endif
+      vertexOutputs.position=vec4f(2.0,2.0,2.0,1.0);
+      return vertexOutputs;
+    }
+  }
+#endif
   let h=clamp(input.position.y,0.0,1.0);
   var bend=vec2f(0.0);
 #ifndef GRASS_STATIC

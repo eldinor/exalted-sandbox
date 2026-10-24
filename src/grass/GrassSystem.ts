@@ -12,6 +12,8 @@ import { createGrassBlade } from './GrassGeometry.ts';
 import { grassLightingResponse } from './GrassAppearance.ts';
 import { GrassPlacementJob, type GrassPlacementConfig } from './GrassPlacementJob.ts';
 import { grassCandidateSeed, grassHash as hash } from './GrassDistribution.ts';
+import { DISTANT_GRASS_SUFFIX } from './DistantGrass.ts';
+import { grassTransitionEnd,grassTileMinDistance,grassTileMaxDistance } from './GrassLod.ts';
 import { canUseStaticGrass } from './GrassWind.ts';
 import type { GrassSamplers, GrassSettings, GrassStats, GrassUpdateContext } from './grassTypes.ts';
 import type { ImportedGrassPrototype } from './ImportedGrass.ts';
@@ -60,6 +62,7 @@ export interface GrassSystemOptions {
     updateMaterial?(material: ShaderMaterial, context: GrassUpdateContext): void;
     syncMesh?(mesh: Mesh, visible: boolean, distance: number, staticGrass: boolean): void;
     importedOnly?: boolean;
+    continuousDistantLod?: boolean;
     streaming?: boolean;
     /** Optional production view gates. Completed off-screen patches stay cached. */
     isMeshInView?(mesh: Mesh): boolean;
@@ -161,16 +164,22 @@ export class GrassSystem {
             let near = 0, mid = 0;
             for (const entry of mix) {
                 near += (this.importedPrototypes.get(entry.variant.replace(/_LOD2$/, `_LOD${lod}`))?.triangles ?? 0) * entry.percentage / total;
-                mid += (this.importedPrototypes.get(entry.variant)?.triangles ?? 0) * entry.percentage / total;
+                mid += (this.importedMidPrototype(entry.variant)?.triangles ?? 0) * entry.percentage / total;
             }
             return [near, this.settings.lodEnabled || this.distantLodActive() ? mid : near];
         }
         const near = this.importedPrototypes.get(this.importedNearName())?.triangles ?? 8;
-        const mid = this.importedPrototypes.get(this.settings.importedVariant)?.triangles ?? 2;
+        const mid = this.importedMidPrototype(this.settings.importedVariant)?.triangles ?? 2;
         if (this.settings.bladeSource === 'procedural') return this.settings.lodEnabled ? [8, 2] : [8, 8];
         if (!this.settings.lodEnabled) return [near, this.distantLodActive() ? mid : near];
         if (this.settings.bladeSource === 'hybrid') return [near, 2];
         return [near, mid];
+    }
+
+    private importedMidPrototype(name:string):ImportedGrassPrototype|undefined {
+        return this.settings.cheapDistantGeometry
+            ? this.importedPrototypes.get(name+DISTANT_GRASS_SUFFIX) ?? this.importedPrototypes.get(name)
+            : this.importedPrototypes.get(name);
     }
 
     private importedNearName(): string {
@@ -362,7 +371,7 @@ export class GrassSystem {
 
     private geometryKey(): string {
         this.activeMix();
-        return `${this.settings.bladeSource}:${this.settings.importedVariant}:${this.importedNearName()}:${this.settings.bladeHeight}:${this.settings.bladeWidth}:${this.settings.maxSlope ?? .4}:${this.settings.upright ?? false}:${this.settings.groundOffset ?? .015}:${this.mixSignature}`;
+        return `${this.settings.bladeSource}:${this.settings.importedVariant}:${this.importedNearName()}:${this.settings.bladeHeight}:${this.settings.bladeWidth}:${this.settings.maxSlope ?? .4}:${this.settings.upright ?? false}:${this.settings.groundOffset ?? .015}:${this.mixSignature}:${this.settings.cheapDistantGeometry ?? false}`;
     }
 
     private releaseStreamingPatch(patch: GrassPatch): void {
@@ -386,7 +395,7 @@ export class GrassSystem {
             for (const tile of this.streamReady.values()) for (const patch of tile.patches) this.releaseStreamingPatch(patch);
             this.streamReady.clear(); this.emptyPatches.clear();
             const near = this.importedPrototypes.get(this.importedNearName());
-            const mid = this.importedPrototypes.get(this.settings.importedVariant);
+            const mid = this.importedMidPrototype(this.settings.importedVariant);
             if (this.options.importedOnly && (!near || !mid || this.settings.bladeSource !== 'imported')) throw new Error('Authored grass requires imported prototypes.');
             const nearImported = this.settings.bladeSource !== 'procedural' && !!near;
             const midImported = this.settings.bladeSource === 'imported' && !!mid;
@@ -415,7 +424,7 @@ export class GrassSystem {
                 const placementVariants: { weight: number; heightRatio: number }[] = [];
                 for (const entry of mix) {
                     const nearPrototype = this.importedPrototypes.get(entry.variant.replace(/_LOD2$/, `_LOD${lod}`));
-                    const midPrototype = this.importedPrototypes.get(entry.variant);
+                    const midPrototype = this.importedMidPrototype(entry.variant);
                     const size = this.importedPrototypes.get(entry.variant.replace(/_LOD2$/, '_LOD1'));
                     if (!nearPrototype || !midPrototype || !size) throw new Error(`Missing grass mix prototype: ${entry.variant}`);
                     let midMaterial = this.mixedMaterials.get(entry.variant);
@@ -656,6 +665,8 @@ export class GrassSystem {
         this.nearMaterial.setFloat('colorScale', 1);
         const distanceLod = this.settings.lodEnabled;
         const distantLod = this.distantLodActive();
+        const continuous=!!(this.options.continuousDistantLod&&this.settings.cheapDistantGeometry&&distantLod);
+        const transitionEnd=grassTransitionEnd(this.settings);
         this.nearMaterial.setFloat('lodKind', distanceLod || this.settings.singleLod === 1 ? 0 : 1);
         this.midMaterial.setFloat('colorScale', this.midColorScale);
         Object.assign(this.stats, { visiblePatches: 0, nearInstances: 0, midInstances: 0, triangles: 0, draws: 0 });
@@ -664,13 +675,15 @@ export class GrassSystem {
             this.updatePatchBounds(patch, this.settings.tightGrassBounds === false ? Math.max(14, bendPadding) : bendPadding);
             const distance = Math.hypot(patch.x - context.cameraPosition.x, patch.z - context.cameraPosition.z);
             const inView = !this.options.isMeshInView || this.options.isMeshInView(patch.near);
-            const nearVisible = this.settings.enabled && inView && distance <= (distanceLod ? this.settings.nearDistance : this.settings.farDistance);
-            let midVisible = this.settings.enabled && inView && (
+            const minimumDistance=continuous?grassTileMinDistance(patch.x,patch.z,context.cameraPosition.x,context.cameraPosition.z):distance;
+            const maximumDistance=continuous?grassTileMaxDistance(patch.x,patch.z,context.cameraPosition.x,context.cameraPosition.z):distance;
+            const nearVisible = this.settings.enabled && inView && minimumDistance <= (continuous ? transitionEnd : distanceLod ? this.settings.nearDistance : this.settings.farDistance);
+            let midVisible = this.settings.enabled && inView && (continuous ? maximumDistance>=this.settings.farDistance&&minimumDistance<=this.visibleDistance() : (
                 distanceLod && distance > this.settings.nearDistance && distance <= this.settings.farDistance ||
                 distantLod && distance > this.settings.farDistance && distance <= this.visibleDistance()
-            );
+            ));
             let midInstances = patch.instances;
-            if (distantLod && distance > this.settings.farDistance) {
+            if (!continuous && distantLod && distance > this.settings.farDistance) {
                 const t = Math.min(1, (distance - this.settings.farDistance) / (this.visibleDistance() - this.settings.farDistance));
                 const blend = t * t * (3 - 2 * t);
                 const edgeDensity = Math.max(0, Math.min(1, this.settings.distantGrassDensity ?? 1));
@@ -697,7 +710,8 @@ export class GrassSystem {
                 this.stats.nearInstances += patch.instances;
                 this.stats.triangles += patch.instances * patch.nearTriangles;
                 this.stats.draws++;
-            } else if (midVisible) {
+            }
+            if (midVisible) {
                 if (!patch.tile || !patch.tile.visible) this.stats.visiblePatches++;
                 if (patch.tile) patch.tile.visible = true;
                 this.stats.midInstances += midInstances;

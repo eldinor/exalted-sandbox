@@ -34,6 +34,12 @@ npm test
 npm run build
 ```
 
+`npm run build` packages only the production app into `dist/`. Runtime assets
+are explicitly selected; source packs and lab data remain in the workspace.
+Use `npm run build:labs` for the separate full lab package in `dist-labs/`, then
+`npm run preview:labs` to serve it. See [BUILD_PACKAGING.md](BUILD_PACKAGING.md)
+when adding runtime asset URLs or preparing deployment packages.
+
 Vite uses port 5173 with `strictPort: true`. If startup reports that the port is
 occupied, stop the previous Vite process or use a deliberate alternative
 configuration. Do not start multiple forgotten servers.

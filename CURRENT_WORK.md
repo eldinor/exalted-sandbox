@@ -1,5 +1,35 @@
 # Exalted Current Work
 
+## 1024 rock-array loading trial
+
+The app now uses a separate five-layer 1024-square rock package. Original PNGs
+and 2048 arrays remain unchanged and are verified by hashes. Rock download size
+falls from 129.75 to 33.83 MiB, GPU array storage from about 320 to 80 MiB, and
+the production build to 286.02 MiB. Regenerate with `npm run assets:rocks:1024`.
+Build/typecheck/185 tests pass; local WebGPU resource sizes/startup checked.
+Hosted error reproduction awaits deployment. See BUILD_PACKAGING.md.
+
+## Hosted startup transfer resilience
+
+The reported Content-Length/body mismatch was not reproduced during a cold
+startup of test3.babylonpress.org. Hosted rock binaries match local checksums,
+but some texture transfers take tens of seconds. Terrain-map and rock downloads
+now retry one interrupted transfer with cache reload and preserve the failing
+URL on final error. Startup errors no longer show unrelated WebGPU advice.
+Production package rebuilt; typecheck and 184 tests pass. See BUILD_PACKAGING.md.
+
+## Production asset packaging
+
+Hosted rock-array URLs now use `.rgba.bin` in the production package to avoid
+archive-extension restrictions. Compressed bytes and workspace sources are
+unchanged; decoding inspects the payload signature rather than HTTP headers.
+Startup failure text now uses a plain separator. See BUILD_PACKAGING.md.
+
+The default build now produces only the main app and its runtime asset inventory,
+with source maps disabled. Lab builds use `npm run build:labs` and `dist-labs/`.
+Original authoring assets remain in place. Production output fell from 1,198.57
+to 381.94 MiB, with texture quality and runtime modes preserved. See BUILD_PACKAGING.md.
+
 ## Stone Gate end wall
 
 Added a grounded, collidable wall of 13 varied stone boulders across the northern
@@ -517,3 +547,28 @@ material pipeline.
 Added a separate snow_03 rock-snow facing over the jagged northern Stone Gate cliff.
 It follows terrain contours and reuses the rock array; 1,152 triangles and one
 colour/depth batch. Grounding remains on the terrain. See SNOW_MOUNTAINS.md.
+
+
+## Cheaper distant grass trial
+
+Small grass retains existing LOD2 nearby and uses 36-triangle geometric tufts
+beyond the 22 m patch cutoff. Range/density stay unchanged. Benchmark has a
+Cheaper distant grass comparison toggle. Fixed-view grass submitted indices
+fell about 66%; FPS gains await route comparison. See GRASS.md.
+
+
+## Grass square-patch correction
+
+Cheaper grass now exchanges individual tufts across 22?34 m and thins by root
+distance, with matching colour/depth choices. Nearby grass is retained. The
+smoother transition adds overlapping submissions: fixed-view grass indices
+are about 24% below original geometry, superseding the prior 66% trial figure.
+See GRASS.md.
+
+
+## Narrower grass transition trial
+
+Changed the per-root blend to 22-30 m and tightened batch gates to exact square
+root extents. Fixed-view indices fall another 14%, grass draws another 7% against
+the prior smooth trial. Typecheck and 178 tests pass; native WebGPU view checked.
+Automatic route timing for this new trial remains to be measured. See GRASS.md.

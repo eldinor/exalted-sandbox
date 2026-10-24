@@ -53,7 +53,7 @@ export function flowerSamplers(base: GrassSamplers, seed: number): GrassSamplers
     return {...base, grassWeightAt: (x,z) => base.grassWeightAt(x,z) * flowerColonyAt(x,z,seed)};
 }
 export function flowerSettings(family: MeadowFlowerFamily) {
-    return {...worldGrassSettings(), density: family.density, maxSlope: .7, upright: true, groundOffset: 0,
+    return {...worldGrassSettings(), cheapDistantGeometry: false, density: family.density, maxSlope: .7, upright: true, groundOffset: 0,
         nearDistance: 35, farDistance: 35, distantLodDistance: 50, distantGrassDensity: 0,
         bladeHeight: family.height, windDistance: 50, importedVariant: family.mix[0].variant,
         grassMix: family.mix, windStrength: .07};

@@ -613,5 +613,8 @@ async function boot(): Promise<void> {
 boot().catch((err) => {
     console.error(err);
     const detail = err instanceof Error ? err.message : String(err);
-    loading.fail(`Startup failed Р В Р’В Р В РІР‚В Р В Р’В Р Р†Р вЂљРЎв„ўР В Р вЂ Р В РІР‚С™Р РЋРЎС™ ${detail}`);
+    const downloadFailure=/content-length|network|fetch|cannot load|response.*body/i.test(detail);
+    loading.fail(`Startup failed: ${detail}`,downloadFailure
+        ? 'A required file could not be downloaded completely. Reload and try again. If it repeats, send this message to the site owner.'
+        : 'The app could not finish starting. Reload and try again. If it repeats, send this message to the site owner.');
 });
