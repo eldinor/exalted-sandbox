@@ -4,6 +4,8 @@ import { dirname, isAbsolute, relative, resolve } from 'node:path';
 /** Runtime roots for index.html, including its GLB comparison and prop grounding. */
 export const PRODUCTION_ASSETS = [
     'LICENSE.txt', 'THIRD_PARTY_NOTICES.md',
+    'assets/branding/exalted-logo.svg',
+    'assets/branding/favicon.svg',
     'assets/exalted/alpha-map.glb', 'assets/exalted/exalted_desert.glb',
     ...['vis_ground_heightmap-11.png','vertex_color_4k-9.png','vertex_color_4k copy.png',
         'biome-rock-9.png','biome-beach-9.png','biome-iron-mountains-9.png',

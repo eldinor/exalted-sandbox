@@ -1,5 +1,7 @@
-/** Retry an interrupted startup transfer once, retaining its URL on final failure. */
-export async function readAsset<T>(url:string,read:(response:Response)=>Promise<T>):Promise<T> {
+/** Retry an interrupted startup transfer once, with optional validated range recovery. */
+import { readAssetInRanges } from './assetRanges.ts';
+
+export async function readAsset<T>(url:string,read:(response:Response)=>Promise<T>,options?:{rangeFallback?:boolean}):Promise<T> {
     let retried=false;
     while(true){
         try {
@@ -13,6 +15,15 @@ export async function readAsset<T>(url:string,read:(response:Response)=>Promise<
                 retried=true;
                 console.warn(`[exalted] Retrying interrupted asset download: ${url}`);
                 continue;
+            }
+            if(options?.rangeFallback&&interrupted){
+                try{
+                    console.warn(`[exalted] Recovering interrupted asset in smaller byte ranges: ${url}`);
+                    return await read(await readAssetInRanges(url));
+                }catch(recovery){
+                    const reason=recovery instanceof Error?recovery.message:String(recovery);
+                    throw new Error(`Cannot load ${url}: ${detail}; byte-range recovery failed: ${reason}`,{cause:recovery});
+                }
             }
             throw new Error(`Cannot load ${url}: ${detail}`,{cause});
         }

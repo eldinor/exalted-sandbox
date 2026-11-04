@@ -38,6 +38,7 @@ import { ScreenshotGallery } from './ui/screenshotGallery.ts';
 import { captureWholeMap } from './ui/mapScreenshot.ts';
 import { BiomeSun, islandSunWeight } from './world/biomeSun.ts';
 import { AvatarColors } from './ui/avatarColors.ts';
+import { installControlsHelp } from './ui/controlsHelp.ts';
 import { BenchmarkPanel } from './ui/benchmark.ts';
 import { BenchmarkRoute } from './core/benchmarkRoute.ts';
 import { Sky } from "./render/sky.ts";
@@ -309,6 +310,11 @@ async function boot(): Promise<void> {
             z: -FOREST_CUBE_SPAWN.y * AUTHORED_WORLD_SCALE,
         })
         : null;
+    if (magicalCube) {
+        window.addEventListener('exalted:portal-entered', () => {
+            window.location.assign('https://hall.babylonpress.org/');
+        }, { once: true });
+    }
     // Every surface a spell can light.
     spells.addConsumers(
         ...(desertProps?.materials || []),
@@ -331,6 +337,7 @@ async function boot(): Promise<void> {
     const biomeSun = new BiomeSun(S.sunAzimuth);
     const screenshotGallery = new ScreenshotGallery(engine, rig.camera);
     const avatarColors = new AvatarColors(figure);
+    scene.onDisposeObservable.add(installControlsHelp());
     initInput(canvas, {
         onToggleOverlay: () => overlay.toggle(),
         onScreenshot: () => void screenshotGallery.capture(),

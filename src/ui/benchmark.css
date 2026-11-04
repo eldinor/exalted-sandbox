@@ -16,6 +16,8 @@
     flex-shrink: 0;
 }
 .app-benchmark {
+    /* Temporarily hidden; remove this declaration to restore the benchmark UI. */
+    display: none;
     color: #dbe6f2;
     background: rgba(8, 16, 24, 0.9);
     border: 1px solid rgba(143, 196, 232, 0.25);

@@ -84,7 +84,9 @@ The default mode loads the authored Exalted world:
 - The interactive crystalline Cube is anchored to `FOREST_CUBE_SPAWN`, converted
   from chart coordinates once and grounded on the selected terrain. E dissolves
   it into a persistent portal; entry publishes `exalted:portal-entered` with the
-  legacy ID/position payload. Reflection Cube/probe is absent from main startup.
+  legacy ID/position payload. The main app handles the first entry by navigating
+  the same tab to `https://hall.babylonpress.org/`. Reflection Cube/probe is absent
+  from main startup.
 
 `?terrain=procedural` selects the original procedural snow terrain. It uses
 the nested clipmap and generated heightfield and keeps geometric snow deformation

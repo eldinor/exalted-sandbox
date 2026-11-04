@@ -144,7 +144,7 @@ export class ExaltedWorld {
     private async loadHeightmapInto(target: Mesh): Promise<void> {
         const base = import.meta.env.BASE_URL;
         const [height, biome, groundCoverage, roadDisplay, rockCoverage, beachCoverage] = await Promise.all([ROADS_HEIGHTMAP, ROADS_BIOME_MAP, GROUND_COVERAGE_MAP, ROAD_DISPLAY_MAP, ROCK_COVERAGE_MAP, BEACH_COVERAGE_MAP].map(async path => {
-            return readAsset(`${base}${path}`,async response=>decodeAuthoredPng(new Uint8Array(await response.arrayBuffer())));
+            return readAsset(`${base}${path}`,async response=>decodeAuthoredPng(new Uint8Array(await response.arrayBuffer())),{rangeFallback:true});
         }));
         const data = buildAuthoredHeightmap(height, biome);
         const correctedCliffCells = correctStoneGateTriangles(data);

@@ -148,3 +148,60 @@ checksums and per-layer/channel reduction. Local native WebGPU startup reached
 Ready and confirmed 1024-square GPU resources with five layers and 11 mip levels.
 The new build must be uploaded in full to test the affected user's hosted
 transfer failure; it has not been deployed by this agent.
+
+## Heightmap byte-range recovery, 25 October 2026
+
+The next user report identified `assets/textures/vis_ground_heightmap-11.png`
+as the failing resource, on the replacement host `https://test4.babylonpress.org/`.
+The heightmap returned HTTP 200 with 9,649,840 bytes and matched the preserved
+local SHA-256. The server also returned valid HTTP 206 byte ranges with a strong
+ETag. This does not reproduce that user's interrupted connection or establish
+that the uploaded PNG is damaged.
+
+Only the heightmap now opts into a second recovery path. After both whole-file
+attempts fail with transfer errors, `assetRanges.ts` fetches it sequentially in
+1 MiB ranges, with one retry per interrupted chunk. Other resources retain the
+existing behaviour. Normal successful startup makes no extra requests.
+
+Range recovery requires HTTP 206 and validates each Content-Range, total size,
+exact chunk length, and the file's ETag/Last-Modified. Subsequent requests use
+If-Range. Changed assets, missing validators, compressed range responses,
+unsupported ranges, inconsistent offsets and totals over 64 MiB fail closed.
+The complete byte-identical PNG is assembled before the existing decoder runs.
+The original heightmap, terrain geometry and all other authored files are unchanged.
+
+A real ranged download from test4 reconstructed the heightmap with the original
+SHA-256 `28f852d2bca23e80d0fc7cbf49141a50c06634b463c7683d3eb2a9466b301ade`.
+Typecheck and all 188 Node tests pass, including chunk retries, changed-file
+rejection, exact reconstruction, bounds and validator handling. The main build
+has been rebuilt for deployment. No Playwright or remote publishing was done.
+In a local native WebGPU test, both whole-heightmap requests were deliberately
+failed with closed connections. Ten subsequent range requests reconstructed
+the PNG and startup reached Ready. No new shader or JavaScript errors occurred.
+
+## All authored terrain-map recovery, 30 October 2026
+
+The same user next reported `ground-coverage-9.png: Failed to fetch` on test4.
+The hosted file returns HTTP 200 with 303,674 bytes and SHA-256
+`85528329decc099d5e791a450b7ee1818a9abeee8cd33e0cd2e743473f386bda`,
+matching the local file. HTTP 206 range delivery also works here. No corruption
+or interruption was reproduced on this connection.
+
+All six authored terrain PNGs now use the existing optional range recovery,
+including biome, ground, road, rock and beach maps as well as the heightmap.
+The bounds, validators, two whole-file attempts and per-chunk retry limits stay
+unchanged. A small map such as ground coverage fits in one range request;
+this provides another validated request path, not a reduction in its transfer
+size. Successful downloads make no additional requests. Originals are unchanged.
+
+Tests simulate both initial coverage fetches failing, then decode the recovered
+real PNG and compare it with the original. Successful loads and HTTP 403 remain
+single-attempt paths. Typecheck and the complete 190-test suite pass; the main
+production package is refreshed for deployment. No browser visual check was run.
+
+This remains a mitigation rather than a confirmed fix for the affected user.
+If requests are blocked entirely, range recovery cannot help. Ask that user to
+compare a private browser window and another connection (for example a phone
+hotspot). If it persists, collect the browser Network panel failure details or
+a HAR privately, checking for sensitive headers before sharing. This can help
+distinguish a browser/profile problem from a connection/proxy delivery problem.

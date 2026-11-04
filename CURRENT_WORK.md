@@ -1,5 +1,32 @@
 # Exalted Current Work
 
+## Player controls help, 4 November 2026
+
+A persistent question-mark button at the top right opens a keyboard-accessible
+dialog with current movement, flight, interaction, nine spells, screenshot and
+settings bindings. Opening releases pointer lock and resets held input; gameplay
+shortcuts are blocked while the dialog is open. Escape or the close button
+returns focus to the help button. The spawn bar reserves space for the icon.
+Implemented in `src/ui/controlsHelp.ts` and its CSS; typecheck passes.
+
+## Terrain-map transfer recovery, 30 October 2026
+
+The same test4 user now reports `ground-coverage-9.png: Failed to fetch`.
+Its hosted 303,674 bytes match the local SHA-256, and a range request returns
+valid HTTP 206. All six authored terrain PNGs now opt into the existing bounded,
+validated range fallback after two failed whole-file transfers. Normal successful
+loads and HTTP error handling are unchanged. The affected connection's root cause
+remains unconfirmed; see BUILD_PACKAGING.md for limits and diagnostic next steps.
+
+## test4 heightmap transfer recovery
+
+The new report names vis_ground_heightmap-11.png on test4.babylonpress.org.
+Its hosted bytes match the original, and the server supports validated ranges.
+After two interrupted whole-file reads, this heightmap can now recover in
+1 MiB chunks with bounded retries and strict version/range checks. The PNG and
+terrain remain unchanged. Typecheck/188 tests pass; production build refreshed.
+See BUILD_PACKAGING.md.
+
 ## 1024 rock-array loading trial
 
 The app now uses a separate five-layer 1024-square rock package. Original PNGs
