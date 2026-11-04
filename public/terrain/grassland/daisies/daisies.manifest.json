@@ -1,0 +1,48 @@
+{
+  "source": "public/assets/exalted/daisy_models_pack_realistic_optimized.glb",
+  "sourceSha256": "191eca2b77713bf0b4d775ccf56eec6c27a3250215db5c06812da9a603b688bd",
+  "asset": "public/terrain/grassland/daisies/daisies.glb",
+  "byteLength": 402964,
+  "sourceAttribution": {
+    "author": "LOLIPOP (https://sketchfab.com/lolipop_1707)",
+    "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "source": "https://sketchfab.com/3d-models/daisy-models-pack-realistic-optimized-0748471f99f2416a8b66b522c293720f",
+    "title": "Daisy models pack (realistic, optimized)"
+  },
+  "alphaMode": "MASK",
+  "alphaCutoff": 0.08597224407957241,
+  "upAxis": "Y after complete glTF hierarchy; raw geometry uses Z",
+  "variants": [
+    {
+      "name": "Daisy_1",
+      "sourceNode": "Daisy_1",
+      "triangles": 139,
+      "naturalHeightMetres": 0.5927826585539151,
+      "groundOffsetMetres": -0.0001942095987033099,
+      "role": "White flowering plant",
+      "recommendedFlowerShare": 40
+    },
+    {
+      "name": "Daisy_2",
+      "sourceNode": "Daisy_2",
+      "triangles": 190,
+      "naturalHeightMetres": 0.5872611243830761,
+      "groundOffsetMetres": -0.00016303466691169888,
+      "role": "White flowering plant",
+      "recommendedFlowerShare": 30
+    },
+    {
+      "name": "Daisy_3",
+      "sourceNode": "Daisy_3",
+      "triangles": 196,
+      "naturalHeightMetres": 0.5315007700628485,
+      "groundOffsetMetres": -0.00007413485582219437,
+      "role": "White flowering plant",
+      "recommendedFlowerShare": 30
+    }
+  ],
+  "omitted": [
+    "LOD0, billboard LOD2 and large/small multi-plant patches"
+  ],
+  "productionIntegration": "Used by the main meadow flower layer"
+}

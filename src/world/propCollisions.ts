@@ -67,6 +67,23 @@ export class PropCollisions {
         }
     }
 
+    /** Remove only one owner's cylinder, preserving the shared world collision index. */
+    remove(collider: PropCollider): void {
+        const index = this.colliders.indexOf(collider);
+        if (index < 0) return;
+        this.colliders.splice(index, 1);
+        const size = this.cellSize;
+        for (let z = Math.floor((collider.z - collider.radius) / size); z <= Math.floor((collider.z + collider.radius) / size); z++) {
+            for (let x = Math.floor((collider.x - collider.radius) / size); x <= Math.floor((collider.x + collider.radius) / size); x++) {
+                const key = `${x},${z}`, cell = this.cells.get(key);
+                if (!cell) continue;
+                const entry = cell.indexOf(collider);
+                if (entry >= 0) cell.splice(entry, 1);
+                if (!cell.length) this.cells.delete(key);
+            }
+        }
+    }
+
     /** Collect unique candidate cylinders along an expanded horizontal sweep. */
     query(x0: number, z0: number, x1: number, z1: number, radius: number): Set<PropCollider> {
         const result = new Set<PropCollider>(), size = this.cellSize;

@@ -79,8 +79,8 @@ export class SpawnBar {
         this.select(DEFAULT_SPAWN);
     }
 
-    /** Reveal navigation and its panel after the world becomes usable. */
-    show(): void { this.root.hidden = false; this.panel.hidden = false; }
+    /** Reveal navigation; the texture/wind sidebar stays hidden in the main app. */
+    show(): void { this.root.hidden = false; this.panel.hidden = true; }
 
     /**
      * Update selected destination styling and caption after navigation; does not move the avatar itself.

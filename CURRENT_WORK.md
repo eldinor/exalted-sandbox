@@ -1,5 +1,68 @@
 # Exalted Current Work
 
+## Player controls help, 4 November 2026
+
+A persistent question-mark button at the top right opens a keyboard-accessible
+dialog with current movement, flight, interaction, nine spells, screenshot and
+settings bindings. Opening releases pointer lock and resets held input; gameplay
+shortcuts are blocked while the dialog is open. Escape or the close button
+returns focus to the help button. The spawn bar reserves space for the icon.
+Implemented in `src/ui/controlsHelp.ts` and its CSS; typecheck passes.
+
+## Terrain-map transfer recovery, 30 October 2026
+
+The same test4 user now reports `ground-coverage-9.png: Failed to fetch`.
+Its hosted 303,674 bytes match the local SHA-256, and a range request returns
+valid HTTP 206. All six authored terrain PNGs now opt into the existing bounded,
+validated range fallback after two failed whole-file transfers. Normal successful
+loads and HTTP error handling are unchanged. The affected connection's root cause
+remains unconfirmed; see BUILD_PACKAGING.md for limits and diagnostic next steps.
+
+## test4 heightmap transfer recovery
+
+The new report names vis_ground_heightmap-11.png on test4.babylonpress.org.
+Its hosted bytes match the original, and the server supports validated ranges.
+After two interrupted whole-file reads, this heightmap can now recover in
+1 MiB chunks with bounded retries and strict version/range checks. The PNG and
+terrain remain unchanged. Typecheck/188 tests pass; production build refreshed.
+See BUILD_PACKAGING.md.
+
+## 1024 rock-array loading trial
+
+The app now uses a separate five-layer 1024-square rock package. Original PNGs
+and 2048 arrays remain unchanged and are verified by hashes. Rock download size
+falls from 129.75 to 33.83 MiB, GPU array storage from about 320 to 80 MiB, and
+the production build to 286.02 MiB. Regenerate with `npm run assets:rocks:1024`.
+Build/typecheck/185 tests pass; local WebGPU resource sizes/startup checked.
+Hosted error reproduction awaits deployment. See BUILD_PACKAGING.md.
+
+## Hosted startup transfer resilience
+
+The reported Content-Length/body mismatch was not reproduced during a cold
+startup of test3.babylonpress.org. Hosted rock binaries match local checksums,
+but some texture transfers take tens of seconds. Terrain-map and rock downloads
+now retry one interrupted transfer with cache reload and preserve the failing
+URL on final error. Startup errors no longer show unrelated WebGPU advice.
+Production package rebuilt; typecheck and 184 tests pass. See BUILD_PACKAGING.md.
+
+## Production asset packaging
+
+Hosted rock-array URLs now use `.rgba.bin` in the production package to avoid
+archive-extension restrictions. Compressed bytes and workspace sources are
+unchanged; decoding inspects the payload signature rather than HTTP headers.
+Startup failure text now uses a plain separator. See BUILD_PACKAGING.md.
+
+The default build now produces only the main app and its runtime asset inventory,
+with source maps disabled. Lab builds use `npm run build:labs` and `dist-labs/`.
+Original authoring assets remain in place. Production output fell from 1,198.57
+to 381.94 MiB, with texture quality and runtime modes preserved. See BUILD_PACKAGING.md.
+
+## Stone Gate end wall
+
+Added a grounded, collidable wall of 13 varied stone boulders across the northern
+road end, connecting the two existing endpoint rocks. Reuses three shared rock
+texture layers and the existing boulder geometry. See IRON_MOUNTAINS.md.
+
 ## Product Direction
 
 The playable **Exalted application** remains the main product under development.
@@ -8,6 +71,233 @@ water, atmosphere, props, collisions, UI, and other player-facing systems.
 
 Work should be evaluated by how it supports the quality, performance, and
 maintainability of this main application.
+
+## Rock-array mipmap correction
+
+Explicit per-layer mip uploads fix black rock textures at distance/oblique
+angles. Native WebGPU albedo diagnosis and coarsest-mip readback confirmed the
+missing mips and the fix; the supplied cliff pose now shows the intended texture.
+GPU memory/bindings are unchanged; startup CPU filtering/mip buffers add about
+80 MiB. See SNOW_MOUNTAINS.md.
+
+## Stone Gate left cliff material and triangle correction
+
+The supplied rock/snow/snow_03 colour/normal/ARM/displacement set now covers the
+whole Stone Gate pass terrain (60 m full / 90 m feathered radius), with its
+original road restored as the final material overlay,
+and the left cliff through an isolated soft region. Other
+cliffs retain Rock Face 03. The fifth shared-array layer adds about 64 MiB GPU
+storage without extra bindings/draws. A diagonal correction improves 77 steep
+cells with no added vertices/triangles, shared by rendering and grounding;
+steep-face shadow bias uses geometric normals. See SNOW_MOUNTAINS.md.
+
+## Snow Mountains material trial
+
+Authored heightmap snow mountains now retain snowy ledges and expose cool matte
+rock on steep faces, with texture-height transitions and subtle wind variation.
+Rock Face 03 occupies the fourth shared-array layer (restored after the
+snow_01 cliff trial); exposed rock is limited
+to steeper faces and a 70 m Palecrown snow reserve feathers to 105 m. The trial
+adds no geometry or bindings (+64 MiB GPU array storage) and leaves
+snow gameplay/deformation intact. Shadows remain enabled with readable ambient
+fill. F1 offers a comparison toggle; see SNOW_MOUNTAINS.md for thresholds, cost,
+source-texture limitations and required visual review.
+
+## Iron Mountains layered material
+
+The supplied Rocky Terrain / Rocky Terrain 03 sets now cover the dedicated
+Iron Mountains region at 90 m scale, with triplanar normals, slope/height blends,
+fine detail, subtle rust and darker crevices. Other rock regions retain the river
+set. Three texture arrays preserve the 27-binding budget; F1 includes a material
+comparison toggle. The silhouette pass adds 12 ridge outcrops and 32 smaller boulders using the
+prepared plain boulder, with thin-instance cell batching, matched camera-depth
+passes, road/teleport clearances and independent rock collision. F1 toggles
+material and accents separately; Ctrl+Shift+P includes the accents. Costs and
+asset limitations are recorded in IRON_MOUNTAINS.md. Iron Mountains terrain
+no longer receives cast shadows; its rock accents neither cast nor receive them.
+
+## Removed legacy viewers
+
+On 2026-10-12, halved.html, forest.html, forest_road.html and snow_mountain.html
+were removed with their dedicated JavaScript/WGSL, preparation script and tests.
+Deleted assets: forest_previz.glb, forest-opt.glb, both snowy_mountain terrain
+GLBs, and generated forest-demo prototypes/placements/manifest. Vite entries,
+package scripts and current asset/license records were updated. Production
+forest code and replacement pine/fir/spruce assets remain intact. Historical
+experiment notes are retained as history. Source cleanup removed 28 files,
+approximately 38.4 MiB.
+
+## License ownership and third-party audit
+
+The main MIT copyright holder is Andrei Stepanov. THIRD_PARTY_NOTICES.md
+preserves the earlier repository copyright, asset attribution/derivations and
+exact dependency license/notice texts. Its public copy and LICENSE.txt ship via
+Vite's public assets. Refresh dependency notices with `npm run licenses:update`.
+Asset permissions still missing from source records are explicitly listed;
+Raw Catalog purchase/tier and standalone redistribution permission are not
+verified. The project's MIT license does not relicense these assets.
+
+## Dandelion colonies and sun elevation
+
+Selected Daisy_1/2/3 LOD1 flowers now join dandelions in separate sparse colonies,
+with half the dandelion density and a 40/30/30 mix. Both species use the Meadow
+flowers toggle; overlapping colonies keep grass thinning capped at 35%.
+See GRASS.md and the prepared daisy asset notes.
+
+The main authored meadow now streams selected dandelions in sparse colonies,
+with independent flower density/mix, matching colour/depth alpha cutout and
+shared grass interactions. Benchmark includes a Meadow flowers toggle and
+flower diagnostics. The family contract leaves room for later daisies; see
+GRASS.md. Default sun elevation is now 30 degrees, as requested.
+
+## Forest surf appearance
+
+Forest surf sides now use dark olive/moss colours, without snow transmission,
+blue cave tint or snow glints. Forest emits aged-grass blade tufts with a warm
+brown palette, retaining grass particles' size/lifetime/launch/settling. Each
+spine sample stores forest coverage at birth so boundary crossings retain colour.
+No extra meshes/draws/textures are added; the existing spine texture gains one row.
+See FOREST_NOTES.md and GRASS.md.
+
+## Reduced real big-tree density
+
+Real Big 1 pines and Large 2 fir accents now retain exactly half their sites,
+rounded up per model, using deterministic coordinate ranking. Spruce impostors,
+medium/small trees, saplings and fringe shrubs are untouched. Existing closed-area
+barriers remain; removed open Large 2 trunks lose their individual colliders.
+Benchmark settings record `bigTreeDensity: 0.5`. See FOREST_NOTES.md.
+
+## Regional sun bearings
+
+Authored-world gameplay now blends the sun to 225 degrees in forest and 105
+on Lake Island, after 1 s dwell and over a 7 s shortest-arc smooth transition.
+Boundary hysteresis avoids rapid reversals; leaving restores the editable base
+bearing (default 185). Island classification uses the registered island centre
+and a soft 55-75 m boundary. Automatic routes freeze the entry bearing and
+record effective bearing/region in snapshots. Sky/ambient lighting stays at its previous baked state throughout motion,
+then recalculates once at the settled bearing. Direct light/shadows track each
+frame; asynchronous solves remain coalesced.
+See FOREST_NOTES.md and ARCHITECTURE.md.
+
+## Forest collider-edge fringe
+
+A denser fringe follows the dense forest contour: 165 additional small firs
+(2.8-4.3 m) and 258 low evergreen shrub clusters (1.2-1.9 m). The 3.5 m grid
+covers 3 m inside / 14 m outside the contour, retains existing placements and
+clearings, and excludes roads/water/steep slopes. Bushes reuse two Small 2 LOD2
+shoots (592 triangles), shared fir materials and no extra asset download. Bushes
+have no collision; added small trees have trunk-only cylinders. See FOREST_NOTES.md.
+
+## Selected firs in production
+
+The accessible woodland now uses the prepared realistic-fir subset: Large 2
+(4% accents), Medium 1/2 (24/24%) and Small 1/2 (14/14%), plus retained Pine
+Sapling 1/2 (10/10%). Existing 593 open sites retain X/Z/yaw, 8 m spacing and
+clearings; 466 sites now use firs after large-tree thinning. LOD2 stays active everywhere, with matching
+0.35 alpha-cutout colour/depth and all variants warmed behind loading. Dense
+border pines/spruce cards stay unchanged. See [FOREST_NOTES.md](FOREST_NOTES.md)
+and [fir asset notes](public/terrain/forest/fir-pack-selected.README.md).
+
+## Corrected dense forest contour
+
+The 2026-10-12 user concept now defines a curved western canopy edge instead
+of the rectangular border strip. The middle pocket curves inward; open mixed
+woodland fills the released area. Real trees occupy the first 15 m along the
+curved edge; closed-area colliders follow it. The spawn clearing/corridor,
+terrain palette, model mixes and grounding rules remain separate constraints.
+The reference is saved under `public/terrain/forest/concept`; editable boundary
+points live in `src/forest/DenseForestShape.ts`. See [FOREST_NOTES.md](FOREST_NOTES.md).
+
+## Open forest toward Forest Outlook
+
+Ctrl+Shift+P now saves a full-placement orthographic map at 4096x3072, including
+forest (overhead spruce crowns) and all authored desert props. It bypasses live
+distance/streaming visibility using temporary copies, retains the rig/post chain,
+and saves in the screenshot gallery. Ctrl+P keeps its terrain/water map capture.
+
+The accessible woodland west of the closed strip now extends to and around
+Forest Outlook: 593 real trees at 8 m spacing, using the fir/pine mix above. The overlook retains an
+18 m clearing and a southeast sightline; Cube Spawn's corridor stays clear.
+Individual trunk colliders keep this section walkable. Models retain their
+pack size ratios, use LOD2 and share the darker foliage material. Existing
+closed-strip placement/barriers are unchanged. See [FOREST_NOTES.md](FOREST_NOTES.md).
+
+## Spruce cutout and impostor evaluation
+
+Production grass now gates colour/depth draws by the camera frustum and defers
+off-screen placement jobs. Cached patches remain available when turning back;
+density and distance defaults stay the same. See [GRASS.md](GRASS.md).
+
+`/spruceland.html` compares the prepared alpha-cutout blue spruce (11,364
+triangles) with a two-triangle baked impostor. Seventeen ground/elevated/overhead
+albedo and object-normal views are saved under `public/terrain/forest/blue-spruce`.
+Both use production lighting and matching alpha-tested camera depth; the full
+tree also has matching custom shadow passes. Controls support view, height,
+threshold, visibility and depth inspection. The main forest now uses this spruce
+impostor inside the corrected dense contour, apart from the first 15 m at its
+accessible edge and a 33 m radius around Cube Spawn. Real trees mix
+Big 1 and Small 1 LOD2, with a deterministic 25% Small 1 selection and the pack's
+relative sizes. Clearing, spacing and barriers stay intact. There are 741 cards,
+55 Big 1 and 49 Small 1 trees in the dense section, batched in 32 m chunks.
+Both representations warm colour/depth pipelines behind the loading screen.
+Main-app real pine foliage now has a darker, cooler albedo tint to approach the
+spruce border colour; bark retains its source colour.
+See [FOREST_NOTES.md](FOREST_NOTES.md) and the
+[asset README](public/terrain/forest/blue-spruce/README.md) for regeneration and
+prototype limits.
+
+## Sandy island shoreline
+
+The island now uses the same 30 m beach sand textures and stochastic mapping.
+A separate lake-only water/beach eligibility channel fills submerged island-bank
+gaps without changing original level inference, river flow or dry island terrain.
+Lake level stays 41.669526 m. Typecheck/148 tests and native ground/map checks
+passed; the island centre stays dry and 768 submerged bank samples have no gaps.
+See [BIOMES_MAPS.md](BIOMES_MAPS.md).
+
+## Lake shoreline correction
+
+Heightmap lake water now follows the largest connected wet basin, using the old
+reference outline for identification rather than a hard centroid cut. A 50 m
+candidate margin fills submerged shore areas beyond the old outline. The rendered
+rim clips at the same +0.025 m offset as the plane, closing thin bank gaps. Lake
+level remains about 41.67 m; island/dry land and disconnected pools are excluded.
+The rendered/depth/map/swimming footprint is shared; GLB comparison retains its
+old boundary behavior. See [HEIGHTMAP_INTEGRATION.md](HEIGHTMAP_INTEGRATION.md).
+
+## Beach ground biome
+
+The light-blue lake/river shore is now Beach, with saved `biome-beach-9.png`
+coverage and `aerial_beach_01` colour/OpenGL normal/ARM maps. Texture width is
+30 m as specified by the user. Three offset/rotated samples suppress regular
+repeats. Runtime packs rock/beach masks into R/G of
+`ground-detail-coverage-9.png`; blending is complementary to adjoining land,
+with roads as the final overlay. Water eligibility, lake level, geometry,
+deformation and the original desert material remain intact. Textures warm
+behind loading and share ground samplers; heightmap requests 27 texture slots.
+Current supplied maps are 2K (~0.68 px/cm at 30 m); the stated 2.7 px/cm refers to
+approximately 8K source resolution. See [BIOMES_MAPS.md](BIOMES_MAPS.md).
+
+## Closed eastern forest trial
+
+The main heightmap world now places **1,169** replacement `Pine_big_1` trees in
+the forest's eastern **116 m** strip (Babylon X <= -352), at 5.5 m spacing and
+about 20 m height. Trees use **LOD2 everywhere**, in 48 independent 32 m chunks;
+LOD1 meshes/materials/buffers are no longer created or warmed. Production
+lighting, alpha-tested depth and loading-screen draw warm-up are retained.
+Tree shadow casting and wind remain off. The spawn keeps its 18 m clearing and
+a 16 m wide exit corridor toward positive X; 1,401 independent flight-height
+barrier cylinders close the rest of the stand. The overlook remains accessible.
+
+The Benchmark camera mode menu offers separate **Automatic forest route** and
+**Automatic grassland route** options. The forest route has a fixed 30-second
+ground-edge pass followed by an aerial canopy sweep, three seconds of preparation,
+and restoration/cancellation behavior shared with the grass route. **Forest trees**
+can be toggled before a run for comparison. Route kind, name, version, height,
+pitch and yaw are exported. Typecheck/all 143 Node tests passed; a native WebGPU
+run completed all 30 seconds, checked ground/aerial views, tree-off recording
+and Escape restoration. No build or Playwright. Full forest integration remains
+deferred; see [FOREST_NOTES.md](FOREST_NOTES.md).
 
 ## Main Application
 
@@ -35,7 +325,30 @@ half-size world scale to reduce crowding. Stable placement selection is shared
 by all material parts, render passes and collision extraction; surviving props
 keep their positions, rotations and sizes. See `world/desertDensity.ts`.
 
+Desert props use 64 m spatial chunks with shared near/far rendering batches per
+camera and shadow cascade. Independent pass culling reduces submitted geometry
+while keeping authored placement, density and collisions unchanged. See
+[DESERT_PROPS.md](DESERT_PROPS.md).
+Desert ground uses the previous imported GLB floor texture set again. The
+`aerial_beach_01` colour/normal/ARM experiment passed typecheck, 131 tests and a
+native WebGPU visual check, then was reverted at the user's request. Assets and
+results remain documented in [DESERT_PROPS.md](DESERT_PROPS.md). Improved biome
+blending remains active.
+
+The main app now includes a collapsed recording benchmark above Avatar Colors,
+with manual recording and a repeatable automatic grassland camera route.
+See [BENCHMARK.md](BENCHMARK.md) for metrics, comparison guidance, and the flag
+that removes the panel for a future public release.
+
 ## Supporting Utilities
+
+Main-app Ctrl+P now captures the complete authored terrain from a north-up
+orthographic offscreen camera at 2048 × 1536, into the existing Screenshots
+gallery. P retains viewport capture. The map uses current ground material
+textures/coverage and water geometry, with map lighting and flat blue water;
+it excludes streamed vegetation/props, avatar and temporal camera effects.
+The gameplay camera/post chain remain intact and temporary resources are
+disposed after capture. See the controls in [README.md](README.md).
 
 The following are side utilities and research environments. They are useful for
 developing and validating individual systems, but they are not replacements for
@@ -56,17 +369,53 @@ integration decision.
 
 The Grass Lab compares procedural, imported, and hybrid grass blades using
 deterministic placement, wind, interaction, LOD, and performance measurements.
-Its purpose is to select and tune a grass solution that can later be integrated
-into the authored Exalted world.
+Its reusable subsystem now supplies production grass in the authored Exalted
+world; the lab remains available for isolated tuning and comparisons.
 
 `/generator/grassland.html` is the authored-world counterpart to the generated
 grass benchmark. It shares the lab controls, loads the production half-scale
 `alpha-map.glb`, and places imported LOD1/LOD2 grass on the authored grassland
 palette with exact triangle grounding and a moving patch window. It remains an
-isolated utility with lab lighting and ground rendering; it does not install
-grass into the production frame loop. See [README.md](README.md#grassland-lab)
+isolated utility with lab lighting and ground rendering. The main app now uses
+the shared subsystem with heightmap biome classification, a Tiny D / Small A / Small B 10/45/45 model
+mix at density 3, avatar walking/surf interaction and a production depth pass.
+Tall grass is removed. Grass surfing uses green sides and tiny blade-shaped
+particles in the shared spray pool. Grass receives world shadows but does not cast shadows. Its biome ground uses
+the same tiled Material-326-A PBR texture set as Grassland, at a 4 m repeat. See
+[GRASS.md](GRASS.md) for contracts, validation and the measured geometry cost. See [README.md](README.md#grassland-lab)
 for controls and [HISTORY_DOCS.md](HISTORY_DOCS.md#grassland-lab-technical-notes)
 for implementation details and streaming limitations.
+
+### Forestland Lab
+
+The main app's forest biome ground now uses the supplied `forrest_ground_01`
+colour/normal/ARM textures, tiled at 4 m and blended using the current biome PNG
+until dedicated masks are authored. This ground-only integration does not add
+trees. See [FOREST_NOTES.md](FOREST_NOTES.md) for its contract and asset findings.
+Heightmap grass/forest/desert now blend using the generated packed
+`ground-coverage-9.png`, shared with grass placement. Complementary weights and
+4–6 m transitions remove pale seams; land extends beneath the existing road
+overlay. See [BIOMES_MAPS.md](BIOMES_MAPS.md) for regeneration and channel meanings.
+Heightmap road display edges now use a separate 1.1 m Gaussian feather and a
+single final material overlay. Original gameplay road firmness and deformation
+channels are retained; grass clears the firm road and thins through shoulders.
+The road display mask is now saved and loaded from
+`public/assets/textures/mask-roads-9.png`, with provenance JSON and a regeneration
+script. Different road materials will use a separate selection/weight map.
+Heightmap rock ground now uses `river_small_rocks` colour/normal/ARM from
+`public/terrain/rock/river/` and the saved `biome-rock-9.png` mask. Three randomized
+texture samples suppress the visible regular repeat, with matching normal/ARM
+transforms and stable world-space placement. The previous `rock/03` set is
+retained as a tested reference. The northern
+sandy-painted corridor is corrected to rock in both rendering and sand softness;
+southern desert, snow, roads, water and forest overlook remain intact. Land/rock
+masks regenerate together; see [BIOMES_MAPS.md](BIOMES_MAPS.md).
+
+`/forestland.html` populates the current heightmap's dark-green forest biome with
+12 pine-pack variants with authored LOD1/LOD2 and a bottom percentage mix panel, using deterministic
+32 m chunk batches, exact grounding, camera controls and a 30-second benchmark.
+It remains a supporting lab; production forest integration is unchanged. See
+[generator/forestland/README.md](generator/forestland/README.md).
 
 ### World editor
 
@@ -133,25 +482,18 @@ For the authored map, the current working decision is:
   RGBA material-weight map;
 - keep terrain collision separate when the visual mesh is unsuitable.
 
-The main app currently includes a 3 m reflective test cube ten metres left of
-the default avatar spawn. Its bottom is 0.5 m above the sampled terrain. A
-512-pixel dynamic reflection probe retains its last capture and refreshes only
-while the avatar is within 20 m, at one cubemap update every four frames.
-
-A second 1.5 m shader test cube sits ten metres right of the default spawn with
-the same 0.5 m clearance. Its animated crystalline violet/cyan surface emits HDR
-edges and veins into the existing bloom chain. Within 3 m it offers an E-key
-interaction; activation dissolves the cube and grows a persistent animated
-magical portal ring in its place. The ring contains a blended HDR vortex surface
-with counter-rotating spiral currents, travelling sparks and a feathered edge.
-At activation the complete portal snaps parallel to the nearest vertical cube
-face toward the avatar, then retains that orientation.
-Crossing within 1.5 m of the completed portal shows a world-anchored `Portal
-entered` label and dispatches `exalted:portal-entered` on `window`. The event is
-edge-triggered and fires again only after the avatar leaves and re-enters. Entry
-remains locked until the dissolve and portal-growth animation finishes, followed
-by a 0.45-second settling delay, so an avatar already inside the radius sees the
-complete transition before the label and event appear.
+The interactive 1.5 m crystalline Cube is restored at Forest Cube Spawn
+(chart 767, -104; Babylon -383.5, 52), grounded on current terrain with its
+original 0.5 m clearance. Within 3 m, E dissolves the Cube over 1.25 s and grows
+the persistent HDR portal ring and blended vortex. Its orientation snaps to the
+nearest vertical Cube face toward the avatar and remains fixed. After growth
+and a 0.45 s settling delay, entering the 1.5 m radius displays the world label
+and dispatches window event `exalted:portal-entered`, once per crossing.
+The legacy detail `id: 'default-spawn-portal'` and world-space position payload
+remain unchanged for existing listeners. This event does not automatically
+teleport the avatar. Automatic benchmarks suppress E activation. Reflection
+Cube/probe construction, update, diagnostics and triangle accounting are removed
+from the production entry point; its unused prototype remains in source.
 
 The existing `alpha-map.glb` is approximately 329,000 triangles and is a
 reasonable starting point for a single-level terrain, subject to validation on
@@ -182,9 +524,9 @@ The proposed minimum delivery for that biome is:
 
 ```text
 biome_desert/
-├── desert.glb
-├── desert_material_mask.png
-└── README.md
+в”њв”Ђв”Ђ desert.glb
+в”њв”Ђв”Ђ desert_material_mask.png
+в””в”Ђв”Ђ README.md
 ```
 
 - `desert.glb` contains the optimized terrain or biome geometry, reusable props,
@@ -225,3 +567,35 @@ material pipeline.
 6. Continue grass, forest, avatar, and editor research in isolated utilities.
 7. Move successful utility systems into the main application through measured,
    reviewable integration stages.
+
+
+## Snow Mountain cliff cover
+
+Added a separate snow_03 rock-snow facing over the jagged northern Stone Gate cliff.
+It follows terrain contours and reuses the rock array; 1,152 triangles and one
+colour/depth batch. Grounding remains on the terrain. See SNOW_MOUNTAINS.md.
+
+
+## Cheaper distant grass trial
+
+Small grass retains existing LOD2 nearby and uses 36-triangle geometric tufts
+beyond the 22 m patch cutoff. Range/density stay unchanged. Benchmark has a
+Cheaper distant grass comparison toggle. Fixed-view grass submitted indices
+fell about 66%; FPS gains await route comparison. See GRASS.md.
+
+
+## Grass square-patch correction
+
+Cheaper grass now exchanges individual tufts across 22?34 m and thins by root
+distance, with matching colour/depth choices. Nearby grass is retained. The
+smoother transition adds overlapping submissions: fixed-view grass indices
+are about 24% below original geometry, superseding the prior 66% trial figure.
+See GRASS.md.
+
+
+## Narrower grass transition trial
+
+Changed the per-root blend to 22-30 m and tightened batch gates to exact square
+root extents. Fixed-view indices fall another 14%, grass draws another 7% against
+the prior smooth trial. Typecheck and 178 tests pass; native WebGPU view checked.
+Automatic route timing for this new trial remains to be measured. See GRASS.md.

@@ -12,7 +12,7 @@ import type { GrassSettings, GrassUpdateContext } from '../grass/grassTypes.ts';
 import type { ImportedGrassPrototype } from '../grass/ImportedGrass.ts';
 
 test('stream planning does no placement work; frame queue bounds uploads and reuses retained/pooled meshes', async () => {
-    const server = await createServer({ configFile: false, server: { middlewareMode: true }, appType: 'custom', optimizeDeps: { noDiscovery: true } });
+    const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-grass-streaming', server: { middlewareMode: true }, appType: 'custom', optimizeDeps: { noDiscovery: true } });
     const engine = new NullEngine();
     const scene = new Scene(engine);
     try {
@@ -36,9 +36,16 @@ test('stream planning does no placement work; frame queue bounds uploads and reu
             lodEnabled: false, singleLod: 2, rootColor: [.05, .2, .05], tipColor: [.01, .3, .01],
         };
         let queries = 0;
+        let forward = true;
+        const options: NonNullable<ConstructorParameters<typeof Renderer>[5]> = {
+            importedOnly: true, streaming: true,
+            isTileInView: (_x, z) => forward ? z >= 0 : z < 0,
+            isMeshInView: mesh => forward
+                ? mesh.getBoundingInfo().boundingBox.center.z >= 0 : mesh.getBoundingInfo().boundingBox.center.z < 0,
+        };
         const grass = new Renderer(scene, {
             heightAt: () => 0, grassWeightAt: () => { queries++; return 1; }, excludedAt: () => false, slopeAt: () => 0,
-        }, settings, new Vector2(), 64, { importedOnly: true, streaming: true });
+        }, settings, new Vector2(), 64, options);
         grass.setImportedPrototypes(prototypes);
         assert.equal(queries, 0);
         const context: GrassUpdateContext = { cameraPosition: new Vector3(), elapsedSeconds: 0, impacts: [] };
@@ -51,6 +58,25 @@ test('stream planning does no placement work; frame queue bounds uploads and reu
         }
         const retained = scene.meshes.find(mesh => mesh.name === 'grass:0:0:near');
         assert.ok(retained);
+        // Direction changes gate both enabled meshes and new placement work,
+        // while completed patches retain geometry for an immediate return.
+        grass.update(context);
+        assert.ok(grass.streamingStats.deferred > 0);
+        const cachedGeometry = retained.geometry;
+        const queriesFacingForward = queries;
+        for (let frame = 0; frame < 20; frame++) grass.update(context);
+        assert.equal(queries, queriesFacingForward, 'off-screen queue does not spend placement budget');
+        assert.ok(scene.meshes.filter(mesh => mesh.isEnabled() && mesh.name.startsWith('grass:')).every(mesh => mesh.getBoundingInfo().boundingBox.center.z >= 0));
+        forward = false;
+        grass.update(context);
+        assert.equal(retained.isEnabled(), false, 'turning away disables cached front patch');
+        forward = true;
+        grass.update(context);
+        assert.equal(retained.isEnabled(), true);
+        assert.equal(retained.geometry, cachedGeometry, 'turning back reuses the same buffers');
+        delete options.isTileInView;
+        delete options.isMeshInView;
+        for (let frame = 0; frame < 100; frame++) grass.update(context);
         assert.equal(grass.stats.midInstances, 0);
         context.cameraPosition.x = 16;
         grass.update(context);
@@ -211,4 +237,48 @@ test('stream planning does no placement work; frame queue bounds uploads and reu
     } finally {
         scene.dispose(); engine.dispose(); await server.close();
     }
+});
+
+
+test('cheaper outer grass swaps geometry without changing placements or thinning and restores for comparison',async()=>{
+    const server=await createServer({configFile:false,cacheDir:'node_modules/.vite-test-grass-streaming',server:{middlewareMode:true},appType:'custom',optimizeDeps:{noDiscovery:true}});
+    const engine=new NullEngine(),scene=new Scene(engine);
+    try{
+        const {GrassSystem:Renderer}=await server.ssrLoadModule('/src/grass/GrassSystem.ts');
+        const {worldGrassSettings}=await server.ssrLoadModule('/src/grass/WorldGrassSettings.ts');
+        const settings=worldGrassSettings();settings.density=.03;
+        settings.grassMix=[{variant:'grass_medium_01_small_a_LOD2',percentage:100}];
+        const near=new VertexData();near.positions=[0,0,0,.1,0,0,0,1,0];near.normals=[0,0,1,0,0,1,0,0,1];near.indices=[0,1,2,0,1,2,0,1,2,0,1,2];
+        const far=new VertexData();far.positions=near.positions;far.normals=near.normals;far.indices=[0,1,2];
+        const prototypes=new Map<string,ImportedGrassPrototype>();
+        for(const [suffix,geometry] of [['_LOD1',near],['_LOD2',near],['_LOD2_FAR',far]] as const){const name='grass_medium_01_small_a'+suffix;prototypes.set(name,{name,geometry,triangles:geometry.indices!.length/3,authoredHeight:1});}
+        const options={importedOnly:true,streaming:true,continuousDistantLod:false};
+        const grass:GrassSystem=new Renderer(scene,{heightAt:()=>0,grassWeightAt:()=>1,excludedAt:()=>false,slopeAt:()=>0},settings,new Vector2(),256,options);
+        grass.setImportedPrototypes(prototypes);
+        const context={cameraPosition:new Vector3(),elapsedSeconds:0,impacts:[]};
+        for(let i=0;i<500;i++)grass.update(context);
+        const before={...grass.stats};assert.ok(before.nearInstances>0&&before.midInstances>0);
+        assert.deepEqual(grass.getPrototypeTriangleCounts(),[4,1]);
+        const visible=()=>scene.meshes.filter((m):m is Mesh=>m instanceof Mesh&&m.name.startsWith('grass:')&&m.isEnabled());
+        for(const mesh of visible())assert.equal(mesh.getTotalIndices()/3,mesh.name.includes(':near')?4:1);
+        const matrices=new Map(visible().map(m=>[m.name,m.thinInstanceGetWorldMatrices().flatMap(matrix=>Array.from(matrix.asArray()))]));
+        settings.cheapDistantGeometry=false;
+        for(let i=0;i<500;i++)grass.update(context);
+        assert.equal(grass.stats.nearInstances,before.nearInstances);assert.equal(grass.stats.midInstances,before.midInstances);
+        assert.equal(grass.stats.draws,before.draws);assert.equal(grass.stats.triangles-before.triangles,before.midInstances*3);
+        assert.deepEqual(grass.getPrototypeTriangleCounts(),[4,4]);
+        for(const mesh of visible()){assert.equal(mesh.getTotalIndices()/3,4);assert.deepEqual(mesh.thinInstanceGetWorldMatrices().flatMap(matrix=>Array.from(matrix.asArray())),matrices.get(mesh.name));}
+        settings.cheapDistantGeometry=true;for(let i=0;i<500;i++)grass.update(context);
+        assert.equal(grass.stats.triangles,before.triangles);
+        options.continuousDistantLod=true;grass.update(context);
+        const nearMesh=scene.meshes.find(m=>m.name.startsWith('grass:1:0:near'));
+        const farMesh=scene.meshes.find(m=>m.name.startsWith('grass:1:0:mid'));
+        assert.ok(nearMesh?.isEnabled()&&farMesh?.isEnabled(),'Overlapping bands submit both prototypes for per-root selection');
+        assert.ok(farMesh instanceof Mesh&&nearMesh instanceof Mesh);
+        assert.equal(farMesh.thinInstanceCount,nearMesh.thinInstanceCount,'Root-based thinning gets the complete placement buffer');
+        const outer=visible().filter(m=>m.name.includes(':mid'));
+        assert.ok(outer.some(m=>m.thinInstanceCount>0));
+        assert.ok(grass.stats.draws===visible().length,'Diagnostics count both overlapping batches');
+        grass.dispose();
+    }finally{scene.dispose();engine.dispose();await server.close();}
 });

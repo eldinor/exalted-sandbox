@@ -1,0 +1,86 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {gunzipSync} from 'node:zlib';
+import {createHash} from 'node:crypto';
+import {decodeAuthoredPng} from '../src/terrain/authoredHeightmap.ts';
+import {decodeTexturePng} from '../scripts/prepare-iron-textures.mjs';
+import {buildIronMountainsMask,ironScreeWeight,IRON_MOUNTAINS_MASK} from '../src/terrain/IronMountains.ts';
+import {ROCK_ARRAY_SIZE,ROCK_ARRAY_LAYERS,ROCK_ARRAY_ROOT} from '../src/terrain/RockArrayProfile.ts';
+
+test('1024 trial arrays preserve originals and reduce every layer/channel to the first source mip',()=>{
+    const root=`public/${ROCK_ARRAY_ROOT}/`,meta=JSON.parse(readFileSync(root+'textures.json','utf8'));
+    const original=JSON.parse(readFileSync('public/terrain/rock/iron-mountains/textures.json','utf8'));
+    assert.equal(meta.width,ROCK_ARRAY_SIZE);assert.equal(meta.height,ROCK_ARRAY_SIZE);
+    assert.equal(meta.layers.length,ROCK_ARRAY_LAYERS);assert.deepEqual(meta.layers,original.layers);
+    assert.deepEqual(meta.textureMetres,original.textureMetres);
+    const decode=(file:string,size:number)=>{
+        const bytes=gunzipSync(readFileSync(file)),stride=size*4;
+        for(let row=0;row<bytes.length;row+=stride)for(let x=4;x<stride;x++)bytes[row+x]=(bytes[row+x]+bytes[row+x-4])&255;
+        return bytes;
+    };
+    for(let m=0;m<3;m++){
+        const source=meta.sources[m],output=meta.outputs[m];
+        assert.equal(source.sha256,original.outputs[m].sha256,'Original source checksum remains unchanged');
+        assert.equal(createHash('sha256').update(readFileSync(source.file)).digest('hex'),source.sha256);
+        assert.equal(createHash('sha256').update(readFileSync(root+output.file)).digest('hex'),output.sha256);
+        const big=decode(source.file,2048),small=decode(root+output.file,ROCK_ARRAY_SIZE);
+        assert.equal(small.length,ROCK_ARRAY_SIZE*ROCK_ARRAY_SIZE*ROCK_ARRAY_LAYERS*4);
+        for(let layer=0;layer<ROCK_ARRAY_LAYERS;layer++)for(let pixel=0;pixel<ROCK_ARRAY_SIZE*ROCK_ARRAY_SIZE;pixel+=997){
+            const x=pixel%ROCK_ARRAY_SIZE,y=Math.floor(pixel/ROCK_ARRAY_SIZE);
+            const a=(layer*2048*2048+y*2*2048+x*2)*4;
+            for(let c=0;c<4;c++)assert.equal(small[(layer*ROCK_ARRAY_SIZE*ROCK_ARRAY_SIZE+pixel)*4+c],Math.round((big[a+c]+big[a+4+c]+big[a+2048*4+c]+big[a+2048*4+4+c])*.25));
+        }
+    }
+});
+
+test('Iron Mountains mask selects The Ironspine and northern corridor without western/southern rocks',()=>{
+    const rock=decodeAuthoredPng(readFileSync('public/assets/textures/biome-rock-9.png'));
+    const saved=decodeAuthoredPng(readFileSync(`public/${IRON_MOUNTAINS_MASK}`));
+    const built=buildIronMountainsMask(rock);
+    assert.deepEqual(saved.pixels,built.pixels);
+    const at=(x:number,z:number)=>saved.pixels[Math.round((.5+z/702)*(saved.height-1))*saved.width+Math.round((.5-x/936)*(saved.width-1))];
+    for(const [x,z] of [[-257.5,-190],[-300,-200],[0,-200]])assert.ok(at(x,z)>252);
+    for(const [x,z] of [[-248,125],[272.5,76],[200,-50],[0,280],[-360,200]])assert.equal(at(x,z),0);
+    for(let i=0;i<saved.pixels.length;i++)assert.ok(saved.pixels[i]<=rock.pixels[i]);
+});
+test('height blending favours exposed cliffs, accumulates scree on ledges and never produces empty seams',()=>{
+    for(let c=0;c<=1;c+=.1)for(let s=0;s<=1;s+=.1){
+        assert.equal(ironScreeWeight(0,c,s),0);assert.equal(ironScreeWeight(1,c,s),1);
+        for(let up=0;up<=1;up+=.05){const w=ironScreeWeight(up,c,s);assert.ok(Number.isFinite(w)&&w>=0&&w<=1);}
+    }
+    assert.ok(ironScreeWeight(.7,.1,.9)>ironScreeWeight(.7,.9,.1));
+});
+test('prepared rock arrays retain original river RGB bytes and pack real displacement in mountain ARM alpha',()=>{
+    const root='public/terrain/rock/iron-mountains/',meta=JSON.parse(readFileSync(root+'textures.json','utf8'));
+    assert.deepEqual(meta.textureMetres,[4,90,90,8,8]);
+    for(const source of meta.sources)assert.equal(createHash('sha256').update(readFileSync(source.file)).digest('hex'),source.sha256);
+    for(const [m,map] of ['diff','nor_gl','arm'].entries()){
+        const file=meta.outputs[m],compressed=readFileSync(root+file.file);
+        assert.equal(createHash('sha256').update(compressed).digest('hex'),file.sha256);
+        const bytes=gunzipSync(compressed),stride=meta.width*4;
+        for(let row=0;row<bytes.length;row+=stride)for(let x=4;x<stride;x++)bytes[row+x]=(bytes[row+x]+bytes[row+x-4])&255;
+        assert.equal(bytes.length,meta.width*meta.height*5*4);
+        const original=decodeAuthoredPng(readFileSync(`public/terrain/rock/river/river_small_rocks_${map}_2k.png`));
+        for(let i=0;i<original.width*original.height;i+=31){
+            for(let c=0;c<3;c++)assert.equal(bytes[i*4+c],original.pixels[i*3+c]);
+            assert.equal(bytes[i*4+3],255);
+        }
+        const snowCliff=decodeTexturePng(readFileSync(`public/terrain/rock/03/rock_face_03_${map}_2k.png`));
+        for(let i=0;i<snowCliff.width*snowCliff.height;i+=47){
+            for(let c=0;c<3;c++)assert.equal(bytes[(3*snowCliff.width*snowCliff.height+i)*4+c],snowCliff.pixels[i*snowCliff.channels+c]);
+            assert.equal(bytes[(3*snowCliff.width*snowCliff.height+i)*4+3],255);
+        }
+        const stoneGate=decodeTexturePng(readFileSync(`public/terrain/rock/snow/snow_03_${map}_2k.png`));
+        const stoneGateHeight=map==='arm'?decodeTexturePng(readFileSync('public/terrain/rock/snow/snow_03_disp_2k.png')):null;
+        for(let i=0;i<stoneGate.width*stoneGate.height;i+=47){
+            for(let c=0;c<3;c++)assert.equal(bytes[(4*stoneGate.width*stoneGate.height+i)*4+c],stoneGate.pixels[i*stoneGate.channels+c]);
+            assert.equal(bytes[(4*stoneGate.width*stoneGate.height+i)*4+3],stoneGateHeight?stoneGateHeight.pixels[i*stoneGateHeight.channels]:255);
+        }
+        if(map==='arm'){
+            const h=decodeAuthoredPng(readFileSync('public/terrain/rock/rocky_terrain_03_2k/textures/rocky_terrain_03_disp_2k.png'));
+            const scale=h.pixels instanceof Uint16Array?257:1;
+            for(let i=0;i<h.width*h.height;i+=47)assert.equal(bytes[(2*h.width*h.height+i)*4+3],Math.round(h.pixels[i]/scale));
+        }
+    }
+});

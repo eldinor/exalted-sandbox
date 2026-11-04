@@ -31,6 +31,8 @@ export interface InputState {
 export interface InputHooks {
     onToggleOverlay?: () => void;
     onScreenshot?: () => void;
+    onMapScreenshot?: () => void;
+    onPropMapScreenshot?: () => void;
 }
 
 export const input: InputState = {
@@ -89,14 +91,18 @@ const LOOK_SCALE = 0.0022;
 /** @type {(() => void)|null} */
 let onToggleOverlay: (() => void) | null = null;
 let onScreenshot: (() => void) | null = null;
+let onMapScreenshot: (() => void) | null = null;
+let onPropMapScreenshot: (() => void) | null = null;
 
 /**
  * @param {HTMLCanvasElement} canvas
  * @param hooks - Optional global UI actions handled alongside gameplay input.
  */
 export function initInput(canvas: HTMLCanvasElement, hooks?: InputHooks): void {
+    onPropMapScreenshot = hooks?.onPropMapScreenshot ?? null;
     onToggleOverlay = hooks?.onToggleOverlay ?? null;
     onScreenshot = hooks?.onScreenshot ?? null;
+    onMapScreenshot = hooks?.onMapScreenshot ?? null;
 
     canvas.addEventListener("click", () => {
         if (!input.locked) canvas.requestPointerLock();
@@ -162,6 +168,12 @@ export function initInput(canvas: HTMLCanvasElement, hooks?: InputHooks): void {
             if (isEditable(e.target)) return;
             e.preventDefault();
             if (!e.repeat) input.interactPressed = true;
+            return;
+        }
+        if (e.code === 'KeyP' && (e.ctrlKey || e.metaKey) && !e.altKey) {
+            if (isEditable(e.target)) return;
+            e.preventDefault();
+            if (!e.repeat) { if(e.shiftKey)onPropMapScreenshot?.();else onMapScreenshot?.(); }
             return;
         }
         if (isUI(e.target)) return;

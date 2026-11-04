@@ -16,6 +16,11 @@ import { Constants } from "@babylonjs/core/Engines/constants";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { Scene } from '@babylonjs/core/scene';
 import { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture';
+import { loadMeadowTextures, MEADOW_TILE_METRES, type MeadowTextures } from '../grass/MeadowTextures.ts';
+import { loadForestGroundTextures, FOREST_GROUND_TILE_METRES, type ForestGroundTextures } from './ForestGround.ts';
+import { GROUND_COVERAGE_MAP, DETAIL_COVERAGE_MAP } from './groundCoverage.ts';
+import { loadBeachGroundTextures, BEACH_TILE_METRES, type BeachGroundTextures } from './BeachGround.ts';
+import { loadRockGroundTextures, ROCK_TILE_METRES, type RockGroundTextures } from './RockGround.ts';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import { ExaltedWorld } from "./exaltedWorld.ts";
@@ -123,8 +128,14 @@ export class Terrain {
     readonly detailTex: ProceduralTexture;
     readonly roadBaseTex: Texture;
     readonly roadNormalTex: Texture;
-    readonly roadRoughnessTex: Texture;
+    readonly roadArmTex: Texture;
     readonly biomeMapTex: Texture | null;
+    readonly meadowTextures: MeadowTextures | null;
+    readonly forestTextures: ForestGroundTextures | null;
+    readonly groundCoverageTex: Texture | null;
+    readonly rockTextures: RockGroundTextures | null;
+    readonly beachTextures: BeachGroundTextures | null;
+    readonly detailCoverageTex: Texture | null;
     readonly mesh: Mesh;
     readonly material: ShaderMaterial;
     readonly materials: ShaderMaterial[];
@@ -169,7 +180,7 @@ export class Terrain {
         this.detailTex.wrapV = Constants.TEXTURE_WRAP_ADDRESSMODE;
         this.detailTex.refreshRate = 0;
 
-        const roadRoot = `${import.meta.env.BASE_URL}assets/textures/grasspath/grass_path_2_`;
+        const roadRoot = `${import.meta.env.BASE_URL}terrain/road/asp1/asphalt_snow_`;
         this.roadBaseTex = new Texture(
             `${roadRoot}diff_2k.jpg`, scene, false, false,
             Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
@@ -178,8 +189,8 @@ export class Terrain {
             `${roadRoot}nor_gl_2k.jpg`, scene, false, false,
             Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
         );
-        this.roadRoughnessTex = new Texture(
-            `${roadRoot}rough_2k.jpg`, scene, false, false,
+        this.roadArmTex = new Texture(
+            `${roadRoot}arm_2k.jpg`, scene, false, false,
             Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
         );
         this.biomeMapTex = exalted ? new Texture(
@@ -193,10 +204,27 @@ export class Terrain {
 
         this.roadBaseTex.gammaSpace = true;
         this.roadNormalTex.gammaSpace = false;
-        this.roadRoughnessTex.gammaSpace = false;
-        for (const texture of [this.roadBaseTex, this.roadNormalTex, this.roadRoughnessTex]) {
+        this.roadArmTex.gammaSpace = false;
+        for (const texture of [this.roadBaseTex, this.roadNormalTex, this.roadArmTex]) {
             texture.wrapU = texture.wrapV = Constants.TEXTURE_WRAP_ADDRESSMODE;
             texture.anisotropicFilteringLevel = 8;
+        }
+
+        this.meadowTextures = exalted ? loadMeadowTextures(scene) : null;
+        this.forestTextures = exalted ? loadForestGroundTextures(scene) : null;
+        this.rockTextures = exalted && authoredSource === 'heightmap' ? loadRockGroundTextures(scene) : null;
+        this.beachTextures = exalted && authoredSource === 'heightmap' ? loadBeachGroundTextures(scene) : null;
+        this.detailCoverageTex = this.rockTextures
+            ? new Texture(`${import.meta.env.BASE_URL}${DETAIL_COVERAGE_MAP}`, scene, true, false, Constants.TEXTURE_BILINEAR_SAMPLINGMODE) : null;
+        if (this.detailCoverageTex) {
+            this.detailCoverageTex.gammaSpace = false;
+            this.detailCoverageTex.wrapU = this.detailCoverageTex.wrapV = Constants.TEXTURE_CLAMP_ADDRESSMODE;
+        }
+        this.groundCoverageTex = exalted && authoredSource === 'heightmap'
+            ? new Texture(`${import.meta.env.BASE_URL}${GROUND_COVERAGE_MAP}`, scene, true, false, Constants.TEXTURE_BILINEAR_SAMPLINGMODE) : null;
+        if (this.groundCoverageTex) {
+            this.groundCoverageTex.gammaSpace = false;
+            this.groundCoverageTex.wrapU = this.groundCoverageTex.wrapV = Constants.TEXTURE_CLAMP_ADDRESSMODE;
         }
 
         this.mesh = exalted ? new Mesh("exaltedTerrain", scene) : buildClipmapMesh(scene);
@@ -223,7 +251,9 @@ export class Terrain {
                 uniforms: [
                     "viewProjection", "cameraPos", "lodCenter", "patchCenter",
                     'desertU','desertV','desertBaseMatrix','desertNormalMatrix','desertColor','desertRoughness','desertNormalScale','desertGamma','useDesertTextures',
-                    'roadTextureScale','roadNormalStrength',
+                    'roadTextureScale','roadNormalStrength','roadGamma','meadowTextureScale','meadowGamma',
+                    'forestTextureScale','forestGamma',
+                    'rockTextureScale','rockGamma','ironMountainsEnabled','snowMountainsEnabled','beachTextureScale','beachGamma',
                     'surfaceOrigin','surfaceExtent','useRoadSurfaceMap',
                     "baseSpacing", "gridHalfN",
                     "worldOrigin", "worldSize", "heightRes",
@@ -242,7 +272,11 @@ export class Terrain {
                 samplers: [
                     "heightTex", "auxTex", "detailTex", "skyLUT", "patchTex",
                     "cascade0", "cascade1", "cascade2", "deformTex",
-                    'desertBaseTex','desertNormalTex','roadBaseTex','roadNormalTex','roadRoughnessTex','surfaceMap','biomeMapTex',
+                    'meadowBaseTex','meadowNormalTex','meadowOrmTex','desertBaseTex','desertNormalTex','roadBaseTex','roadNormalTex','roadArmTex','surfaceMap','biomeMapTex',
+                    'forestBaseTex','forestNormalTex','forestArmTex',
+                    'groundCoverageTex',
+                    'rockBaseTex','rockNormalTex','rockArmTex','detailCoverageTex',
+                    'beachBaseTex','beachNormalTex','beachArmTex',
                 ],
                 shaderLanguage: ShaderLanguage.WGSL,
             }
@@ -255,8 +289,41 @@ export class Terrain {
         mat.setTexture("skyLUT", this.sky.lut);
         mat.setTexture('roadBaseTex', this.roadBaseTex);
         mat.setTexture('roadNormalTex', this.roadNormalTex);
-        mat.setTexture('roadRoughnessTex', this.roadRoughnessTex);
+        mat.setTexture('roadArmTex', this.roadArmTex);
+        mat.setFloat('roadGamma', this.roadBaseTex.gammaSpace && !this.roadBaseTex._texture?._useSRGBBuffer ? 1 : 0);
         mat.setTexture('biomeMapTex', this.biomeMapTex ?? this.heightfield.heightTex);
+        if (this.groundCoverageTex) mat.setTexture('groundCoverageTex', this.groundCoverageTex);
+        if (this.rockTextures && this.detailCoverageTex) {
+            mat.setTexture('rockBaseTex', this.rockTextures.baseColor);
+            mat.setTexture('rockNormalTex', this.rockTextures.normal);
+            mat.setTexture('rockArmTex', this.rockTextures.arm);
+            mat.setTexture('detailCoverageTex', this.detailCoverageTex);
+            mat.setFloat('rockTextureScale', 1 / ROCK_TILE_METRES);
+            mat.setFloat('rockGamma', 1); // Raw array stores encoded sRGB without hardware decoding.
+            mat.setFloat('ironMountainsEnabled', S.ironMountainsMaterial ? 1 : 0);
+            mat.setFloat('snowMountainsEnabled', S.snowMountainsMaterial ? 1 : 0);
+        }
+        if (this.beachTextures) {
+            mat.setTexture('beachBaseTex', this.beachTextures.baseColor);
+            mat.setTexture('beachNormalTex', this.beachTextures.normal);
+            mat.setTexture('beachArmTex', this.beachTextures.arm);
+            mat.setFloat('beachTextureScale', 1 / BEACH_TILE_METRES);
+            mat.setFloat('beachGamma', this.beachTextures.baseColor.gammaSpace && !this.beachTextures.baseColor._texture?._useSRGBBuffer ? 1 : 0);
+        }
+        if (this.meadowTextures) {
+            mat.setTexture('meadowBaseTex', this.meadowTextures.baseColor);
+            mat.setTexture('meadowNormalTex', this.meadowTextures.normal);
+            mat.setTexture('meadowOrmTex', this.meadowTextures.orm);
+            mat.setFloat('meadowTextureScale', 1 / MEADOW_TILE_METRES);
+            mat.setFloat('meadowGamma', this.meadowTextures.baseColor.gammaSpace && !this.meadowTextures.baseColor._texture?._useSRGBBuffer ? 1 : 0);
+        }
+        if (this.forestTextures) {
+            mat.setTexture('forestBaseTex', this.forestTextures.baseColor);
+            mat.setTexture('forestNormalTex', this.forestTextures.normal);
+            mat.setTexture('forestArmTex', this.forestTextures.arm);
+            mat.setFloat('forestTextureScale', 1 / FOREST_GROUND_TILE_METRES);
+            mat.setFloat('forestGamma', this.forestTextures.baseColor.gammaSpace && !this.forestTextures.baseColor._texture?._useSRGBBuffer ? 1 : 0);
+        }
         mat.setFloat('roadTextureScale', 1 / 6);
         mat.setFloat('roadNormalStrength', 0.72);
         mat.setTexture('surfaceMap', this.heightfield.heightTex);
@@ -436,6 +503,20 @@ export class Terrain {
         await this.deform.warmUp();
         this.setDeformTexture(this.deform.texture);
 
+        await Promise.all([this.roadBaseTex, this.roadNormalTex, this.roadArmTex].map(texture => whenReady(texture, texture.name)));
+        if (this.meadowTextures) {
+            await Promise.all(Object.values(this.meadowTextures).map(texture => whenReady(texture, texture.name)));
+        }
+        if (this.forestTextures) {
+            await Promise.all(Object.values(this.forestTextures).map(texture => whenReady(texture, texture.name)));
+        }
+        if (this.groundCoverageTex) await whenReady(this.groundCoverageTex, 'ground coverage');
+        if (this.beachTextures) await Promise.all(Object.values(this.beachTextures).map(texture => whenReady(texture, texture.name)));
+        if (this.rockTextures) {
+            await this.rockTextures.ready;
+            await Promise.all([this.rockTextures.baseColor,this.rockTextures.normal,this.rockTextures.arm].map(texture => whenReady(texture, texture.name)));
+        }
+        if (this.detailCoverageTex) await whenReady(this.detailCoverageTex, 'rock/beach detail coverage');
         await whenReady(this.material, "snow material", [this.mesh, false]);
         if (this.local) {
             if (!this.localMaterial || !this.groundProbe) throw new Error('Local terrain resources are incomplete.');
@@ -505,6 +586,8 @@ export class Terrain {
         _lod.set(focus.x, focus.z);
 
         for (const m of this.materials) {
+            m.setFloat('ironMountainsEnabled', S.ironMountainsMaterial ? 1 : 0);
+            m.setFloat('snowMountainsEnabled', S.snowMountainsMaterial ? 1 : 0);
         m.setFloat('useDesertTextures',this.useDesertTextures ? 1 : 0);
         if (this.local) m.setVector2('patchCenter', this.local.focus);
         m.setVector3("cameraPos", cameraPos);
@@ -651,8 +734,14 @@ export class Terrain {
         this.detailTex.dispose();
         this.roadBaseTex.dispose();
         this.roadNormalTex.dispose();
-        this.roadRoughnessTex.dispose();
+        this.roadArmTex.dispose();
         this.biomeMapTex?.dispose();
+        if (this.meadowTextures) for (const texture of Object.values(this.meadowTextures)) texture.dispose();
+        if (this.forestTextures) for (const texture of Object.values(this.forestTextures)) texture.dispose();
+        this.groundCoverageTex?.dispose();
+        if (this.rockTextures) for (const texture of [this.rockTextures.baseColor,this.rockTextures.normal,this.rockTextures.arm]) texture.dispose();
+        this.detailCoverageTex?.dispose();
+        if (this.beachTextures) for (const texture of Object.values(this.beachTextures)) texture.dispose();
         this.deform.dispose();
         this.heightfield.dispose();
     }

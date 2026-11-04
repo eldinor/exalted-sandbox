@@ -1,5 +1,9 @@
 # Staged TypeScript migration plan
 
+Legacy-page cleanup (2026-10-12): the half-world, old forest, forest-road and
+mountain viewers and their dedicated assets/code have been removed. Earlier
+completed-work entries below are historical records.
+
 Status: The main application migration is complete through Stage 7. The production
 source tree is strictly typed; standalone forest and mountain demos remain JavaScript.
 

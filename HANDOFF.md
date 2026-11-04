@@ -12,7 +12,8 @@ supporting utilities. They do not define production world behaviour unless a
 feature is explicitly integrated into the main app.
 
 Start with [CURRENT_WORK.md](CURRENT_WORK.md), [ARCHITECTURE.md](ARCHITECTURE.md),
-and [TODO.md](TODO.md). This file records the minimum context needed when the
+and [TODO.md](TODO.md). Production grass integration is documented in
+[GRASS.md](GRASS.md). This file records the minimum context needed when the
 project is copied into a new repository.
 
 ## Setup and validation
@@ -32,6 +33,12 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+`npm run build` packages only the production app into `dist/`. Runtime assets
+are explicitly selected; source packs and lab data remain in the workspace.
+Use `npm run build:labs` for the separate full lab package in `dist-labs/`, then
+`npm run preview:labs` to serve it. See [BUILD_PACKAGING.md](BUILD_PACKAGING.md)
+when adding runtime asset URLs or preparing deployment packages.
 
 Vite uses port 5173 with `strictPort: true`. If startup reports that the port is
 occupied, stop the previous Vite process or use a deliberate alternative
@@ -150,10 +157,13 @@ paths.
   scale; the same selection removes their collision cylinders.
   `?props=authored` retains the original Y for diagnostics.
 - Shared geometry and thin instances provide near/far detail levels.
+- Desert props stream through 64 m chunks and merge visible instances into shared
+  batches per camera/shadow pass. Collision remains independent; see [DESERT_PROPS.md](DESERT_PROPS.md).
 - Large rocks, quiver trunks, cacti and woody Searsia stems use approximate
   static cylinder collision derived from their placed full-detail geometry.
 - Leaves, soft plants and small stones remain passable.
-- Forest integration is deferred until replacement tree models arrive.
+- Full forest integration remains deferred. The user authorized a limited closed
+  eastern-strip trial using replacement `Pine_big_1`; see `FOREST_NOTES.md`.
 
 ### Water
 
@@ -177,6 +187,8 @@ paths.
 - Do not insert Babylon `FluidRenderer` ahead of this post chain; it takes the
   first camera postprocess slot and disrupts temporal/history assumptions.
 - Ctrl+I dynamically loads the matching Babylon Inspector.
+- Ctrl+P captures terrain/water from above; Ctrl+Shift+P captures a 4096x3072
+  orthographic whole-map view with all forest/desert prop placements in Screenshots.
 - P captures the final scene canvas into a session-only 12-slot screenshot
   gallery with preview, navigation, deletion, individual download, and ZIP
   download.
@@ -188,9 +200,6 @@ These are intentionally separate from the production app:
 - `generator/generated-world.html`: procedural 2 x 2 km world research;
 - `generator/grass-performance.html`: grass blade and performance lab;
 - `generator/grassland.html`: imported grass on the half-scale authored Exalted terrain;
-- `forest.html`: retained forest performance prototype;
-- `forest_road.html`: imported forest-road viewer;
-- `snow_mountain.html`: imported mountain viewer;
 - `waterfall.html`: GPU waterfall and spray lab;
 - avatar export/import scripts and planned editor utilities.
 

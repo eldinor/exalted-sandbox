@@ -113,8 +113,8 @@ export class ScreenshotGallery {
         window.addEventListener("keydown", this.onPreviewKeyDown, true);
     }
 
-    /** Queue one current-viewport PNG after Babylon finishes the next rendered frame. */
-    async capture(): Promise<void> {
+    /** Save either the current viewport or an offscreen map PNG to the shared gallery. */
+    async capture(renderMap?: () => Promise<string>): Promise<void> {
         if (this.capturing || this.disposed) return;
         this.capturing = true;
         this.root.hidden = false;
@@ -122,13 +122,14 @@ export class ScreenshotGallery {
         try {
             const width = this.engine.getRenderWidth(true);
             const height = this.engine.getRenderHeight(true);
-            const dataUrl = await CreateScreenshotAsync(
+            const dataUrl = renderMap ? await renderMap() : await CreateScreenshotAsync(
                 this.engine, this.camera, { width, height }, "image/png"
             );
+            if (this.disposed) return;
             if (!dataUrl.startsWith(PNG_PREFIX)) throw new Error("Babylon returned an invalid PNG.");
             this.collection.add(dataUrlToBlob(dataUrl));
             this.render();
-            this.setStatus("Screenshot saved", true);
+            this.setStatus(renderMap ? "Map screenshot saved" : "Screenshot saved", true);
         } catch (error) {
             console.error("[exalted] screenshot capture failed", error);
             this.setStatus("Screenshot failed", true);

@@ -21,6 +21,7 @@ excludes that ground, retains authored prop transforms, and makes distant LODs
 with meshoptimizer (MIT). The actual file uses shared mesh references rather than
 the `EXT_mesh_gpu_instancing` extension claimed in the handoff.
 
-`snowy_mountain_-_terrain.glb` is the user-provided mountain viewer asset. It contains three mesh primitives, 260,642 triangles and one embedded JPEG base-color texture. The viewer bakes the imported hierarchy, centers X/Z, moves the lowest point to Y=0 and uniformly fits the widest horizontal dimension to 1,000 metres. The source file is unchanged. No deformation is applied.
+The legacy forest/forest-road and mountain viewer GLBs were removed with their
+pages on 2026-10-12. Production forest assets remain under public/terrain/forest/.
 
 The temporary disp2/disp2-opt and curved-d1 displays and surf1 video were removed during migration preparation.

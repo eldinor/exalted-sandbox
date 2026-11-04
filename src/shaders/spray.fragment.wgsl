@@ -71,9 +71,11 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     if (r2 > 1.0) { discard; }
 
     let state = input.vState;
-    let water = step(3.5, state.z);
-    let sand = step(1.5, state.z) * (1.0-water);
-    let kind = mix(state.z - sand * 2.0, 1.0-step(4.5,state.z), water);
+    let grass = step(5.5, state.z);
+    let agedGrass=step(6.5,state.z);
+    let water = step(3.5, state.z) * (1.0-grass);
+    let sand = step(1.5, state.z) * (1.0-water) * (1.0-grass);
+    let kind = mix(mix(state.z - sand * 2.0, 1.0-step(4.5,state.z), water), 1.0, grass);
 
     // Break the disc's edge. A perfectly circular puff is the tell that gives
     // billboards away; a hashed radial wobble costs one noise fetch.
@@ -83,15 +85,28 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     if (r > 1.0) { discard; }
 
     // Soft-edged for powder, harder for a clod of thrown snow.
-    let edge = mix(
+    var edge = mix(
         pow(clamp(1.0 - r * r, 0.0, 1.0), 1.6),
         smoothstep(1.0, 0.65, r),
         kind
     );
+    if (grass > 0.5) {
+        // A tiny tuft of three tapered, curved blades. The vertex pass rotates
+        // it as it tumbles; the existing pool supplies gravity, wind and fade.
+        let h = (input.vCorner.y + 1.0) * 0.5;
+        let taper = 0.075 * (1.0-h) + 0.008;
+        let x = input.vCorner.x;
+        let bend = h * h;
+        let centre = abs(x - (state.y - .5) * .45 * bend);
+        let left = abs(x + .38 * bend + .09);
+        let right = abs(x - .40 * bend - .09);
+        let blade = min(centre, min(left, right));
+        edge = (1.0 - smoothstep(taper * .6, taper, blade)) * smoothstep(0.0, .08, h);
+    }
     // Powder is close to transparent on its own; density has to come from many
     // grains overlapping, or a single one turns into a decal. 0.26 was low enough
     // that even fifteen hundred live grains read as haze rather than as spray.
-    var alpha = state.w * edge * mix(0.36, 0.55, kind);
+    var alpha = state.w * edge * mix(mix(0.36, 0.55, kind), 1.0, grass);
     if (alpha < 0.004) { discard; }
 
     // Spherical normal from the billboard's own coordinates.
@@ -116,7 +131,9 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
         // Coarse mip averages stones and soil into fine airborne dust.
         soil = desertSoilColor(world.xz,6.0)*1.15;
     }
-    let albedo = mix(mix(vec3f(0.92, 0.94, 0.98), soil, sand),vec3f(.78,.91,.98),water);
+    let albedo = mix(mix(mix(vec3f(0.92, 0.94, 0.98), soil, sand),vec3f(.78,.91,.98),water),
+        mix(mix(vec3f(.055,.16,.018), vec3f(.14,.32,.035), state.y),
+            mix(vec3f(.16,.10,.035),vec3f(.36,.25,.085),clamp(state.y,0.0,1.0)),agedGrass), grass);
     let diff = wrapDiffuse(dot(N, L), 0.75);
     var color = albedo * INV_PI * sun * diff * shadow;
 
@@ -130,7 +147,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // white.
     let mu = dot(-V, L);
     let fwd = phaseMie(mu, 0.55) * 0.85;
-    color += sun * albedo * fwd * mix(0.25, 1.0, shadow) * (1.0 - kind * 0.5);
+    color += sun * albedo * fwd * mix(0.25, 1.0, shadow) * (1.0 - kind * 0.5) * (1.0-grass);
 
     // Sky, which is what fills the shadowed side and keeps it blue.
     color += albedo * INV_PI * shIrradiance(N, uniforms.shR) * uniforms.ambientIntensity;

@@ -13,13 +13,16 @@ export const S = {
     // ---------------------------------------------------------------- quality
     preset: "ultra",
     resolutionScale: 1.0,
+    ironMountainsMaterial: true,
+    ironMountainsRocks: true,
+    snowMountainsMaterial: true,
 
     // ------------------------------------------------------------------- sun
-    sunAzimuth: 118, // degrees, compass bearing of the sun
+    sunAzimuth: 185, // degrees, compass bearing of the sun
     // Low enough for long raking shadows, high enough that the beam still
     // carries real energy — below ~10 degrees the air mass eats so much of it
     // that the scene goes flat and sky-lit.
-    sunElevation: 13.0,
+    sunElevation: 30.0,
     sunIntensity: 4.2,
     sunTempWarm: 1.0, // 0 = neutral white, 1 = full warm low-sun tint
     ambientIntensity: 1.0,
@@ -30,8 +33,8 @@ export const S = {
     fogHeightFalloff: 0.045,
     fogStart: 24,
     aerialStrength: 1.0,
-    // Degrees. Drives sastrugi shear and dune orientation. Held 70-80 degrees
-    // away from `sunAzimuth`: sastrugi ridges run along the wind, so when the
+    // Degrees. Drives sastrugi shear and dune orientation.
+    // Sastrugi ridges run along the wind, so when wind and sun
     // two align the sun rakes down every ridge, lights both flanks identically
     // and the fine structure reads as flat ground.
     windDirection: 42,
@@ -137,10 +140,12 @@ export interface SettingGroup {
  * @type {{group:string, items:Array<{k:string,l:string,t:string,min?:number,max?:number,step?:number,opts?:string[]}>}[]}
  */
 export const SCHEMA: SettingGroup[] = [
+    { group: 'Snow Mountains', items: [{ k: 'snowMountainsMaterial', l: 'Snow and exposed cliff rock', t: 'b' }] },
+    { group: 'Iron Mountains', items: [{ k: 'ironMountainsMaterial', l: 'Layered rock material', t: 'b' }, { k: 'ironMountainsRocks', l: 'Cliff and boulder accents', t: 'b' }] },
     {
         group: "Sun & Sky",
         items: [
-            { k: "sunAzimuth", l: "Azimuth", t: "f", min: 0, max: 360, step: 1 },
+            { k: "sunAzimuth", l: "Base azimuth", t: "f", min: 0, max: 360, step: 1 },
             { k: "sunElevation", l: "Elevation", t: "f", min: 0.5, max: 45, step: 0.1 },
             { k: "sunIntensity", l: "Intensity", t: "f", min: 0, max: 10, step: 0.05 },
             { k: "sunTempWarm", l: "Warmth", t: "f", min: 0, max: 1, step: 0.01 },

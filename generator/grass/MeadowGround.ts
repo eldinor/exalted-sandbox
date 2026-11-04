@@ -1,9 +1,8 @@
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
-import { Texture } from '@babylonjs/core/Materials/Textures/texture';
+import { loadMeadowTextures } from '../../src/grass/MeadowTextures.ts';
+export { MEADOW_TILE_METRES } from '../../src/grass/MeadowTextures.ts';
 import type { Scene } from '@babylonjs/core/scene';
 import { authoredGrassWeight } from './AuthoredGrassSamplers.ts';
-
-export const MEADOW_TILE_METRES = 4;
 
 /** Reorder visual triangles into other-biome and grassland material ranges. */
 export function partitionGrasslandTriangles(indices: ArrayLike<number>, colors: ArrayLike<number>): { indices: Uint32Array; otherIndexCount: number } {
@@ -31,17 +30,11 @@ export function partitionGrasslandTriangles(indices: ArrayLike<number>, colors: 
 
 export function createMeadowGroundMaterial(scene: Scene): PBRMaterial {
     const material = new PBRMaterial('authored-meadow-ground', scene);
-    const load = (name: string, gammaSpace: boolean): Texture => {
-        const texture = new Texture(`${import.meta.env.BASE_URL}terrain/grassland/meadow/Material-326-A_${name}`, scene, false, false);
-        texture.gammaSpace = gammaSpace;
-        texture.coordinatesIndex = 1;
-        texture.wrapU = texture.wrapV = Texture.WRAP_ADDRESSMODE;
-        texture.anisotropicFilteringLevel = 8;
-        return texture;
-    };
-    material.albedoTexture = load('BaseColor.jpg', true);
-    material.bumpTexture = load('Normal.jpg', false);
-    material.metallicTexture = load('ORM.png', false);
+    const textures = loadMeadowTextures(scene);
+    for (const texture of Object.values(textures)) texture.coordinatesIndex = 1;
+    material.albedoTexture = textures.baseColor;
+    material.bumpTexture = textures.normal;
+    material.metallicTexture = textures.orm;
     material.metallic = 1;
     material.roughness = 1;
     material.useAmbientOcclusionFromMetallicTextureRed = true;

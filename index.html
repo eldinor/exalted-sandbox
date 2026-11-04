@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>EXALTED</title>
-<link rel="icon" href="data:," />
+<title>Exalted - Sandbox</title>
+<link rel="icon" type="image/svg+xml" href="/assets/branding/favicon.svg" />
 <style>
     :root {
         /* Cool-shadow palette pulled from the Horizon reference. */
@@ -77,11 +77,11 @@
     }
 
     .wordmark {
-        font-size: clamp(28px, 4.4vw, 54px);
-        font-weight: 200;
-        letter-spacing: 0.62em;
-        text-indent: 0.62em; /* optical re-centre against the trailing track */
-        color: var(--frost);
+        display: block;
+        width: clamp(120px, 22vw, 220px);
+        max-width: 100%;
+        height: auto;
+        margin: 0 auto;
         opacity: 0;
         animation: rise 1400ms cubic-bezier(0.16, 1, 0.3, 1) 120ms forwards;
     }
@@ -96,6 +96,17 @@
         color: var(--frost-dim);
         opacity: 0;
         animation: rise 1400ms cubic-bezier(0.16, 1, 0.3, 1) 420ms forwards;
+    }
+
+    .sandbox-label {
+        display: block;
+        margin-top: 8px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 16px;
+        font-style: italic;
+        letter-spacing: 0.16em;
+        text-indent: 0.16em;
+        text-transform: none;
     }
 
     @keyframes rise {
@@ -176,7 +187,7 @@
 <body>
     <canvas id="view" tabindex="0"></canvas>
     <header id="spawn-bar" hidden>
-        <div class="spawn-brand"><strong>EXALTED</strong><small>Press Esc and click on<br>a world location</small></div>
+        <a class="spawn-brand" href="https://alpha.exalted8.com/" aria-label="Exalted home"><img src="/assets/branding/exalted-logo.svg" alt="Exalted" width="2040" height="700" /></a>
         <nav aria-label="Spawn locations"></nav>
         <span class="spawn-status" role="status" aria-live="polite"></span>
     </header>
@@ -193,8 +204,8 @@
 
     <div id="boot">
         <div class="boot-inner">
-            <div class="wordmark">EXALTED</div>
-            <div class="tagline">Interactive 3D magazine</div>
+            <img class="wordmark" src="/assets/branding/exalted-logo.svg" alt="Exalted" width="2040" height="700" fetchpriority="high" />
+            <div class="tagline">Interactive 3D magazine<span class="sandbox-label">Sandbox</span></div>
             <div class="bar"><div class="bar-fill" id="boot-bar"></div></div>
             <div class="phase" id="boot-phase">initialising</div>
         </div>
@@ -203,7 +214,7 @@
     <div id="nogpu">
         <div>
             <b>WebGPU is not available in this browser.</b><br />
-            EXALTED requires a WebGPU-capable browser. Try Chrome 113+ on a desktop GPU.
+            <span id="startup-help">EXALTED requires a WebGPU-capable browser. Try Chrome 113+ on a desktop GPU.</span>
         </div>
     </div>
 

@@ -75,6 +75,7 @@ export class ShadowSystem {
     maxHeight = 60;
     texelWorldPad = 2;
     private _perCascade?: ShaderMaterial[][];
+    private readonly casterMaterials = new Map<Mesh, ShaderMaterial[]>();
 
     constructor(scene: Scene) {
         this.scene = scene;
@@ -157,17 +158,44 @@ export class ShadowSystem {
      * @param {import("@babylonjs/core/Meshes/mesh").Mesh} mesh
      * @param {(cascade:number) => ShaderMaterial} makeMaterial
      * @param {number} [cascades] how many cascades to cast into, from the near end
+     * @param {number} [firstCascade] starting cascade for a separately culled instance batch
      */
-    registerCaster(mesh:Mesh, makeMaterial:(cascade:number)=>ShaderMaterial, cascades?:number): void {
-        const n = Math.min(cascades === undefined ? CASCADE_COUNT : cascades, CASCADE_COUNT);
-        for (let i = 0; i < n; i++) {
+    registerCaster(mesh:Mesh, makeMaterial:(cascade:number)=>ShaderMaterial, cascades?:number, firstCascade = 0): void {
+        if (this.casterMaterials.has(mesh)) this.unregisterCaster(mesh);
+        const registered: ShaderMaterial[] = [];
+        this.casterMaterials.set(mesh, registered);
+        const n = Math.min(firstCascade + (cascades === undefined ? CASCADE_COUNT : cascades), CASCADE_COUNT);
+        for (let i = firstCascade; i < n; i++) {
             const mat = makeMaterial(i);
+            // Streamed casters can register after this frame's cascade refit.
+            mat.setMatrix('lightViewProjection', this.matrices[i]);
+            registered[i] = mat;
             this.maps[i].renderList!.push(mesh);
             this.maps[i].setMaterialForRendering(mesh, mat);
             this.materials.push(mat);
             if (!this._perCascade) this._perCascade = [];
             (this._perCascade[i] ||= []).push(mat);
         }
+    }
+
+    /** Unregister a streamed caster; its shared materials remain caller-owned. */
+    unregisterCaster(mesh: Mesh): void {
+        const registered = this.casterMaterials.get(mesh);
+        if (!registered) return;
+        for (let cascade = 0; cascade < registered.length; cascade++) {
+            const material = registered[cascade];
+            if (!material) continue;
+            const list = this.maps[cascade].renderList;
+            const index = list?.indexOf(mesh) ?? -1;
+            if (list && index >= 0) list.splice(index, 1);
+            this.maps[cascade].setMaterialForRendering(mesh, undefined);
+            const globalIndex = this.materials.indexOf(material);
+            if (globalIndex >= 0) this.materials.splice(globalIndex, 1);
+            const materials = this._perCascade?.[cascade];
+            const localIndex = materials?.indexOf(material) ?? -1;
+            if (materials && localIndex >= 0) materials.splice(localIndex, 1);
+        }
+        this.casterMaterials.delete(mesh);
     }
 
     /**
@@ -369,5 +397,7 @@ export class ShadowSystem {
     dispose(): void {
         for (const m of this.maps) m.dispose();
         for (const m of this.materials) m.dispose();
+        this.materials.length = 0; this.casterMaterials.clear();
+        this._perCascade = undefined;
     }
 }

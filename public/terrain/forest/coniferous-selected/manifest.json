@@ -1,0 +1,43 @@
+{
+  "source": "public/terrain/forest/coniferous_forest_assets_pack.glb",
+  "sourceSha256": "c87dc08bb7413f202e5e2a7f758dd7e274b275887498e2cf43abd179a8e085e6",
+  "attribution": {
+    "author": "Dari (https://sketchfab.com/dariiiii)",
+    "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "source": "https://sketchfab.com/3d-models/coniferous-forest-assets-pack-240ce9cf0ad3474f809a59f9446e63cd",
+    "title": "Coniferous Forest Assets Pack"
+  },
+  "preparation": "Shared external PNG maps; zeroed asset display translations only.",
+  "assets": [
+    {
+      "file": "fallen-log.glb",
+      "sourceNode": "Coniferous Dead Log_5",
+      "triangles": 320,
+      "bytes": 24740
+    },
+    {
+      "file": "dead-tree-tall.glb",
+      "sourceNode": "Coniferous Dead Tree_6",
+      "triangles": 1484,
+      "bytes": 93464
+    },
+    {
+      "file": "dead-tree-short.glb",
+      "sourceNode": "Coniferous Dead Tree 2_7",
+      "triangles": 580,
+      "bytes": 38760
+    },
+    {
+      "file": "boulder-mossy.glb",
+      "sourceNode": "BoulderMossyLarge_8",
+      "triangles": 768,
+      "bytes": 37480
+    },
+    {
+      "file": "boulder-plain.glb",
+      "sourceNode": "BoulderPlainLarge_13",
+      "triangles": 768,
+      "bytes": 37544
+    }
+  ]
+}

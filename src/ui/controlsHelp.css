@@ -1,0 +1,57 @@
+body #spawn-bar:not([hidden]) { padding-right: 58px; }
+.controls-help-button {
+    position: fixed;
+    top: 8px;
+    right: 14px;
+    z-index: 70;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(143, 196, 232, .45);
+    border-radius: 50%;
+    background: #101c28;
+    color: #e3edf5;
+    font: 600 19px/1 system-ui, sans-serif;
+    cursor: pointer;
+}
+.controls-help {
+    position: fixed;
+    margin: auto;
+    width: min(640px, calc(100vw - 28px));
+    max-height: calc(100dvh - 40px);
+    padding: 24px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid rgba(143, 196, 232, .3);
+    border-radius: 12px;
+    background: #0d1722;
+    color: #dbe6f2;
+    font: 14px/1.5 ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
+    box-shadow: 0 20px 70px #0008;
+}
+.controls-help::backdrop { background: rgba(3, 7, 12, .72); }
+.controls-help header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.controls-help h2 { font-size: 21px; font-weight: 600; }
+.controls-help-close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #435567;
+    border-radius: 6px;
+    color: #dbe6f2;
+    background: #1a2a39;
+    font: 24px/1 system-ui, sans-serif;
+    cursor: pointer;
+}
+.controls-help-button:hover, .controls-help-close:hover { background: #294159; }
+.controls-help button:focus-visible, .controls-help-button:focus-visible { outline: 2px solid #b7dfff; outline-offset: 3px; }
+.controls-help p { margin-top: 10px; color: #aebdcd; }
+.controls-help section { margin-top: 22px; }
+.controls-help h3 { margin-bottom: 8px; color: #e3c78a; font-size: 15px; font-weight: 600; }
+.controls-help dl > div { display: grid; grid-template-columns: minmax(160px, 2fr) 3fr; gap: 12px; padding: 8px 0; border-bottom: 1px solid #dbe6f214; }
+.controls-help dt { color: #edf4fb; }
+.controls-help dd { margin: 0; color: #b8c8d8; }
+.controls-help kbd { font: 12px/1.6 ui-monospace, monospace; background: #223344; border: 1px solid #405368; border-radius: 4px; padding: 1px 5px; }
+@media (max-width: 460px) {
+    .controls-help { padding: 16px; }
+    .controls-help dl > div { grid-template-columns: 1fr; gap: 4px; }
+}

@@ -35,6 +35,8 @@ varying vAge: f32;
 varying vAmp: f32;
 varying vCurl: f32;
 varying vViewDist: f32;
+varying vGrass: f32;
+varying vForest: f32;
 
 @vertex
 fn main(input: VertexInputs) -> FragmentInputs {
@@ -84,5 +86,7 @@ fn main(input: VertexInputs) -> FragmentInputs {
     vertexOutputs.vAmp = sc.x;
     vertexOutputs.vCurl = sc.y;
     vertexOutputs.vViewDist = distance(P, uniforms.cameraPos);
+    vertexOutputs.vGrass = wakeGrass(wakeTex, uniforms.wakeCount, u);
+    vertexOutputs.vForest = wakeForest(wakeTex, uniforms.wakeCount, u);
     vertexOutputs.position = uniforms.viewProjection * vec4f(P, 1.0);
 }

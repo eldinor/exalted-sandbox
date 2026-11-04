@@ -1,8 +1,14 @@
 # Exalted application architecture
 
+Production and lab packaging are separate: `npm run build` builds `index.html`
+and copies validated runtime assets into `dist/`; `npm run build:labs` retains
+the full lab inputs/public assets/generated bake in `dist-labs/`. Development
+still serves all sources and assets. See [BUILD_PACKAGING.md](BUILD_PACKAGING.md)
+for the explicit runtime inventory and external GLB dependency handling.
+
 This document describes the production world application served by `index.html`.
 It covers the TypeScript code under `src`, its runtime order, major data paths,
-and extension points. The standalone mountain and forest pages are prototypes and
+and extension points. The supporting grass/forest labs and asset tools are utilities and
 are described separately under [Demo boundaries](#demo-boundaries).
 
 ## System overview
@@ -48,9 +54,39 @@ The default mode loads the authored Exalted world:
   scale, yielding an approximately 936 x 702 metre world while avatars, prop
   geometry, movement and effects remain metre-sized.
 - `exalted_desert.glb` supplies authored desert vegetation and rocks.
+- Shared Grassland geometry streams onto the authored grass biome, with avatar
+  walking/surf bending and a matching production depth pass. Density is 3; grass
+  receives shadows but does not cast them. See [GRASS.md](GRASS.md).
+- A separate flower-family adapter streams dandelion colonies using the same
+  patch/interactions infrastructure. Colour/depth share alpha cutout and fade;
+  flower density/mix and diagnostics remain separate, with future daisies in mind.
+- Heightmap textured ground blends grass, forest and desert using the generated
+  linear RGB `ground-coverage-9.png`, also read by CPU grass placement. Existing
+  snow, road, water and deformation masks remain separate. See
+  A saved `biome-rock-9.png` supplies rock ground and removes sand softness in
+  the corrected northern corridor. See [BIOMES_MAPS.md](BIOMES_MAPS.md) for
+  preparation and the 27-texture device limit. Beach coverage is saved separately
+  and packed with rock into `ground-detail-coverage-9.png` (R rock, G beach),
+  retaining water eligibility independently. `BeachGround.ts` owns the supplied
+  aerial beach colour/normal/ARM maps at 30 m physical width; stochastic sampling
+  shares the rock implementation and existing repeat samplers.
 - Water geometry is derived from the selected terrain triangles and water mask plus
   `world/waterReference.json`.
-- The spawn bar exposes named locations and texture and wind controls.
+- The spawn bar exposes named locations; the texture/wind sidebar stays hidden.
+- Iron Mountains is a subset of rock in the packed detail mask's B channel.
+  Three 5-layer raw texture arrays replace the original rock bindings: old
+  river rock, 90 m exposed rock and broken rock, plus Snow Mountains Rock Face
+  03 and Stone Gate snow_03. ARM alpha supplies texture height for the two Iron layers; Snow Mountains
+  uses AO as an approximate crevice proxy. Signed triplanar normals support
+  material projection. Slope/height blending and distance-faded fine detail stay in the existing terrain beauty pass. No geometry/depth/shadow
+  ordering changes; mask preparation stays offline. See IRON_MOUNTAINS.md for
+  the significant texture-memory/download cost and comparison toggle.
+- The interactive crystalline Cube is anchored to `FOREST_CUBE_SPAWN`, converted
+  from chart coordinates once and grounded on the selected terrain. E dissolves
+  it into a persistent portal; entry publishes `exalted:portal-entered` with the
+  legacy ID/position payload. The main app handles the first entry by navigating
+  the same tab to `https://hall.babylonpress.org/`. Reflection Cube/probe is absent
+  from main startup.
 
 `?terrain=procedural` selects the original procedural snow terrain. It uses
 the nested clipmap and generated heightfield and keeps geometric snow deformation
@@ -86,6 +122,8 @@ The owner that constructs a resource normally disposes it through the scene
 disposal lifecycle. Shared pools remain owned by their top-level system:
 
 - `Terrain` owns deformable terrain state and terrain materials.
+- `WorldGrass` owns streamed grass patches and shared pass materials, unregistering
+  culled/disposed meshes from the depth target. Grass is excluded from shadow targets.
 - `Character` owns procedural figure meshes, materials, skeleton data, and cloth.
 - `SprayField` owns the bounded particle pool used by movement, water, and spells.
 - `SpellSystem` owns spell instances, pooled water strands, crystals, and lights.
@@ -173,6 +211,12 @@ materials, and renders repeated content with thin instances. Near and far buffer
 provide the current two-level prop LOD system. Wind deformation is applied in the
 prop shaders and shared with relevant depth and shadow passes.
 
+Desert props now stream through 64 m spatial chunks, merging selected placements
+into shared near/far batches per camera and shadow cascade. Conservative individual
+prop bounds cull each pass independently; off-camera shadow casters remain eligible.
+Fixed typed buffers and shared geometry/materials are reused across movement and
+teleports. See [DESERT_PROPS.md](DESERT_PROPS.md) for diagnostics and measured cost.
+
 Desert placement density now follows world area scale: at 0.5 world scale,
 roughly 25% of authored placements survive. A stable hash of horizontal placement
 coordinates gives all material primitives at the same origin one decision and
@@ -253,6 +297,10 @@ Shared resources keep spell cost bounded:
 This means active spell count changes buffer contents and visibility rather than
 creating an unbounded number of render resources.
 
+Melt (`Thaw`, spell 9) keeps its terrain recovery, crystal melting, warm light
+and mist. Its legacy snow/slush runoff curve is disabled (`SHOW_RUNOFF = false`)
+and acquires no shared-water strand, so the ice-like trace is no longer drawn.
+
 ## Rendering pipeline
 
 The custom renderer has four connected layers:
@@ -303,8 +351,10 @@ history work subscribe through `onChange`.
 transitions. `CameraRig` owns the third-person spring arm and obstacle response.
 
 `Overlay` builds tuning and performance controls. `SpawnBar` owns biome
-navigation plus compact texture and wind controls. `Ctrl+I` dynamically imports
-the matching Babylon Inspector version and docks it on the right.
+navigation and the currently hidden texture/wind sidebar. `Ctrl+I` dynamically imports
+the matching Babylon Inspector version and docks it on the right. The app uses
+`node_modules/.vite-exalted` for its prepared dependencies; SSR tests use separate
+caches so running tests cannot invalidate lazy Inspector chunks in the dev server.
 
 `core/perf.ts` maintains frame percentiles, CPU subsystem timings, per-frame draw
 counts, triangle estimates, and spike tracking. The frame loop performs the
@@ -359,22 +409,45 @@ New spells should implement the coordinator lifecycle, reuse pooled strands,
 crystals, lights, and spray where suitable, register animated geometry with depth
 and shadow systems, and release all handles on reset.
 
-The future forest implementation must follow [FOREST_SPEC.md](FOREST_SPEC.md):
+The eastern forest sections live in `src/world/worldForest.ts`, with shared
+TypeScript pine asset, placement, grounding and material adapters in `src/forest`.
+It uses 32 m independent thin-instance batches per Big 1/Small 1 LOD2 model
+at the accessible 15 m edge and around Cube Spawn, plus CPU-expanded sprite
+batches for the dense interior (15 m inside the authored contour, outside the 33 m spawn ring),
+sharing two spruce
+atlas textures and colour/prepass materials. `ImpostorBatchGeometry.ts` handles
+height, yaw-relative view selection and camera-facing geometry without temporary
+allocations; `ForestImpostorBatch.ts` owns typed buffers, conservative fixed
+chunk bounds, distance compaction and depth-registration cleanup. It uses the
+registered production prop shaders and matching alpha-tested depth. Frame updates
+follow desert props; pine and card colour/depth pipelines draw during loading. An
+independent overlapping-cylinder area barrier shares the existing collision grid
+and is removed by ownership on disposal. A benchmark toggle changes rendering,
+not access. The shaped dense section reserves the spawn clearing and exit corridor; its
+versioned automatic benchmark combines a ground-edge pass and aerial sweep using
+the same camera lifecycle as the independent grass route. Tree casting/wind and
+full-biome integration remain deferred. `OpenForestPlacement.ts` adds the
+walkable section toward Forest Outlook with five selected firs and two pine saplings,
+8 m spacing, per-model root grounding and individual trunk cylinders. It leaves
+the overlook centre and grassland sightline clear, fills the pocket outside the
+corrected dense contour and batches each model independently with shared pack materials. The
+existing forest toggle and route include this extension; per-variant pipelines
+warm during loading. `FirPack.ts` supplies the selected fir manifest to the shared
+hierarchy-baking/root-grounding loader. Pine and fir source containers/materials
+are owned independently and released together by the production forest.
+
+The future complete forest implementation must follow [FOREST_SPEC.md](FOREST_SPEC.md):
 32 m chunks, thin instances, two geometry LOD levels, stable shadows, root-anchored
 wind, trunk-only collision, and separation between asset preparation and runtime
 rendering.
 
 ## Demo boundaries
 
-These pages are intentionally outside the production TypeScript migration:
-
-- `snow_mountain.html` and `src/mountain/demo.js`
-- `forest_road.html` and its mountain helper modules
-- `forest.html` and `src/forest`
-
-They may import production TypeScript modules through Vite, but production code
-must not depend on them. The old forest implementation is a performance and
-regression reference for future replacement models, not a world subsystem.
+The old half-world, forest performance, forest-road and mountain viewers were
+removed on 2026-10-12, together with their dedicated renderer/helpers, tests,
+preparation script and GLBs. Current Grassland, Forestland, Spruceland, heightmap,
+waterfall and generator tools remain independent supporting utilities.
+Production must not import their lab entry points or authoring code.
 
 ## Validation
 
@@ -390,3 +463,99 @@ classification, water geometry and swimming, and retained forest preparation
 algorithms. GPU appearance and performance still require manual checks at fixed
 camera positions and resolution. Production builds are reserved for explicit
 release validation rather than every reversible edit.
+
+
+The standalone `spruceland.html` evaluates a prepared cutout spruce and a baked
+17-view impostor. Shared `ImpostorViews.ts`/`SpruceImpostor.ts` supply view selection,
+validated atlas metadata and two-triangle card placement. `ForestMaterials`
+optionally enables object-normal atlas shading in the existing prop WGSL; default
+prop shading remains unchanged. Camera-depth alpha is shared with the visible
+card, and detailed tree alpha agrees with its shadow passes. Offline WebGPU
+baking lives under `generator/spruce` and writes attributed runtime assets under
+`public/terrain/forest/blue-spruce`. Production does not import baking code.
+
+
+Whole-map inspection uses an isolated orthographic camera/render target, leaving
+the gameplay camera and temporal chain intact. Ctrl+P renders authoritative
+terrain/water; Ctrl+Shift+P also asks forest/desert subsystems for complete
+placement snapshots via `MapPropSnapshot`, ignoring gameplay stream/distance
+visibility. Forest snapshots use all matrices and overhead impostor views.
+Temporary geometry/materials use an exclusive layer and the depth-tested group
+0, then dispose after readback. The prop shader's MAP_SCREENSHOT branch retains
+alpha cutout and emits readable sRGB map colours without distance fade/fog/wind.
+
+
+`world/biomeSun.ts` supplies authored-world sun azimuth independently of the base
+sun slider. Avatar X/Z classify forest palette/overlook correction and Lake
+Island at (272.5,76), with a soft island radius (55-75 m), entry/release hysteresis
+(0.65/0.25), 1 s dwell and 7 s smooth shortest-arc motion. Forest target is 225,
+island target 105; elevation/intensity remain global settings. Procedural mode
+is unchanged. Pause stops transition time; teleports use the same delayed blend.
+Automatic routes freeze the current entry angle throughout preparation/recording;
+benchmark `sunRegion` snapshots record effective angle and region. `EXALTED.biomeSun`
+exposes the controller. The settings azimuth is labelled Base azimuth.
+
+The main frame sets `Sky.azimuthOverride` and synchronizes the sun after avatar/
+rig movement and before post uniforms, sky, shadows and world materials. It does
+not overwrite S.sunAzimuth or alter render-target ordering/history. Sky update
+defers atmosphere/SH solves throughout `BiomeSun.moving`, preserving the previous
+baked lighting while sun direction/direct light/cascades change every frame.
+The dirty state is retained for one solve when motion ends. Already-started
+readbacks do not publish SH during a new transition, and remaining bake steps
+are stopped until settled. The existing coalescing and 250 ms guard remain as
+safety measures, rather than scheduling periodic lighting solves during motion.
+
+
+The surf spine texture is now 96x4 RGBA32F: rows 0/1 retain position/distance
+and direction/amplitude, row 2 curl/age/grass, row 3 forest coverage. Coverage
+is retained at sample birth. Wake colour blends forest olive/moss with matching
+geometry/depth/shadow passes; the shared spray pool distinguishes kind 6 green
+grass from kind 7 aged forest tufts. Both use identical silhouette/settling, and
+neither participates in opaque depth or custom shadow targets.
+
+
+Iron Mountains silhouette accents are owned by `world/ironRocks.ts`, with pure
+mask/terrain-based deterministic placement in `world/IronRockPlacement.ts`.
+Only authored heightmap mode loads the prepared plain boulder. Static 64 m
+thin-instance batches share production prop materials, camera-depth passes (no casting/reception of shadows); independent collision cylinders stay registered across the
+render comparison toggle. Explicit warm-up submits instanced variants during
+loading and removes its probe afterward. Disposal unregisters owned casters,
+meshes, source textures/materials and colliders. Whole-map prop snapshots include
+all accents. See IRON_MOUNTAINS.md for grounding and geometry budget.
+
+
+The authored heightmap snow-mountain trial uses `terrain/SnowMountains.ts`
+coverage/height-blend functions through an explicit WGSL include. It reuses the
+shared texture array's dedicated Rock Face 03 layer on steep snow faces and binds only one
+new comparison uniform. The final road overlay is excluded; geometry, gameplay
+surface channels, depth/shadow passes and frame order remain unchanged. See
+SNOW_MOUNTAINS.md for scope and material cost.
+
+
+`StoneGateTriangles.ts` corrects selected steep heightmap cell diagonals before
+ExaltedWorld constructs its mesh/surface index. The vertices and triangle budget
+remain fixed; all grounding and render/depth passes consume the same indices.
+The material's left-pass region uses shared array layer 4 with snow_03 colour,
+normal, ARM and real texture height in ARM alpha. The scalar height PNG decoder
+supports grayscale-alpha 16-bit input for this source. Geometry still represents
+the authored world heightmap; texture displacement is used for material blending.
+
+
+RockGround's readiness promise now includes explicit RGBA mip uploads for all
+five layers via `RockArrayMipmaps.ts` and RawTexture2DArray.updateMipLevel.
+Babylon 9.18 WebGPU auto-generation covers only layer 0. The base is uploaded
+last so context-restoration base/mip buffers remain consistent. Filtering stays
+trilinear/anisotropic; the fix adds startup CPU work/buffers, not frame work,
+GPU allocation or bindings. It also repairs filtered sampling of Iron layers.
+
+The current loading trial selects five 1024-square layers through
+`RockArrayProfile.ts`, using separately derived files in `iron-mountains-1024`.
+The preserved 2048 arrays remain the authoring source. Runtime dimensions,
+delta row stride, byte checks and mip generation follow the selected profile;
+all colour/depth consumers share the same arrays. See BUILD_PACKAGING.md.
+
+
+The visual Stone Gate pass overlay uses a shared authored spawn anchor, full
+60 m coverage and a 90 m outer feather, plus the existing left-cliff coverage.
+It applies snow_03 before the final road overlay, excludes water and keeps the CPU gameplay
+surface channels intact. The same five-layer mipmapped arrays remain in use.

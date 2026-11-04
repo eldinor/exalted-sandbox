@@ -1,0 +1,57 @@
+.dev-panel-stack {
+    position: fixed;
+    top: 88px;
+    right: 14px;
+    z-index: 48;
+    width: 210px;
+    max-height: calc(100dvh - 102px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.dev-panel-stack .avatar-colors {
+    position: static;
+    width: auto;
+    flex-shrink: 0;
+}
+.app-benchmark {
+    /* Temporarily hidden; remove this declaration to restore the benchmark UI. */
+    display: none;
+    color: #dbe6f2;
+    background: rgba(8, 16, 24, 0.9);
+    border: 1px solid rgba(143, 196, 232, 0.25);
+    border-radius: 7px;
+    font: 12px/1.35 ui-sans-serif, "Inter", "Segoe UI", system-ui, sans-serif;
+    backdrop-filter: blur(10px);
+}
+.app-benchmark > details > summary {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.app-benchmark-controls { padding: 0 12px 12px; display: grid; gap: 8px; }
+.app-benchmark label { display: grid; gap: 4px; }
+.app-benchmark label.benchmark-grass-toggle { display: flex; align-items: center; justify-content: space-between; }
+.app-benchmark label.benchmark-grass-toggle[hidden] { display: none; }
+.app-benchmark input, .app-benchmark select, .app-benchmark textarea, .app-benchmark button {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 7px;
+    color: inherit;
+    background: #14252c;
+    border: 1px solid #34515a;
+    border-radius: 4px;
+    font: inherit;
+}
+.app-benchmark button, .app-benchmark summary { cursor: pointer; }
+.app-benchmark input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
+.app-benchmark button:disabled { opacity: .45; cursor: default; }
+.app-benchmark p { margin: 0; }
+.app-benchmark textarea { height: 180px; resize: vertical; font-family: monospace; }
+@media (max-width: 720px) {
+    .dev-panel-stack { top: 74px; right: 8px; width: 190px; max-height: calc(100dvh - 82px); }
+}

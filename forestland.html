@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exalted — Forestland</title>
+  <link rel="stylesheet" href="./generator/grass/grass.css">
+</head>
+<body>
+  <canvas id="view" tabindex="0" aria-label="Exalted Forestland lab"></canvas>
+  <aside>
+    <a href="./generator/grassland.html">Grassland lab</a>
+    <p class="eyebrow">Exalted world</p><h1>Forestland</h1>
+    <p id="status" role="status">Loading terrain and pine trees…</p>
+    <button id="camera-mode" type="button">Camera: Ground</button>
+    <button id="reset-camera" type="button">Reset camera</button>
+    <fieldset><legend>Forest coverage</legend>
+      <label class="toggle"><input id="enabled" type="checkbox" checked> Trees enabled</label>
+      <label>Tree spacing <output id="spacing-value">12 m</output></label>
+      <input id="spacing" type="range" min="8" max="24" step="1" value="12">
+      <label>Reference height · Medium 2 <output id="height-value">12 m</output></label>
+      <input id="height" type="range" min="6" max="20" step="1" value="12">
+      <label>LOD1 distance <output id="near-value">40 m</output></label>
+      <input id="near" type="range" min="10" max="80" step="5" value="40">
+      <label>Detailed tree distance <output id="distance-value">140 m</output></label>
+      <input id="distance" type="range" min="60" max="240" step="10" value="140">
+      <label class="toggle"><input id="placeholders" type="checkbox" checked> Farthest tree placeholders</label>
+      <label>Placeholder outer distance <output id="placeholder-distance-value">350 m</output></label>
+      <input id="placeholder-distance" type="range" min="180" max="500" step="10" value="350">
+      <p class="help">Six triangles per distant tree, including a top canopy for aerial views. Distances include camera altitude. Distant placeholders cast no shadows.</p>
+      <label class="toggle"><input id="shadows" type="checkbox" checked> Nearby tree shadows</label>
+      <label class="toggle"><input id="terrain" type="checkbox" checked> Show terrain</label>
+      <p class="help">Medium, big, small and sapling pines. Adjust their percentages in the bottom panel. Only the forest biome is populated; this lab has no tree collisions.</p>
+      <p class="help">Pine pack by <a href="https://sketchfab.com/lolipop_1707" target="_blank" rel="noopener">LOLIPOP</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Prepared LOD subset; foliage uses alpha cutout.</p>
+    </fieldset>
+    <dl>
+      <div><dt>Placed trees</dt><dd id="placed">—</dd></div>
+      <div><dt>Trees in range</dt><dd id="visible">—</dd></div>
+      <div><dt>Placeholder trees</dt><dd id="placeholder-count">—</dd></div>
+      <div><dt>Submitted draw calls</dt><dd id="draws">—</dd></div>
+      <div><dt>Submitted indices</dt><dd id="indices">—</dd></div>
+      <div><dt>FPS</dt><dd id="fps">—</dd></div>
+      <div><dt>Weighted triangles LOD1 / 2</dt><dd id="prototype">—</dd></div>
+    </dl>
+    <p class="help">Ground: click the view, WASD and mouse to explore, Shift for faster movement. Overview: drag to orbit and scroll to zoom.</p>
+  </aside>
+  <aside class="benchmark-sidebar" aria-label="Forest benchmark">
+    <h1>Benchmark</h1>
+    <label for="benchmark-note">Test description</label>
+    <input id="benchmark-note" type="text" placeholder="e.g. Forest ground view">
+    <button id="benchmark-start" type="button">Start 30-second benchmark</button>
+    <button id="benchmark-stop" type="button" disabled>Stop</button>
+    <p id="benchmark-status" class="help" role="status">Ready to record.</p>
+    <button id="benchmark-copy" type="button" disabled>Copy results</button>
+    <details id="benchmark-details" hidden><summary>Detailed results</summary><textarea id="benchmark-results" aria-label="Benchmark results JSON" readonly></textarea></details>
+  </aside>
+  <script type="module" src="./generator/forestland/ForestlandLab.ts"></script>
+</body>
+</html>

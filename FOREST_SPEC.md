@@ -1,10 +1,41 @@
 # Forest: retained specification for replacement models
 
-Status: deferred. The existing `forest.html`, `src/forest`, preparation script,
-tests and assets are retained as a prototype reference. Do not integrate the
-current tree models into the main world. Resume with the replacement assets.
+Status: the complete forest remains deferred, with user-authorized production
+sections: the heightmap world's closed eastern strip now repeats the replacement
+`Pine_big_1` and `Pine_small_1` models alongside spruce impostors. See [FOREST_NOTES.md](FOREST_NOTES.md) for its extent, density,
+barrier and benchmark contract. The legacy forest page, renderer, preparation script, tests and assets were
+removed on 2026-10-12. Historical lessons below remain reference.
+
+The separate `/forestland.html` lab now explores 12 user-supplied pine-pack
+variants with authored LOD1/LOD2 on the current heightmap's forest biome. Its placement,
+UI and benchmark are documented in [generator/forestland/README.md](generator/forestland/README.md).
+The lab remains standalone. Its shared TypeScript pine loader and root grounding
+now also serve the limited eastern-strip trial; the full forest contract below
+remains the target for later integration.
 
 ## Scope and integration
+
+The authorized main-app dense section follows the corrected 2026-10-12 concept
+via `DenseForestShape.ts`, including the inward middle curve. Spruce impostors
+fill the interior except the accessible 15 m band along that curve and a 33 m
+radius around Cube Spawn (-383.5, 52). These real-tree areas mix Big 1 and
+Small 1 LOD2 (deterministic 25% Small 1 selection). Small trees retain the
+pack's size ratio and use their own root-support grounding. This preserves
+deterministic X/Z, yaw and placement density,
+the spawn clearing, exit corridor and independent barrier. Spruce cards use
+17 baked ground/aerial/overhead views, shared materials, 32 m typed-buffer
+batches, matching alpha-tested camera depth and no casting or wind. This is
+the current border section; complete biome population remains deferred.
+
+The user also authorized the accessible section westward through Forest Outlook.
+It spans westward from the curved dense edge to X=-166 within the forest palette and the bounded
+forest-floor correction around (-248,125). It uses Fir Large 2 (4%), Fir Medium 1/2 (24/24%), Fir Small 1/2 (14/14%) and
+retained Pine Sapling 1/2 (10/10%). Spacing is 8 m, Medium 1 reference height
+is 14 m, Large 2 is 20 m, and pine saplings retain their previous scale. An 18 m overlook clearing and southeast sightline
+stay open. Per-model trunk-root grounding and size ratios are retained. Each
+32 m chunk has separate thin-instance bindings per model, shared materials,
+matching depth and startup warm-up. Trunk-only cylinders replace an area barrier
+for this section. Shadow casting and wind stay disabled.
 
 - Keep asset preparation, placement, chunking, LOD and collisions independent of
   the demo page so the renderer can be used by the main world.
@@ -69,3 +100,16 @@ before and after optimizations. Preserve meaningful CPU regression tests and
 perform a manual GPU visual/performance check. Do not use Playwright unless asked.
 
 Implementation reference: [src/forest/README.md](src/forest/README.md).
+
+
+The authorized collider-edge fringe uses a 3.5 m jittered grid in a 3 m inside /
+14 m outside band along the dense contour. It adds short Small 1/2 firs and low
+paired-shoot Small 2 LOD2 shrubs without moving existing sites or obstructing the
+clearings. Bushes have no collision; new trees use trunk cylinders. All fringe
+geometry shares production chunking, depth, warm-up, toggles and map snapshots.
+
+
+Real Big 1 pines and Large 2 fir accents now use deterministic 50% thinning
+(ceil per model). Spruce impostors and all other models stay unchanged. The
+closed barrier is independent of thinning; removed open-tree colliders are
+removed together with their trunks. This does not alter the dense contour.

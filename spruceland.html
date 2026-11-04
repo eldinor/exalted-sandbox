@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exalted — Spruce comparison</title>
+<style>body{margin:0;background:#0b151b;color:#dce7ec;font:14px system-ui}canvas{width:100vw;height:100vh;display:block}aside{position:fixed;top:16px;left:16px;padding:16px;background:#0b151beF;border:1px solid #41606b;border-radius:8px;max-width:300px}button,select,input{margin:5px;padding:5px}a{color:#a7d7dd}label{display:block}#depth{display:none;position:fixed;inset:0;width:100%;height:100%}</style></head><body>
+<canvas id="view"></canvas><img id="depth" alt="Camera depth comparison"><aside><a href="forestland.html">Forestland</a><h2>Blue spruce</h2><p>Left: cutout tree · Right: baked impostor</p><p id="status">Loading…</p>
+<button id="ground">Ground view</button><button id="aerial">Aerial view</button><button id="overhead">Overhead</button>
+<label>Cutout threshold <input id="cutoff" type="range" min="0.2" max="0.5" step="0.01" value="0.35"><output id="cutoffValue">0.35</output></label>
+<label>Tree height <input id="height" type="range" min="4" max="20" step="1" value="4"><output id="heightValue">4 m</output></label>
+<label><input id="full" type="checkbox" checked>Detailed cutout tree</label><label><input id="impostor" type="checkbox" checked>Baked impostor</label>
+<button id="depthButton">Show camera depth</button><p>Drag to orbit · Scroll to zoom</p><p>RosticOstafi · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p></aside>
+<script type="module" src="/generator/spruce/comparison.ts"></script></body></html>

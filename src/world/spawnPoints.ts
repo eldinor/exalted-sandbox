@@ -1,6 +1,6 @@
 /** Named Rev B destinations in chart coordinates before Babylon conversion. */
 
-export type BiomeName = 'Desert' | 'Snow' | 'Grassland' | 'Forest' | 'Mountains' | 'Lake' | 'Island' | 'Waterfall' | 'Pass';
+export type BiomeName = 'Desert' | 'Beach' | 'Snow' | 'Grassland' | 'Forest' | 'Mountains' | 'Lake' | 'Island' | 'Waterfall' | 'Pass';
 
 /** Authored player inspection point; X/Y are map-plane coordinates and yaw is radians. */
 export interface SpawnPoint {
@@ -12,18 +12,33 @@ export interface SpawnPoint {
     readonly yaw: number;
 }
 
+/** Shared authored location for the forest clearing and its interactive Cube. */
+export const FOREST_CUBE_SPAWN: Readonly<SpawnPoint> = Object.freeze({
+    id: 'C2', name: 'The Thornwood', biome: 'Forest', x: 767, y: -104, yaw: 0.8,
+});
+
+export const PALECROWN_SPAWN: Readonly<SpawnPoint> = Object.freeze({
+    id: 'C5', name: 'The Palecrown', biome: 'Snow', x: -218, y: 251, yaw: 0,
+});
+
+export const STONE_GATE_SPAWN: Readonly<SpawnPoint> = Object.freeze({
+    id: 'stone-gate', name: 'Stone Gate', biome: 'Pass', x: 65, y: 325, yaw: Math.PI,
+});
+
 const points: SpawnPoint[] = [
     // 12 m south of the authored road-fork spawn, on loose sand for immediate footprints.
     { id: 'desert-start', name: 'Desert Start', biome: 'Desert', x: 65, y: -616, yaw: Math.PI },
-    { id: 'C5', name: 'The Palecrown', biome: 'Snow', x: -218, y: 251, yaw: 0 },
+    PALECROWN_SPAWN,
     { id: 'C3', name: 'The Long Green', biome: 'Grassland', x: 310, y: 0, yaw: Math.PI },
-    { id: 'C2', name: 'The Thornwood', biome: 'Forest', x: 767, y: -104, yaw: 0.8 },
+    FOREST_CUBE_SPAWN,
+    // Existing Outlook clearing at world (-248, 125), facing its southeast sightline.
+    { id: 'forest-outlook', name: 'Forest Outlook', biome: 'Forest', x: 496, y: -250, yaw: Math.PI * .75 },
     { id: 'C6', name: 'The Ironspine', biome: 'Mountains', x: 515, y: 380, yaw: 0 },
     { id: 'lakeside-overlook', name: 'Lakeside Overlook', biome: 'Lake', x: -334, y: 41, yaw: 0.7 },
     { id: 'lake-island', name: 'Lake Island', biome: 'Island', x: -545, y: -152, yaw: 0.7 },
     // River mouth beside the lake; positioned on the bank for waterfall inspection.
     { id: 'waterfall', name: 'Waterfall', biome: 'Waterfall', x: -550, y: 65, yaw: -2.4 },
-    { id: 'stone-gate', name: 'Stone Gate', biome: 'Pass', x: 65, y: 325, yaw: Math.PI },
+    STONE_GATE_SPAWN,
 ];
 
 export const SPAWN_POINTS: readonly Readonly<SpawnPoint>[] = Object.freeze(

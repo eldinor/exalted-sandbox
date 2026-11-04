@@ -10,8 +10,16 @@
  * @module shaders/registry
  */
 
+import { grassBiomeWGSL } from '../grass/GrassBiome.ts';
+import { forestGroundCoverageWGSL } from '../terrain/forestGroundCoverage.ts';
 import { ShaderStore } from "@babylonjs/core/Engines/shaderStore";
+import grassVertex from '../grass/grass.vertex.wgsl?raw';
+import grassFragment from './grass.fragment.wgsl?raw';
 import desertAppearance from './lib/desertAppearance.wgsl?raw';
+import rockSampling from './lib/rockSampling.wgsl?raw';
+import ironMountains from './lib/ironMountains.wgsl?raw';
+import { snowMountainsWGSL } from '../terrain/SnowMountains.ts';
+import { ironHeightBlendWGSL } from '../terrain/IronMountains.ts';
 import desertPropVert from './desertProp.vertex.wgsl?raw';
 import desertPropFrag from './desertProp.fragment.wgsl?raw';
 
@@ -83,7 +91,14 @@ import crystalPrepassVert from "./crystalPrepass.vertex.wgsl?raw";
 
 
 const INCLUDES = {
+    grassBiome: grassBiomeWGSL,
+    forestGroundCoverage: forestGroundCoverageWGSL,
     desertAppearance,
+    rockSampling,
+    snowMountains: snowMountainsWGSL,
+    ironMountains: ironHeightBlendWGSL + '\n' + ironMountains,
+    // Identical stochastic PBR mapping, specialized with independent beach bindings.
+    beachSampling: rockSampling.replaceAll('Rock', 'Beach').replaceAll('rock', 'beach').replaceAll('sampleUV, 0, sampleDx','sampleUV, sampleDx'),
     surfaceTypes: surfaceWGSL,
     exaltedSurface,
     surfaceMap,
@@ -104,6 +119,8 @@ const INCLUDES = {
 } as const satisfies Readonly<Record<string, string>>;
 
 const SHADERS = {
+    worldGrassVertexShader: grassVertex,
+    worldGrassPixelShader: grassFragment,
     groundProbePixelShader: groundProbe,
     heightBakePixelShader: heightBakeFrag,
     auxBakePixelShader: auxBakeFrag,
