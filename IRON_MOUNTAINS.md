@@ -1,5 +1,26 @@
 # Iron Mountains material
 
+## Current image delivery, 5 November 2026
+
+The active 1024-square package uses 20 ordinary opaque PNGs in
+`public/terrain/rock/iron-mountains-png-1024/`, generated with
+`npm run assets:rocks:png`. Browser PNG decoding replaces the custom response
+stream / DecompressionStream gzip path for rocks. One image downloads at a time;
+colour, normal and ARM arrays upload sequentially before existing warm-up.
+Height uses separate grayscale PNGs and is copied into ARM alpha after decoding,
+avoiding Canvas premultiplication corrupting material RGB. No gamma/ICC tags are
+embedded and bitmap colour conversion is disabled. All reconstructed base-level
+bytes match the prior 1024 arrays, including each height channel; existing mips,
+material bindings, projection, colours, lighting and GPU storage remain unchanged.
+
+Payload is 30.50 MiB rather than 33.83 MiB for compressed binary delivery.
+The original 2048 and 1024 packed arrays remain read-only preparation sources
+and are excluded from the production runtime inventory. The earlier binary
+delivery descriptions and 2K measurements below are historical. Heightmap
+loading and its validated range fallback are unchanged. This addresses the
+reported `arm-height.rgba.bin` abort by removing that delivery path; it does not
+establish the cause of the affected user's interrupted downloads.
+
 The authored heightmap's upper-right rocky region now has its own layered
 material, using the supplied `rocky_terrain_2k` and `rocky_terrain_03_2k` maps.
 Both use the user's **90 m** physical width. This first pass changes material

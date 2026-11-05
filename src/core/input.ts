@@ -121,21 +121,52 @@ export function initInput(canvas: HTMLCanvasElement, hooks?: InputHooks): void {
     });
 
     document.addEventListener("mousemove", (e) => {
-        if (!input.locked) return;
+        if (!input.locked && !input.surf) return;
+        // Button state comes from press/release events. Firefox pointer-lock
+        // movement can report buttons=0 while a button is still held.
         input.lookX += e.movementX * LOOK_SCALE;
         input.lookY += e.movementY * LOOK_SCALE;
     });
 
-    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    document.addEventListener("contextmenu", (e) => {
+        if (input.locked || e.target === canvas) e.preventDefault();
+    }, true);
 
-    document.addEventListener("mousedown", (e) => {
-        if (!input.locked) return;
-        if (e.button === 2) input.surf = true;
-    });
+    const startSurf = (e: MouseEvent): void => {
+        if (e.button !== 2 || (!input.locked && e.target !== canvas)) return;
+        // Surf remains usable over the world when pointer lock is unavailable.
+        // Cancelling pointerdown would suppress Firefox's camera mousemoves.
+        // Context menus are cancelled separately; compatibility mousedown can
+        // still prevent its default without suppressing later movement.
+        if (e.type === 'mousedown') e.preventDefault();
+        if (document.activeElement !== canvas) canvas.focus({ preventScroll: true });
+        input.surf = true;
+    };
+
+    // Babylon prevents pointerdown defaults, which suppresses compatibility
+    // mousedown events in Firefox. Observe the original pointer events first.
+    document.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse') startSurf(e);
+    }, true);
+    document.addEventListener('pointerup', e => {
+        if (e.pointerType === 'mouse' && e.button === 2) input.surf = false;
+    }, true);
+    document.addEventListener('pointermove', e => {
+        // Chorded button transitions use pointermove, not another pointerdown.
+        // A normal move has button=-1; never infer a release from its buttons.
+        if (e.pointerType !== 'mouse' || e.button !== 2) return;
+        if (e.buttons & 2) startSurf(e);
+        else input.surf = false;
+    }, true);
+    document.addEventListener('pointercancel', e => {
+        if (e.pointerType === 'mouse') input.surf = false;
+    }, true);
+    // Some pointer-lock implementations continue to deliver only mouse events.
+    document.addEventListener('mousedown', startSurf, true);
 
     document.addEventListener("mouseup", (e) => {
         if (e.button === 2) input.surf = false;
-    });
+    }, true);
 
     document.addEventListener(
         "wheel",

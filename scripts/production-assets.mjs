@@ -19,7 +19,7 @@ export const PRODUCTION_ASSETS = [
     ...['diff','nor_gl','arm'].map(map=>`terrain/forest/textures/forrest_ground_01_${map}_2k.png`),
     ...['diff','nor_gl','arm'].map(map=>`terrain/sand/beach/aerial_beach_01_${map}_2k.png`),
     ...['diff','nor_gl','arm'].map(map=>`terrain/road/asp1/asphalt_snow_${map}_2k.jpg`),
-    ...['base','normal','arm-height'].map(map=>`terrain/rock/iron-mountains-1024/${map}.rgba.gz`),
+    ...['base','normal','arm','height'].flatMap(map=>Array.from({length:5},(_,layer)=>`terrain/rock/iron-mountains-png-1024/${map}-${layer}.png`)),
 ];
 
 function localPath(root, name) {

@@ -8,7 +8,7 @@ import { PRODUCTION_ASSETS,productionAssetFiles,productionAssetOutput } from '..
 import { readRockArrayResponse } from '../src/terrain/RockArrayStream.ts';
 import { gzipSync } from 'node:zlib';
 import { readAsset } from '../src/core/assetDownload.ts';
-import { ROCK_ARRAY_ROOT } from '../src/terrain/RockArrayProfile.ts';
+import { ROCK_ARRAY_ROOT, ROCK_IMAGE_ROOT, ROCK_IMAGE_MAPS, ROCK_ARRAY_LAYERS } from '../src/terrain/RockArrayProfile.ts';
 
 test('asset failures retain the URL for HTTP errors, fetch errors and truncated bodies',async()=>{
     const original=globalThis.fetch,url='/terrain/rock/iron-mountains/base.rgba.bin';
@@ -92,10 +92,11 @@ test('current production inventory retains runtime packs and boulder textures, w
     assert.ok(!files.includes('terrain/forest/pine_trees_pack_lowpoly_game_ready_lods.glb'));
     assert.ok(!files.includes('terrain/rock/snow/snow_03_diff_2k.png'),'Packed rock texture arrays supply this layer');
     for(const map of ['base','normal','arm-height']){
-        assert.ok(files.includes(`${ROCK_ARRAY_ROOT}/${map}.rgba.gz`),'Selected runtime profile is packaged');
+        assert.ok(!files.includes(`${ROCK_ARRAY_ROOT}/${map}.rgba.gz`),'Packed arrays stay outside the PNG build');
         assert.equal(productionAssetOutput(`${ROCK_ARRAY_ROOT}/${map}.rgba.gz`),`${ROCK_ARRAY_ROOT}/${map}.rgba.bin`);
         assert.ok(!files.includes(`terrain/rock/iron-mountains/${map}.rgba.gz`),'Original high-resolution arrays stay outside the trial build');
     }
+    for(const map of ROCK_IMAGE_MAPS)for(let layer=0;layer<ROCK_ARRAY_LAYERS;layer++)assert.ok(files.includes(`${ROCK_IMAGE_ROOT}/${map}-${layer}.png`));
     console.log('Production runtime/provenance assets:',files.length,(files.reduce((s,p)=>s+statSync(join(root,p)).size,0)/1048576).toFixed(2),'MiB');
 });
 

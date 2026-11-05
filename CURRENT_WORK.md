@@ -1,5 +1,59 @@
 # Exalted Current Work
 
+## Firefox right-button surf, 5 November 2026
+
+Steering follow-up: cancelling pointerdown also suppressed Firefox mousemove
+while surfing. The main scene now sets preventDefaultOnPointerDown/Up=false,
+and surf's pointer handler leaves the down event uncancelled. Context menus
+remain explicitly blocked. Camera steering retains the existing mousemove
+path/sensitivity and accepts held right-drag even without pointer lock, so it
+does not double-count pointer and mouse movement. A native Firefox input test
+reproduced zero steering with the old cancellation and nonzero X/Y movement
+after the change. Regression coverage checks drag steering, hover gating and
+unchanged locked sensitivity. Full visual gameplay remains a manual check.
+
+Confirmed cause: Babylon's default scene pointer handler cancels pointerdown,
+and Firefox suppresses the compatibility mousedown that surf relied on. A native
+Firefox 159.0.1 input harness reproduces no surf with pointerdown cancelled,
+then passes after listening to pointerdown/up/cancel in document capture.
+Chorded right-button transitions use pointermove's changed button; ordinary
+mouse/pointer movement cannot clear a held surf. Mouse handlers remain for
+pointer-lock implementations delivering only mouse events. Regression tests
+cover pointer-only delivery, chords, cancellation and existing focus cleanup.
+This is an event-level browser check, not visual gameplay verification. The
+isolated headless Firefox cannot initialise this app's WebGPU device, so full
+Firefox gameplay remains a manual check. Earlier troubleshooting follows.
+
+Surf input no longer requires pointer lock when right-pressing the canvas.
+The handler focuses the canvas, prevents right-press defaults and suppresses
+context menus in document capture while locked or over the world. Held surf
+uses explicit press/release events rather than unreliable movement button bits;
+pointer unlock and
+window blur still clear surf. Unlocked UI right-click remains available.
+This addresses a confirmed input dependency on pointer-lock success rather than
+claiming Firefox never supports pointer lock. Tests cover the unlocked canvas,
+UI focus, document-targeted locked events, button chords and release cleanup.
+
+Follow-up: the first fix incorrectly trusted movement-event `buttons`, which
+could immediately clear a held right press in Firefox pointer lock. That check
+is removed; regression coverage now includes locked movement with `buttons=0`.
+The prior native Firefox test covered unlocked input only and did not establish
+that the reported captured-mouse gameplay problem was solved.
+
+## Ordinary mountain texture loading, 5 November 2026
+
+Mountain/rock arrays now assemble from 20 browser-decoded opaque PNGs, loaded
+sequentially. The custom rock response stream and native gzip decompression are
+absent from this runtime path. Height travels separately to avoid Canvas alpha
+premultiplication; reconstructed RGBA bytes match the previous 1024 arrays.
+Payload falls from 33.83 to 30.50 MiB, with unchanged GPU resources and mips.
+Source textures/arrays and heightmap loading remain unchanged. See
+IRON_MOUNTAINS.md and BUILD_PACKAGING.md. No hosted deployment is performed here.
+Typecheck, all 192 Node tests and production build pass. Native Chrome WebGPU
+startup reaches Ready with 20 rock PNG requests and no binary-array requests;
+browser-decoded array hashes match preserved packed sources. No visual review
+or affected-user Firefox reproduction is claimed.
+
 ## Player controls help, 4 November 2026
 
 A persistent question-mark button at the top right opens a keyboard-accessible

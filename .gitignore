@@ -4,6 +4,7 @@ node_modules/
 # build output
 dist/
 dist-labs/
+dist-pages/
 .vite/
 test-results/
 playwright-report/

@@ -6,6 +6,11 @@ the full lab inputs/public assets/generated bake in `dist-labs/`. Development
 still serves all sources and assets. See [BUILD_PACKAGING.md](BUILD_PACKAGING.md)
 for the explicit runtime inventory and external GLB dependency handling.
 
+Rock material arrays assemble from sequential ordinary PNG downloads and browser
+image decoding (`RockPngImages.ts`); separate grayscale images preserve height
+before packing it into ARM alpha. Explicit array mip uploads and startup warm-up
+are retained. Legacy compressed arrays are preparation sources, not runtime URLs.
+
 This document describes the production world application served by `index.html`.
 It covers the TypeScript code under `src`, its runtime order, major data paths,
 and extension points. The supporting grass/forest labs and asset tools are utilities and
@@ -349,6 +354,17 @@ history work subscribe through `onChange`.
 
 `core/input.ts` owns keyboard, pointer lock, mouse buttons, and one-frame
 transitions. `CameraRig` owns the third-person spring arm and obstacle response.
+Right-button surf works directly over the canvas even without pointer lock.
+The scene leaves pointer defaults uncancelled for custom input, and surf does
+not cancel pointerdown, preserving Firefox's compatibility camera mousemove.
+Surf also listens to original mouse-pointer events. Chorded button
+transitions are handled via pointermove's changed button; ordinary movement
+cannot cancel surf. Mouse press/release remains a fallback for pointer lock.
+Blur, pointer cancellation and unlock clear it.
+Camera look continues to consume mousemove once per movement at its existing
+sensitivity, with right-drag steering available when pointer lock is unavailable.
+Context menus are suppressed in document capture only for the canvas or active
+pointer lock, leaving normal unlocked UI context menus available.
 
 `Overlay` builds tuning and performance controls. `SpawnBar` owns biome
 navigation and the currently hidden texture/wind sidebar. `Ctrl+I` dynamically imports
