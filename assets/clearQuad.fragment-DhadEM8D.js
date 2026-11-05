@@ -1,0 +1,3 @@
+import{n as e,r as t}from"./rolldown-runtime-CNC7AqOf.js";import{n,t as r}from"./shaderStore-C5hmi3ce.js";var i=t({clearQuadPixelShaderWGSL:()=>s}),a,o,s,c=e((()=>{n(),a=`clearQuadPixelShader`,o=`uniform color: vec4f;@fragment
+fn main(input: FragmentInputs)->FragmentOutputs {fragmentOutputs.color=uniforms.color;}
+`,r.ShadersStoreWGSL[a]||(r.ShadersStoreWGSL[a]=o),s={name:a,shader:o}}));export{c as n,i as t};

@@ -1,0 +1,4 @@
+import{n as e,r as t}from"./rolldown-runtime-CNC7AqOf.js";import{n,t as r}from"./shaderStore-C5hmi3ce.js";var i=t({meshUVSpaceRendererPixelShaderWGSL:()=>s}),a,o,s,c=e((()=>{n(),a=`meshUVSpaceRendererPixelShader`,o=`varying vDecalTC: vec2f;var textureSamplerSampler: sampler;var textureSampler: texture_2d<f32>;@fragment
+fn main(input: FragmentInputs)->FragmentOutputs {if (input.vDecalTC.x<0. || input.vDecalTC.x>1. || input.vDecalTC.y<0. || input.vDecalTC.y>1.) {discard;}
+fragmentOutputs.color=textureSample(textureSampler,textureSamplerSampler,input.vDecalTC);}
+`,r.ShadersStoreWGSL[a]||(r.ShadersStoreWGSL[a]=o),s={name:a,shader:o}}));export{s as n,i as r,c as t};

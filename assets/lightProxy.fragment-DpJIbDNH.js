@@ -1,0 +1,3 @@
+import{n as e,r as t}from"./rolldown-runtime-CNC7AqOf.js";import{n,t as r}from"./shaderStore-C5hmi3ce.js";var i=t({lightProxyPixelShader:()=>s}),a,o,s,c=e((()=>{n(),a=`lightProxyPixelShader`,o=`flat varying vec2 vLimits;flat varying highp uint vMask;void main(void) {if (gl_FragCoord.y<vLimits.x || gl_FragCoord.y>vLimits.y) {discard;}
+gl_FragColor=vec4(vMask,0,0,1);}
+`,r.ShadersStore[a]||(r.ShadersStore[a]=o),s={name:a,shader:o}}));export{i as n,c as t};

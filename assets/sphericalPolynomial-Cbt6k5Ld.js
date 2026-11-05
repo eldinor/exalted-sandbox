@@ -1,0 +1,1 @@
+import{n as e}from"./rolldown-runtime-CNC7AqOf.js";import{r as t}from"./sphericalPolynomial.pure-CCyw-q2l.js";var n=e((()=>{t()}));export{n as t};

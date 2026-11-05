@@ -1,0 +1,1 @@
+import{n as e,r as t}from"./rolldown-runtime-CNC7AqOf.js";import{a as n,i as r,o as i,r as a,t as o}from"./clusteredLightContainer.pure-xHb-4C4G.js";var s=t({ClusteredLightingSceneComponent:()=>r,RegisterClusteredLightingSceneComponent:()=>n}),c=e((()=>{i(),a(),i(),n(o)}));export{c as n,s as t};

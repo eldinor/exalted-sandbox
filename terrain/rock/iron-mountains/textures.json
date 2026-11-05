@@ -1,0 +1,114 @@
+{
+  "width": 2048,
+  "height": 2048,
+  "layers": [
+    "river",
+    "exposedRock",
+    "brokenRock",
+    "snowCliff",
+    "stoneGateSnowRock"
+  ],
+  "textureMetres": [
+    4,
+    90,
+    90,
+    8,
+    8
+  ],
+  "format": "RGBA8; horizontal delta (4-byte pixel), then gzip; sRGB-encoded base, linear normal/ARM/height",
+  "heightChannel": "ARM alpha, normalized source displacement",
+  "sources": [
+    {
+      "file": "public/terrain/rock/river/river_small_rocks_diff_2k.png",
+      "sha256": "b634294c3ead442fa9e06ddd6f0a17aa7a2b41493bda7432552aaa30315094ed"
+    },
+    {
+      "file": "public/terrain/rock/river/river_small_rocks_nor_gl_2k.png",
+      "sha256": "d26daa3b79a4b71649d082da975648b88dfc72d426130adeae199a5de5149f39"
+    },
+    {
+      "file": "public/terrain/rock/river/river_small_rocks_arm_2k.png",
+      "sha256": "44d756954ebfe49f898c6382242a3ec79c1aec7fc935725758d34675ff019d18"
+    },
+    {
+      "file": "public/terrain/rock/rocky_terrain_2k/textures/rocky_terrain_diff_2k.png",
+      "sha256": "af30762fc7bc6a8dc22b69483aab20f03d487e5b84ac4f6b365bf3744d3497e6"
+    },
+    {
+      "file": "public/terrain/rock/rocky_terrain_2k/textures/rocky_terrain_nor_gl_2k.png",
+      "sha256": "0ac01ba57578119bca35c1762c1faffee110d208744b93caeaec3a9df012d82a"
+    },
+    {
+      "file": "public/terrain/rock/rocky_terrain_2k/textures/rocky_terrain_arm_2k.png",
+      "sha256": "b01834cd6f34415531073a492dbd78bbcf1e0407065e7fc29f59076f6e5322f1"
+    },
+    {
+      "file": "public/terrain/rock/rocky_terrain_2k/textures/rocky_terrain_disp_2k.png",
+      "sha256": "97a8a6432f2129b2c9bc395b92b09c9a420299098353d3ccfcf2b23f9bfd81b1"
+    },
+    {
+      "file": "public/terrain/rock/rocky_terrain_03_2k/textures/rocky_terrain_03_diff_2k.png",
+      "sha256": "0ac3df29d432cafe7bbccd9ea83846efee019cc4503ed9be28555c7922620c3f"
+    },
+    {
+      "file": "public/terrain/rock/rocky_terrain_03_2k/textures/rocky_terrain_03_nor_gl_2k.png",
+      "sha256": "302cdf94a46d5595884c477060ee84a35dcb2d6b87be759fd0fa296d04913a53"
+    },
+    {
+      "file": "public/terrain/rock/rocky_terrain_03_2k/textures/rocky_terrain_03_arm_2k.png",
+      "sha256": "f3f9291acae04d678c13bd951624ed29c022ba7b3feae49e216bba6e0e4479db"
+    },
+    {
+      "file": "public/terrain/rock/rocky_terrain_03_2k/textures/rocky_terrain_03_disp_2k.png",
+      "sha256": "c6d112b6d5ea0d2d168dd2e1b240e80667abf94d881921ae37c5ab022f874ebb"
+    },
+    {
+      "file": "public/terrain/rock/03/rock_face_03_diff_2k.png",
+      "sha256": "09c30549220c8297c06eabcb25d272fcc1b514548be712221bd9d47f010def8b"
+    },
+    {
+      "file": "public/terrain/rock/03/rock_face_03_nor_gl_2k.png",
+      "sha256": "53044f276b4f1c3041b91c7d4767bda0d75cb4b2d237f08b64eb4e95ee456a93"
+    },
+    {
+      "file": "public/terrain/rock/03/rock_face_03_arm_2k.png",
+      "sha256": "8b306caf9c78d7293cc2baf4caa6214612e1f0be70660771b85cbb3faafe9c2d"
+    },
+    {
+      "file": "public/terrain/rock/snow/snow_03_diff_2k.png",
+      "sha256": "f06c54110c36c0bde5eeec7404669bb1e564b8d21f7657451eb7098a94483132"
+    },
+    {
+      "file": "public/terrain/rock/snow/snow_03_nor_gl_2k.png",
+      "sha256": "561da4bcab1e804d19c62dd065b0e51f368a73637e05d0b69532cabd501762e9"
+    },
+    {
+      "file": "public/terrain/rock/snow/snow_03_arm_2k.png",
+      "sha256": "0eb5678f793224d7534469c34edb9cba479980f1b94884e3ee7f16b5bd89f2fb"
+    },
+    {
+      "file": "public/terrain/rock/snow/snow_03_disp_2k.png",
+      "sha256": "ab3da6a803ed31b3016674694ca37ec381284c939d4727c4bba085332bdfcbff"
+    }
+  ],
+  "outputs": [
+    {
+      "file": "base.rgba.gz",
+      "bytes": 43990069,
+      "rawBytes": 83886080,
+      "sha256": "8a9402459b1b05757e0c194dc05cb8d9f3fa2bbf9a6e98008bbf5714ab71c6ab"
+    },
+    {
+      "file": "normal.rgba.gz",
+      "bytes": 55818637,
+      "rawBytes": 83886080,
+      "sha256": "4919c36b02b42c19999ed4e62c0d0664e4e411d4f8a7275282c01f9074b7362a"
+    },
+    {
+      "file": "arm-height.rgba.gz",
+      "bytes": 36247590,
+      "rawBytes": 83886080,
+      "sha256": "ffcdefc6d0b0b89e3bcdffaa7c8ab3b268f3b101a5d0e7b033846caab98303ee"
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "width": 1024,
+  "height": 1024,
+  "layers": [
+    "river",
+    "exposedRock",
+    "brokenRock",
+    "snowCliff",
+    "stoneGateSnowRock"
+  ],
+  "textureMetres": [
+    4,
+    90,
+    90,
+    8,
+    8
+  ],
+  "format": "Opaque RGB8 and grayscale8 PNG; untagged; no resampling or pixel changes. Height is separate to avoid alpha premultiplication.",
+  "sources": [
+    {
+      "file": "public/terrain/rock/iron-mountains-1024/base.rgba.gz",
+      "sha256": "e9799676759f12c779c40d41cea9298695412d169681871b283c709ffa2bd2bd"
+    },
+    {
+      "file": "public/terrain/rock/iron-mountains-1024/normal.rgba.gz",
+      "sha256": "62644cf4663318e53397066759b3576df0e1d450298af07b494af5b63ec4e05c"
+    },
+    {
+      "file": "public/terrain/rock/iron-mountains-1024/arm-height.rgba.gz",
+      "sha256": "71f30ca960e4a701cdf4b014ca0a2c241db067c5c45f8cfe338a64f3a6eae013"
+    }
+  ],
+  "outputs": [
+    {
+      "file": "base-0.png",
+      "bytes": 2288124,
+      "sha256": "84c2a6cdd2d0569ed39e63938d64569b0c7b569da5eb6a506c5023bdca1cab53"
+    },
+    {
+      "file": "base-1.png",
+      "bytes": 2039373,
+      "sha256": "653b60562654b1660e9bfd38a5e8aca0b8d7070b48aab507fd68659875fa9630"
+    },
+    {
+      "file": "base-2.png",
+      "bytes": 2106630,
+      "sha256": "d8129d7e0834988ac980e3094d1e274faae5a668292b7479584a63eb717f360b"
+    },
+    {
+      "file": "base-3.png",
+      "bytes": 2089025,
+      "sha256": "8441f1702b81b39d0166912c34ad62f42b5101b29d63130ec36f16dfdb328add"
+    },
+    {
+      "file": "base-4.png",
+      "bytes": 1927163,
+      "sha256": "40c748eceaafbf8c9e7d66e6e1196fb474b32ec03d0a6a6bd8547e8795d7dd1e"
+    },
+    {
+      "file": "normal-0.png",
+      "bytes": 2603737,
+      "sha256": "bb401053f4c666179277cb035a86874b8cee2854d7524f366f689b166d3c4e69"
+    },
+    {
+      "file": "normal-1.png",
+      "bytes": 2236566,
+      "sha256": "1b6022830b8eb1b5bcbb875a6d439e5b8b4a8f2799da696ba74f7f3c87693a0a"
+    },
+    {
+      "file": "normal-2.png",
+      "bytes": 2462861,
+      "sha256": "46eda8df3b91a4c206509461e9a859923a1ae7f0c74e9456fc0d0bc13bd8741e"
+    },
+    {
+      "file": "normal-3.png",
+      "bytes": 2361435,
+      "sha256": "3df4533234f19a98ef62f05053fc8d17b772eda26ae5aef8577eee7e4deb2e21"
+    },
+    {
+      "file": "normal-4.png",
+      "bytes": 2600067,
+      "sha256": "11710de8b4ef139349064edce11a5acd6919fa7bfb34ea4c452fad8b7c37cae8"
+    },
+    {
+      "file": "arm-0.png",
+      "bytes": 1789906,
+      "sha256": "63e5ea208724c32325cced03d9c3ad0de5b42f6a727b8bb8667452309d0d4bd3"
+    },
+    {
+      "file": "height-0.png",
+      "bytes": 2389,
+      "sha256": "49fb6d2e20aab34a2c2499e7027cdaaaff3729054cc71c42308f6f8086d11d82"
+    },
+    {
+      "file": "arm-1.png",
+      "bytes": 1335470,
+      "sha256": "f7d3cafa9a7d12d9f428f38980e807069b669d3ff39ca80131a1870056312eff"
+    },
+    {
+      "file": "height-1.png",
+      "bytes": 341198,
+      "sha256": "50686b09b864ccd62d03e125b956da5b0a1d167c52a8b1a9bb8f9e7ca0201494"
+    },
+    {
+      "file": "arm-2.png",
+      "bytes": 1496239,
+      "sha256": "66c412f34b02446e683a5269fed231aa68123ba994c826fcc35639ef77c9e610"
+    },
+    {
+      "file": "height-2.png",
+      "bytes": 388007,
+      "sha256": "708f79f23796732341f3ce06fca94b11ff35541e0b0520128afb8d2127fb2433"
+    },
+    {
+      "file": "arm-3.png",
+      "bytes": 1652950,
+      "sha256": "733909c2ff3234d1c3dbb664a019d4a966db7db89814f7adf7b5ef66ea89969b"
+    },
+    {
+      "file": "height-3.png",
+      "bytes": 2389,
+      "sha256": "49fb6d2e20aab34a2c2499e7027cdaaaff3729054cc71c42308f6f8086d11d82"
+    },
+    {
+      "file": "arm-4.png",
+      "bytes": 1734076,
+      "sha256": "3083d1a15290b9f7a1451a5243bad06dea56f0af26e76b6925554023cfdf02e6"
+    },
+    {
+      "file": "height-4.png",
+      "bytes": 526903,
+      "sha256": "62ba23dec08402c5fefc0602070d6b95544b7970cc30eaf36b34e3adda33f95a"
+    }
+  ]
+}

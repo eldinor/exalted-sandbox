@@ -1,0 +1,57 @@
+{
+  "source": "public/assets/exalted/undergrowth_pack_lowpoly_game-ready.glb",
+  "sourceSha256": "14e37e8919155390701a3c65baeba2120c6365e723a6c21452a5bb1768ff18d8",
+  "asset": "public/terrain/grassland/dandelions/dandelions.glb",
+  "byteLength": 205668,
+  "sourceAttribution": {
+    "author": "LOLIPOP (https://sketchfab.com/lolipop_1707)",
+    "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "source": "https://sketchfab.com/3d-models/undergrowth-pack-lowpoly-game-ready-c98b4c1a15aa447a97cb76df127c1c78",
+    "title": "Undergrowth pack (lowpoly, game-ready)"
+  },
+  "alphaMode": "MASK",
+  "alphaCutoff": 0.35,
+  "upAxis": "Y after complete glTF hierarchy; raw geometry uses Z",
+  "variants": [
+    {
+      "name": "Dandelion_001",
+      "sourceNode": "Dandelion.001",
+      "triangles": 38,
+      "naturalHeightMetres": 0.2381559107452631,
+      "groundOffsetMetres": 0.011301377788186073,
+      "role": "Yellow flowering plant",
+      "recommendedFlowerShare": 45
+    },
+    {
+      "name": "Dandelion_002",
+      "sourceNode": "Dandelion.002",
+      "triangles": 38,
+      "naturalHeightMetres": 0.23863581288605928,
+      "groundOffsetMetres": 0.012772147543728352,
+      "role": "Yellow flowering plant",
+      "recommendedFlowerShare": 35
+    },
+    {
+      "name": "Dandelion_003",
+      "sourceNode": "Dandelion.003",
+      "triangles": 66,
+      "naturalHeightMetres": 0.23480968177318573,
+      "groundOffsetMetres": 0.008451879024505615,
+      "role": "Yellow flowering plant",
+      "recommendedFlowerShare": 20
+    },
+    {
+      "name": "Dandelion_005",
+      "sourceNode": "Dandelion.005",
+      "triangles": 38,
+      "naturalHeightMetres": 0.23180908430367708,
+      "groundOffsetMetres": 0.010574628598988056,
+      "role": "Optional unopened-bud accent",
+      "recommendedFlowerShare": 0
+    }
+  ],
+  "omitted": [
+    "Dandelion.004 (similar flowering silhouette)"
+  ],
+  "productionIntegration": "Prepared only; not placed in the main app"
+}

@@ -1,0 +1,4 @@
+import{n as e}from"./rolldown-runtime-CNC7AqOf.js";import{n as t,t as n}from"./shaderStore-C5hmi3ce.js";import{n as r,t as i}from"./sceneUboDeclaration-CF_xguIu.js";import{n as a,t as o}from"./meshUboDeclaration-CF_UR3-U.js";import{n as s,t as c}from"./sceneVertexDeclaration-rzzexj5z.js";import{n as l,t as u}from"./meshVertexDeclaration-CGgPx3q1.js";var d,f,p,m;e((()=>{t(),c(),i(),u(),o(),d=`volumetricLightingRenderVolumeVertexShader`,f=`#include<__decl__sceneVertex>
+#include<__decl__meshVertex>
+attribute vec3 position;varying vec4 vWorldPos;void main(void) {vec4 worldPos=world*vec4(position,1.0);vWorldPos=worldPos;gl_Position=viewProjection*worldPos;}
+`,n.ShadersStore[d]||(n.ShadersStore[d]=f),p=[s,r,l,a];for(let e of p)n.IncludesShadersStore[e.name]||(n.IncludesShadersStore[e.name]=e.shader);m={name:d,shader:f}}))();export{m as volumetricLightingRenderVolumeVertexShader};

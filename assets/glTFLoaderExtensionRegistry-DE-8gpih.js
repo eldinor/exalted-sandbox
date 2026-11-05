@@ -1,0 +1,1 @@
+import{n as e,t}from"./logger-2laD6MFI.js";e();var n=new Map,r=n;function i(e,r,i){a(e)&&t.Warn(`Extension with the name '${e}' already exists`),n.set(e,{isGLTFExtension:r,factory:i})}function a(e){return n.delete(e)}export{r as n,a as r,i as t};

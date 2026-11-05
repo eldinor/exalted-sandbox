@@ -1,0 +1,3 @@
+import{n as e,r as t}from"./rolldown-runtime-CNC7AqOf.js";import{n,t as r}from"./shaderStore-C5hmi3ce.js";var i=t({meshUVSpaceRendererPixelShader:()=>s}),a,o,s,c=e((()=>{n(),a=`meshUVSpaceRendererPixelShader`,o=`precision highp float;varying vec2 vDecalTC;uniform sampler2D textureSampler;void main(void) {if (vDecalTC.x<0. || vDecalTC.x>1. || vDecalTC.y<0. || vDecalTC.y>1.) {discard;}
+gl_FragColor=texture2D(textureSampler,vDecalTC);}
+`,r.ShadersStore[a]||(r.ShadersStore[a]=o),s={name:a,shader:o}}));export{s as n,i as r,c as t};

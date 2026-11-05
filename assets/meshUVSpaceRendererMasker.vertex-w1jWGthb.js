@@ -1,0 +1,2 @@
+import{n as e,r as t}from"./rolldown-runtime-CNC7AqOf.js";import{n,t as r}from"./shaderStore-C5hmi3ce.js";var i=t({meshUVSpaceRendererMaskerVertexShaderWGSL:()=>s}),a,o,s,c=e((()=>{n(),a=`meshUVSpaceRendererMaskerVertexShader`,o=`attribute uv: vec2f;varying vUV: vec2f;@vertex
+fn main(input : VertexInputs)->FragmentInputs {vertexOutputs.position= vec4f( vec2f(vertexInputs.uv.x,vertexInputs.uv.y)*2.0-1.0,0.,1.0);vertexOutputs.vUV=vertexInputs.uv;}`,r.ShadersStoreWGSL[a]||(r.ShadersStoreWGSL[a]=o),s={name:a,shader:o}}));export{s as n,i as r,c as t};

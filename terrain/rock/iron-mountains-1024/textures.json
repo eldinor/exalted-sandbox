@@ -1,0 +1,55 @@
+{
+  "width": 1024,
+  "height": 1024,
+  "layers": [
+    "river",
+    "exposedRock",
+    "brokenRock",
+    "snowCliff",
+    "stoneGateSnowRock"
+  ],
+  "textureMetres": [
+    4,
+    90,
+    90,
+    8,
+    8
+  ],
+  "format": "RGBA8; horizontal delta (4-byte pixel), then gzip; sRGB-encoded base, linear normal/ARM/height",
+  "heightChannel": "ARM alpha, normalized source displacement",
+  "derivation": "2x2 RGBA box reduction; identical to the first existing mip level. Source files are read-only.",
+  "sources": [
+    {
+      "file": "public/terrain/rock/iron-mountains/base.rgba.gz",
+      "sha256": "8a9402459b1b05757e0c194dc05cb8d9f3fa2bbf9a6e98008bbf5714ab71c6ab"
+    },
+    {
+      "file": "public/terrain/rock/iron-mountains/normal.rgba.gz",
+      "sha256": "4919c36b02b42c19999ed4e62c0d0664e4e411d4f8a7275282c01f9074b7362a"
+    },
+    {
+      "file": "public/terrain/rock/iron-mountains/arm-height.rgba.gz",
+      "sha256": "ffcdefc6d0b0b89e3bcdffaa7c8ab3b268f3b101a5d0e7b033846caab98303ee"
+    }
+  ],
+  "outputs": [
+    {
+      "file": "base.rgba.gz",
+      "bytes": 11452456,
+      "rawBytes": 20971520,
+      "sha256": "e9799676759f12c779c40d41cea9298695412d169681871b283c709ffa2bd2bd"
+    },
+    {
+      "file": "normal.rgba.gz",
+      "bytes": 14200603,
+      "rawBytes": 20971520,
+      "sha256": "62644cf4663318e53397066759b3576df0e1d450298af07b494af5b63ec4e05c"
+    },
+    {
+      "file": "arm-height.rgba.gz",
+      "bytes": 9820034,
+      "rawBytes": 20971520,
+      "sha256": "71f30ca960e4a701cdf4b014ca0a2c241db067c5c45f8cfe338a64f3a6eae013"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+import{n as e}from"./rolldown-runtime-CNC7AqOf.js";function t(...e){let n=e=>!!e&&typeof e==`object`;return e.reduce((e,r)=>{let i=Object.keys(r);for(let a of i){let i=e[a],o=r[a];Array.isArray(i)&&Array.isArray(o)?e[a]=i.concat(...o):n(i)&&n(o)?e[a]=t(i,o):e[a]=o}return e},{})}var n=e((()=>{}));export{n,t};

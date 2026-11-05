@@ -1,0 +1,1 @@
+import{n as e}from"./rolldown-runtime-CNC7AqOf.js";import{a as t,o as n}from"./domManagement-Baekvk0B.js";var r,i=e((()=>{n(),r=class{static get Now(){return t()&&window.performance&&window.performance.now?window.performance.now():Date.now()}}}));export{i as n,r as t};

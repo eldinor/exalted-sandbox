@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Exalted - Sandbox</title>
+<link rel="icon" type="image/svg+xml" href="/exalted-sandbox/assets/branding/favicon.svg" />
+<style>
+    :root {
+        /* Cool-shadow palette pulled from the Horizon reference. */
+        --ink:      #070b12;
+        --ink-2:    #0d141f;
+        --frost:    #dbe6f2;
+        --frost-dim:#7d8ea3;
+        --accent:   #8fc4e8;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--ink);
+        color: var(--frost);
+        font-family: ui-sans-serif, "Inter", "Segoe UI", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    #view {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        outline: none;
+        touch-action: none;
+    }
+
+    /* ---------------------------------------------------------------- boot */
+
+    #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        background:
+            radial-gradient(120% 90% at 50% 42%, #16202e 0%, #0a1019 55%, #05080d 100%);
+        transition: opacity 900ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #boot.gone { opacity: 0; pointer-events: none; }
+
+    /* Faint drifting grain so the boot screen is never a flat fill. */
+    #boot::after {
+        content: "";
+        position: absolute;
+        inset: -50%;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+        opacity: 0.035;
+        mix-blend-mode: screen;
+        animation: drift 24s linear infinite;
+        pointer-events: none;
+    }
+
+    @keyframes drift {
+        from { transform: translate3d(0, 0, 0); }
+        to   { transform: translate3d(-160px, -160px, 0); }
+    }
+
+    .boot-inner {
+        position: relative;
+        z-index: 1;
+        width: min(560px, 78vw);
+        text-align: center;
+    }
+
+    .wordmark {
+        display: block;
+        width: clamp(120px, 22vw, 220px);
+        max-width: 100%;
+        height: auto;
+        margin: 0 auto;
+        opacity: 0;
+        animation: rise 1400ms cubic-bezier(0.16, 1, 0.3, 1) 120ms forwards;
+    }
+
+    .tagline {
+        margin-top: 1.4em;
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.34em;
+        text-indent: 0.34em;
+        text-transform: uppercase;
+        color: var(--frost-dim);
+        opacity: 0;
+        animation: rise 1400ms cubic-bezier(0.16, 1, 0.3, 1) 420ms forwards;
+    }
+
+    .sandbox-label {
+        display: block;
+        margin-top: 8px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 16px;
+        font-style: italic;
+        letter-spacing: 0.16em;
+        text-indent: 0.16em;
+        text-transform: none;
+    }
+
+    @keyframes rise {
+        from { opacity: 0; transform: translate3d(0, 14px, 0); }
+        to   { opacity: 1; transform: none; }
+    }
+
+    .bar {
+        position: relative;
+        margin: 3.6em auto 0;
+        width: 100%;
+        height: 1px;
+        background: rgba(219, 230, 242, 0.13);
+        overflow: hidden;
+    }
+
+    .bar-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 0%;
+        background: linear-gradient(90deg, transparent, var(--accent) 60%, #eaf4ff);
+        box-shadow: 0 0 14px rgba(143, 196, 232, 0.55);
+        transition: width 380ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .phase {
+        margin-top: 1.5em;
+        height: 1em;
+        font-size: 10px;
+        font-weight: 400;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--frost-dim);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* --------------------------------------------------------- hard failure */
+
+    #nogpu {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: none;
+        place-items: center;
+        background: var(--ink);
+        padding: 2rem;
+        text-align: center;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        line-height: 1.7;
+        color: var(--frost-dim);
+    }
+
+    #nogpu.show { display: grid; }
+    #nogpu b { color: var(--frost); font-weight: 500; }
+
+    /* ------------------------------------------------------------- hint */
+
+    #hint {
+        position: fixed;
+        left: 50%;
+        bottom: 38px;
+        z-index: 50;
+        transform: translateX(-50%);
+        font-size: 10px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: rgba(219, 230, 242, 0.42);
+        text-shadow: 0 1px 12px rgba(0, 0, 0, 0.8);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 700ms ease;
+    }
+
+    #hint.show { opacity: 1; }
+</style>
+  <script type="module" crossorigin src="/exalted-sandbox/assets/main-CHjTCA0X.js"></script>
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/rolldown-runtime-CNC7AqOf.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/logger-2laD6MFI.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/observable-BwscXBHA.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/shaderStore-C5hmi3ce.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/domManagement-Baekvk0B.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/devTools-991HRYPF.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/tools.functions-DXnqCYM0.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/engineStore-Dn1zeY_z.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/performanceConfigurator-DoL7Do74.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/precisionDate-BZXqVLjK.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/internalTexture-9I--C00r.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/abstractEngine.pure-4XqMtC-1.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math.scalar.functions-CyoqGUxJ.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/abstractEngine-C5zUo3rV.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/perfCounter-BdRnkoxe.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/webgpuPerfCounter-BoXdJ6Ua.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/webgpuBundleList-CyNtWyBD.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/typeStore-CaB-EwHV.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math.vector.pure-C-qMt1QQ.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math.axis-DT0wHUxV.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math.color.pure-Cp_dxFsi.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math.plane-Bj6SFfas.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math.frustum-B5EEOtpU.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math.path-CCKrIhCa.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math.size-CXW4bcIQ.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math.viewport-B6NOLkyG.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math-Dib7K_Hd.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/thinEngine.pure-BtR6-SH_.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/webRequest-Bm_wVgyK.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/guid-CTIGwL8d.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/tools.pure-p7TVOVcg.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/buffer.pure-Dkr8mgim.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/uniformBuffer-BWZ__SPT.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/preload-helper-CZ6HzyzZ.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/decorators-BBnV04hZ.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/decorators.serialization-BoU-XblM.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/compatibilityOptions-D369iUt7.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/texture.pure-Be-8b2ye.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/renderingManager-DwN3uTcF.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/lightConstants-DC43wvyg.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/renderTargetTexture.pure-D6gNWvni.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/drawWrapper-BnbQKC3Z.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/effectRenderer.pure-D9Yv6SDc.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/textureTools-DUPav4KI.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/buffer-B3XRq3qC.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/sphericalPolynomial.pure-CCyw-q2l.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/abstractEngine.dom.pure-2ZCeOC9S.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/abstractEngine.renderPass.pure-BcBbEoJ5.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/webgpuEngine.pure-Dwb5pO1A.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/clearQuad.vertex-BCebtBd6.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/clearQuad.fragment-DhadEM8D.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/textureLoaderManager-DStBg60F.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/floatingOriginMatrixOverrides-BHzE1xBa.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/sceneComponent-63Di5OgE.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/pointerEvents-C2T-6rJJ.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/keyboardEvents-BHkjmMZO.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/uniqueIdGenerator-DJY4DqrT.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/scene.pure-1-kecj7b.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/materialHelper.functions-BFkaZ3WM.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/material.pure-BgEtWucG.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/node-Ceg9RSYg.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/mesh.pure-BnCxY1H9.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/instancedMesh.pure-DgsjhPup.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/transformNode-DVr7y6rw.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/webAudioBaseSubGraph-CjaaWKW4.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/spatialWebAudio-C_637X57.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/material-BRqLb8xz.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/pushMaterial-DniENSGk.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/vertexPullingHelper.functions-BauKo_03.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/shaderMaterial.pure-BeVnLmcY.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/rawTexture-D2y7WZsr.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/sceneLoader-CSAaViGM.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/materialDefines-DPrixbMR.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/gaussianSplattingMesh.pure-Cn3aGJKH.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/morphTarget-B3t0NMP2.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/morphTargetManager-zcq_iTQk.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/constants-B5FbTFGT.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/math.color-CGU-fdzy.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/renderTargetTexture-BuA0mVZu.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/light-Bzzrl6PR.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/assetContainer-BdkROyHC.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/lazy-DGm9mQOK.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/glTFFileLoader.pure-DOl00Fss.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/tools-Cyk6yL7q.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/animation.pure-BI1sJBdG.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/animation-9_mHa2cO.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/bone.pure-DiqP_0G5.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/skeleton-Bha9daJa.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/multiMaterial-BV8Rr7eD.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/imageProcessing-sqVcuWPs.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/material.detailMapConfiguration--xjvCDlj.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/standardMaterial.pure-Dv3Lw6g7.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/spotLight.pure-Cs0_hWv8.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/pointLight.pure-DuxI6j01.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/glTFLoaderExtensionRegistry-DE-8gpih.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/objectModelMapping-IbpKMvEc.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/deepMerger-pHVzquBM.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/glTFLoader.pure-vJbKc1_c.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/glTFLoader-D3-JZMM5.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/glTFLoaderAnimation-clsyhGSx.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/proceduralTexture.pure-lML6N8S5.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/dumpTools.pure-D_o6wN1h.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/sphericalPolynomial-Cbt6k5Ld.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/rgbdTextureTools-B4krDyTM.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/environmentTextureTools.pure-D_7Rb-U4.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/abstractEngine.cubeTexture.pure-BLqBosFJ.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/cubeTexture.pure-CnZRlVB-.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/rawCubeTexture-BNp3fikI.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/EXT_lights_image_based-B3DG8CHf.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/thinInstanceMesh.pure-B8D4WI4y.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/thinInstanceMesh-NsXqepDh.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/EXT_mesh_gpu_instancing-CAKGlWVq.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/meshoptCompression-D-EHwgMM.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/EXT_meshopt_compression-DSx1KGFm.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/EXT_texture_webp-H49-8TQC.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/EXT_texture_avif-Dbn9X8Zs.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/EXT_lights_ies-DGij83JG.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/workerPool-rKYy8o2K.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/dracoDecoder-DmRmhPnJ.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_draco_mesh_compression-DLBCsWe8.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_gaussian_splatting-BBpCSDt0.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_lights_punctual-BFoQ27Uq.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/rectAreaLight.pure-DpDWkper.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/EXT_lights_area-BAzlYgtl.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_pbrSpecularGlossiness-CMEv9kAu.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_unlit-B_xSKOQu.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_clearcoat-BoozHKit.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_coat-ByZYzI2j.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_iridescence-Bw1pNeIU.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_anisotropy-D7u8QO0C.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_emissive_strength-CJpHHE_3.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_sheen-DQXYNYzV.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_fuzz-CFpLhHy7.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_specular-CjyH0ScE.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_ior-DmEXWMEw.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_variants-BTj7m3bD.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/transmissionHelper-C4pmRVCQ.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_transmission-DLv4QUyk.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_diffuse_transmission-BrcqRZC7.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_volume-DW_pJN7W.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_volume_scatter-CX3V_ONT.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_dispersion-gLGtCAu7.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_materials_diffuse_roughness-CHT_4d9S.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_mesh_quantization-B-biOi5t.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_texture_basisu-TS5KzX0c.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_texture_transform-CcBzB4b1.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_xmp_json_ld-CriDrVGB.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_animation_pointer-CTzFkH8L.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/abstractSoundSource-eKTsQ6Pu.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/webAudioSoundSource-DpMsMWau.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/abstractSoundInstance-lfIAnpd_.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/webAudioStaticSound-B9UjTF81.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/webAudioStreamingSound-VPT6sfKT.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/sound.pure-ChVydMXT.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/audioSceneComponent-D5dHdCSG.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/MSFT_audio_emitter-CtTcnOcd.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/MSFT_lod-7wsr3NDB.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/MSFT_minecraftMesh-ke_n02AV.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/MSFT_sRGBFactors-Bc4A_1m1.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/flowGraphRichTypes.pure-DTEOusTz.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/flowGraphBlock-KWZbALyv.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/flowGraphAssetsContext-CH0tLAsa.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/flowGraphExecutionBlock-tavuQ1vC.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/flowGraphExecutionBlockWithOutSignal-DnrXn8Jy.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/flowGraphAsyncExecutionBlock-Cs2ek8QV.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/utils-BfVayJ_c.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/flowGraphEventBlock-D6s4QmEK.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/flowGraphCoordinator-RYOdkzqG.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/flowGraphParser-BwCR4V6O.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/flowGraphRichTypes-CeZCYsZu.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/declarationMapper-BZomqMNa.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_interactivity-CpIijZwh.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_node_visibility-9sENSyS9.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_node_selectability-DHShXY7T.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/KHR_node_hoverability-BlW2IHA8.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/ExtrasAsMetadata-RSh5HW8l.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/brdfTextureTools-zGjjcovp.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/pbrBaseMaterial.pure-C7amOOAd.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/pbrMaterial.pure-Bye3PeZ5.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/imageProcessingDeclaration-BUOQt5T9.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/logDepthDeclaration-d5YMcyq1.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/helperFunctions-3XR9MQdT.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/imageProcessingFunctions-Ckw_JnYm.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/fogFragmentDeclaration-neuXL8AV.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/clipPlaneFragment-smHhwblQ.js">
+  <link rel="modulepreload" crossorigin href="/exalted-sandbox/assets/clipPlaneVertex-B7Ah5L7Z.js">
+  <link rel="stylesheet" crossorigin href="/exalted-sandbox/assets/main-C_YVKTcs.css">
+</head>
+<body>
+    <canvas id="view" tabindex="0"></canvas>
+    <header id="spawn-bar" hidden>
+        <a class="spawn-brand" href="https://alpha.exalted8.com/" aria-label="Exalted home"><img src="/exalted-sandbox/assets/branding/exalted-logo.svg" alt="Exalted" width="2040" height="700" /></a>
+        <nav aria-label="Spawn locations"></nav>
+        <span class="spawn-status" role="status" aria-live="polite"></span>
+    </header>
+    <aside id="terrain-panel" aria-label="Terrain appearance" hidden>
+        <h2>Textures</h2>
+        <label><input id="use-desert-textures" type="checkbox" checked> Use desert textures</label>
+        <label><input id="use-procedural-textures" type="checkbox"> Use procedural textures</label>
+        <section id="wind-panel" aria-labelledby="wind-heading">
+            <h2 id="wind-heading">Wind</h2>
+        </section>
+    </aside>
+
+    <div id="hint">click to look &nbsp;·&nbsp; wasd to move &nbsp;·&nbsp; f1 for settings</div>
+
+    <div id="boot">
+        <div class="boot-inner">
+            <img class="wordmark" src="/exalted-sandbox/assets/branding/exalted-logo.svg" alt="Exalted" width="2040" height="700" fetchpriority="high" />
+            <div class="tagline">Interactive 3D magazine<span class="sandbox-label">Sandbox</span></div>
+            <div class="bar"><div class="bar-fill" id="boot-bar"></div></div>
+            <div class="phase" id="boot-phase">initialising</div>
+        </div>
+    </div>
+
+    <div id="nogpu">
+        <div>
+            <b>WebGPU is not available in this browser.</b><br />
+            <span id="startup-help">EXALTED requires a WebGPU-capable browser. Try Chrome 113+ on a desktop GPU.</span>
+        </div>
+    </div>
+
+</body>
+</html>

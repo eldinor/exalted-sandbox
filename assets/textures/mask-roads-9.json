@@ -1,0 +1,12 @@
+{
+  "source": "assets/textures/vertex_color_4k-9.png",
+  "sourceSha256": "cbd6e7eb6addaf5dcf5960d84a82a4c92f4b9ca9f826f0a7fba3b6f6f336fa39",
+  "output": "assets/textures/mask-roads-9.png",
+  "outputSha256": "f32273dfc096fcd5d64e9703ed8273e1b8bb7f5607c3d667f86ffdd26eda4870",
+  "width": 2049,
+  "height": 1537,
+  "format": "grayscale8",
+  "sigmaMetres": 1.1,
+  "orientation": "same endpoints and orientation as source biome PNG",
+  "meaning": "white=road, black=land, grey=visual road blend; independent of gameplay firmness and road material selection"
+}
