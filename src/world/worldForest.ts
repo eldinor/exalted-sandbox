@@ -1,3 +1,4 @@
+import { propAssetPath } from '../core/PropTextureProfile.ts';
 /** Limited authored-world experiment: dense, inaccessible eastern pines. */
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
@@ -109,7 +110,7 @@ export class WorldForest {
                 submergedAt:(x,z,y)=>(this.terrain.water?.sample(x,z)?.level??-Infinity)>y,
             },pinePrototypes,[...placement.trees,...open.trees]);
             Object.assign(this.fringeStats,{placed:fringe.trees.length,trees:fringe.trees.length-fringe.bushes,bushes:fringe.bushes});
-            const response = await fetch(`${import.meta.env.BASE_URL}terrain/forest/blue-spruce/impostor.json`);
+            const response = await fetch(`${import.meta.env.BASE_URL}${propAssetPath('terrain/forest/blue-spruce/impostor.json')}`);
             if (!response.ok) throw new Error('Failed to load border spruce atlas metadata.');
             const atlasData: unknown = await response.json();
             this.impostorResources = new ForestImpostorResources(this.scene, parseSpruceAtlas(atlasData), this.shading);

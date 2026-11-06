@@ -1,5 +1,66 @@
 # Exalted Current Work
 
+## Smaller 1K deployment inventory, 6 November 2026
+
+`build:1k` now selects the ground/prop derivatives before resolving GLB
+external dependencies. Replaced originals and unused external boulder images
+are omitted from this package; attribution notes and original `public/` assets
+remain. Ordinary multi-page builds retain both profiles. The script creates no
+ZIP; the user prepares upload archives after building. Packaging tests check
+exclusions and retained runtime assets.
+
+## 1K spruce atlas colour correction, 6 November 2026
+
+The first prop conversion incorrectly treated baked premultiplied colour and
+object-space normal atlases as ordinary straight-alpha glTF maps. The impostor
+shader already unpremultiplies both, causing bright cyan foliage and incorrect
+normals. Atlas preparation now box-filters stored RGBA channels directly,
+matching texture sampling; it does not gamma-convert, unpremultiply, adjust
+coverage or renormalise these special maps. Ordinary GLB processing is unchanged.
+Regression coverage checks reduced stored colour/normal/alpha against source
+block averages. Original atlases and shader/material settings stay unchanged.
+Typecheck and all three prop-profile tests pass. Visual confirmation remains
+with the user; built packages need rebuilding.
+
+## Standalone 1K deployment command, 6 November 2026
+
+`npm run build:1k` builds only the 1K ground/props shell into `dist-1k/`
+and renames its compiled HTML to `index.html`. `npm run preview:1k` serves it.
+Source pages, normal build and Pages build remain unchanged. The validated
+runtime/provenance inventory is retained. See BUILD_PACKAGING.md.
+
+## 1K ground and prop comparison, 6 November 2026
+
+`index-1k-props.html` adds a third main-app shell: the existing 1K ground
+profile plus capped-at-1024 prop textures. `index.html` and `index-1k.html`
+retain their existing prop assets. Pine and desert embedded textures and the
+boulder's external normal map are reduced offline into self-contained GLBs.
+Every geometry buffer, node, accessor, material setting and placement is retained.
+Fir, grass and flower textures already fit within 1K and are reused unchanged.
+Spruce atlases become 1024 x 384 with matching 128-pixel tile metadata; views,
+geometry and colour/depth cutoffs remain unchanged. Linear-light premultiplied
+colour filtering, normal renormalisation and cutout coverage adjustment are
+applied offline. Sources remain read-only and checksum-verified.
+Run `npm run assets:props:1k` to regenerate (Python/Pillow 12+). See
+`public/terrain/props-1k/SOURCE.md`. Visual foliage quality and performance
+comparison remain manual checks. Typecheck and all 196 Node tests pass,
+including source hashes and byte-identical geometry checks. No production
+build or publishing performed.
+
+## 1K tiled ground comparison, 6 November 2026
+
+`index-1k.html` shares the main app runtime and selects twelve 1024-square tiled
+maps for meadow, forest floor, beach and road. The original page and source
+assets remain unchanged. These maps fall from 148.82 to 23.94 MiB; mountains
+were already 1K. Height/biome masks, terrain, props and all GLBs are preserved.
+See BUILD_PACKAGING.md and public/terrain/ground-1k/SOURCE.md for conversion,
+asset checksums and deployment details. Next reminder: embedded GLB textures,
+including DesertGround in exalted_desert.glb, then trees/flowers with cutouts.
+Typecheck and all 194 Node tests pass. Native Chrome WebGPU reaches Ready for
+both pages: the comparison loads exactly twelve 1024-square replacements;
+the original loads its existing 2K/4K tiled maps and no 1K replacements.
+No visual quality approval or production build is claimed for this change.
+
 ## Firefox right-button surf, 5 November 2026
 
 Steering follow-up: cancelling pointerdown also suppressed Firefox mousemove

@@ -1,0 +1,186 @@
+{
+  "format": "exalted-ground-1k-v1",
+  "method": "Colour: linear-light box reduction, re-encoded sRGB. Normals: linear box reduction and vector renormalisation. Packed maps: linear box reduction. Original physical texture scales unchanged.",
+  "outputs": [
+    {
+      "source": "terrain/grassland/meadow/Material-326-A_BaseColor.jpg",
+      "file": "meadow-base.png",
+      "kind": "colour",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        4096,
+        4096
+      ],
+      "sourceBytes": 4627491,
+      "bytes": 2512776,
+      "sourceSha256": "3dff4a5bee203fcd2c30728ec203a223b4075c4b3601a94fcc2458fa63d14c95",
+      "sha256": "364d45028e3df2c0e15d842ac88d5867e358991ca3704b6f232f0b27798029af"
+    },
+    {
+      "source": "terrain/grassland/meadow/Material-326-A_Normal.jpg",
+      "file": "meadow-normal.png",
+      "kind": "normal",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        4096,
+        4096
+      ],
+      "sourceBytes": 3828090,
+      "bytes": 2614431,
+      "sourceSha256": "455f33a1bc986faf18c0acf5cfefc7558cea4e1a929ee7c504fae78b00da7523",
+      "sha256": "a6abc99cbd98f384168f00bc4dfb41f45dc3827e0c912d16555e92cb2df55478"
+    },
+    {
+      "source": "terrain/grassland/meadow/Material-326-A_ORM.png",
+      "file": "meadow-arm.png",
+      "kind": "linear",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        4096,
+        4096
+      ],
+      "sourceBytes": 25281178,
+      "bytes": 1905723,
+      "sourceSha256": "da208e40288d07533f0ef4dc5ad92b140a616541134425e4e535550909efebb8",
+      "sha256": "fd13bd1da9b17b70811a6d683973af8dd76d27b6f9dbcb287a90a8dba120c4a8"
+    },
+    {
+      "source": "terrain/forest/textures/forrest_ground_01_diff_2k.png",
+      "file": "forest-base.png",
+      "kind": "colour",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 26253635,
+      "bytes": 2343310,
+      "sourceSha256": "06a7c3c4a3916fd96821c4f4d21b4a38c333e931bfc66856e19dab720a22ffa5",
+      "sha256": "29de456ada4e2af180a05cc612fb85d0a38a6748eff31146bbf410f41a5253f0"
+    },
+    {
+      "source": "terrain/forest/textures/forrest_ground_01_nor_gl_2k.png",
+      "file": "forest-normal.png",
+      "kind": "normal",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 27037479,
+      "bytes": 2707750,
+      "sourceSha256": "bfc3e06ea31c3de513c9421a8fbbb4a540ebe32fada1bbb545286c1abc96e313",
+      "sha256": "29c0ed2a03c73fb0f14ab79b5c7944da6c2441d38fe31fb071d0af912bfe6ef0"
+    },
+    {
+      "source": "terrain/forest/textures/forrest_ground_01_arm_2k.png",
+      "file": "forest-arm.png",
+      "kind": "linear",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 18233670,
+      "bytes": 1805532,
+      "sourceSha256": "e58d904020d89f224a04da9b5a93774afe8c7cb91e8d37fc9f03b45db72aaffd",
+      "sha256": "009734e9c015afd6304483d331478c17bb30fc01dceb911244285dfb8ff38227"
+    },
+    {
+      "source": "terrain/sand/beach/aerial_beach_01_diff_2k.png",
+      "file": "beach-base.png",
+      "kind": "colour",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 23509529,
+      "bytes": 1244899,
+      "sourceSha256": "3bc7228c7f80bd10af54cc228650acda9c40e39999f261f8893afcee0563a6fa",
+      "sha256": "6472557f57b5896e2266d4e9ed1a6888e72894f5f3c5f71c7d981314f85dbb01"
+    },
+    {
+      "source": "terrain/sand/beach/aerial_beach_01_nor_gl_2k.png",
+      "file": "beach-normal.png",
+      "kind": "normal",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 6738050,
+      "bytes": 1842817,
+      "sourceSha256": "e4d4e3aae7f104c6481d1ec8ff93003a3128fb623adcb78c3b005c1e29b730bd",
+      "sha256": "39e6306ff01c6106179d5e407a2516c58f433727a2791b37860bfa44265a9c94"
+    },
+    {
+      "source": "terrain/sand/beach/aerial_beach_01_arm_2k.png",
+      "file": "beach-arm.png",
+      "kind": "linear",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 6116014,
+      "bytes": 1548616,
+      "sourceSha256": "ddb18e31fa2b48ba06aa0ac86b03ea0f9f9b36c6c862a63d3d6e149e5472e9c1",
+      "sha256": "6dc45ba6087779e5165a9a6d379d88ef8f0e6339218236b1dfb3ff1e4fa94a31"
+    },
+    {
+      "source": "terrain/road/asp1/asphalt_snow_diff_2k.jpg",
+      "file": "road-base.png",
+      "kind": "colour",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 5348934,
+      "bytes": 2577087,
+      "sourceSha256": "d4e72f34370a068ce54e2748032516cb2915f3cb1d756edbb165243274a776ae",
+      "sha256": "0ece4cfaafb233e419056f429fc0207f94a3b1ca705ce15317337a1c6976382f"
+    },
+    {
+      "source": "terrain/road/asp1/asphalt_snow_nor_gl_2k.jpg",
+      "file": "road-normal.png",
+      "kind": "normal",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 5798307,
+      "bytes": 2452179,
+      "sourceSha256": "091e5635d9904a2b0002f2ce44b0744c4813cc36fd7ef9757a4c5462475e819f",
+      "sha256": "06e390c7fb3498f4aa3154b6ebb9e7550fc5b97ee58935377d9b17d756a1c16d"
+    },
+    {
+      "source": "terrain/road/asp1/asphalt_snow_arm_2k.jpg",
+      "file": "road-arm.png",
+      "kind": "linear",
+      "width": 1024,
+      "height": 1024,
+      "sourceDimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 3275729,
+      "bytes": 1545378,
+      "sourceSha256": "f262522e36d78fc1277ef5987cd4526c455933e13f6b054f7f346e92579d22d1",
+      "sha256": "fe5426bb485b07a79d68590a62b40f06496574c51c2fe32720ff16960da19505"
+    }
+  ]
+}

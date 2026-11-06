@@ -34,7 +34,8 @@ npm test
 npm run build
 ```
 
-`npm run build` packages only the production app into `dist/`. Runtime assets
+`npm run build` packages the production app and its `index-1k.html` ground-texture
+comparison plus `index-1k-props.html` (1K ground and props) into `dist/`. The original entry retains its texture defaults. Runtime assets
 are explicitly selected; source packs and lab data remain in the workspace.
 Use `npm run build:labs` for the separate full lab package in `dist-labs/`, then
 `npm run preview:labs` to serve it. See [BUILD_PACKAGING.md](BUILD_PACKAGING.md)

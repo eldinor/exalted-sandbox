@@ -3,6 +3,7 @@ import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 /** Runtime roots for index.html, including its GLB comparison and prop grounding. */
 export const PRODUCTION_ASSETS = [
+    ...['desert.glb','pines.glb','boulder.glb','impostor-colour.png','impostor-normal.png','impostor.json'].map(name=>`terrain/props-1k/${name}`),
     'LICENSE.txt', 'THIRD_PARTY_NOTICES.md',
     'assets/branding/exalted-logo.svg',
     'assets/branding/favicon.svg',
@@ -20,6 +21,7 @@ export const PRODUCTION_ASSETS = [
     ...['diff','nor_gl','arm'].map(map=>`terrain/sand/beach/aerial_beach_01_${map}_2k.png`),
     ...['diff','nor_gl','arm'].map(map=>`terrain/road/asp1/asphalt_snow_${map}_2k.jpg`),
     ...['base','normal','arm','height'].flatMap(map=>Array.from({length:5},(_,layer)=>`terrain/rock/iron-mountains-png-1024/${map}-${layer}.png`)),
+    ...['meadow','forest','beach','road'].flatMap(set=>['base','normal','arm'].map(map=>`terrain/ground-1k/${set}-${map}.png`)),
 ];
 
 function localPath(root, name) {
@@ -29,18 +31,19 @@ function localPath(root, name) {
 }
 
 /** Resolve GLB image/buffer dependencies; fail before bundling if anything is missing. */
-export function productionAssetFiles(publicDir, roots=PRODUCTION_ASSETS, preserveNotes=true) {
+export function productionAssetFiles(publicDir, roots=PRODUCTION_ASSETS, preserveNotes=true, excluded=new Set()) {
     const files=new Set(),queue=[...roots];
     if(preserveNotes){
         const notes=dir=>{for(const entry of readdirSync(dir,{withFileTypes:true})){
             const file=resolve(dir,entry.name);
             if(entry.isDirectory())notes(file);
-            else if(/\.(md|txt|json)$/i.test(entry.name))queue.push(relative(publicDir,file));
+            else if(/\.(md|txt|json)$/i.test(entry.name)&&!excluded.has(relative(publicDir,file).replaceAll('\\','/')))queue.push(relative(publicDir,file));
         }};
         notes(publicDir);
     }
     while(queue.length){
         const file=localPath(publicDir,queue.pop()),name=relative(publicDir,file).replaceAll('\\','/');
+        if(excluded.has(name))throw new Error(`Excluded original is still referenced by a runtime asset: ${name}`);
         if(files.has(name))continue;
         if(!existsSync(file)||!statSync(file).isFile())throw new Error(`Missing production asset: ${name}`);
         files.add(name);
@@ -57,18 +60,33 @@ export function productionAssetFiles(publicDir, roots=PRODUCTION_ASSETS, preserv
     return [...files].sort();
 }
 
+/** Select replacements before resolving GLB dependencies, so old external maps fall away too. */
+export function production1kAssetFiles(publicDir) {
+    const replacements=new Map();
+    for(const root of ['terrain/ground-1k','terrain/props-1k']){
+        const manifest=JSON.parse(readFileSync(localPath(publicDir,`${root}/textures.json`),'utf8'));
+        for(const entry of manifest.outputs){
+            if(typeof entry.source!=='string'||typeof entry.file!=='string')throw new Error(`Invalid 1K manifest: ${root}`);
+            replacements.set(entry.source,`${root}/${entry.file}`);
+        }
+    }
+    replacements.set('terrain/forest/blue-spruce/impostor.json','terrain/props-1k/impostor.json');
+    const roots=[...new Set(PRODUCTION_ASSETS.map(name=>replacements.get(name)??name))];
+    return productionAssetFiles(publicDir,roots,true,new Set(replacements.keys()));
+}
+
 /** Archive extensions may be denied by shared hosting; the bytes stay gzipped. */
 export function productionAssetOutput(name) {
     return /^terrain\/rock\/iron-mountains(?:-1024)?\/(base|normal|arm-height)\.rgba\.gz$/.test(name)
         ? name.replace(/\.gz$/,'.bin') : name;
 }
 
-export function productionAssetPackage() {
+export function productionAssetPackage({oneK=false}={}) {
     let publicDir='',outDir='',files=[];
     return {
         name:'exalted-production-assets',apply:'build',
         configResolved(config){publicDir=resolve(config.root,'public');outDir=resolve(config.root,config.build.outDir);},
-        buildStart(){files=productionAssetFiles(publicDir);},
+        buildStart(){files=oneK?production1kAssetFiles(publicDir):productionAssetFiles(publicDir);},
         writeBundle(){
             let bytes=0;
             for(const name of files){const source=localPath(publicDir,name),target=localPath(outDir,productionAssetOutput(name));

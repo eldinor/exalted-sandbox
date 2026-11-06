@@ -21,6 +21,7 @@ import { loadForestGroundTextures, FOREST_GROUND_TILE_METRES, type ForestGroundT
 import { GROUND_COVERAGE_MAP, DETAIL_COVERAGE_MAP } from './groundCoverage.ts';
 import { loadBeachGroundTextures, BEACH_TILE_METRES, type BeachGroundTextures } from './BeachGround.ts';
 import { loadRockGroundTextures, ROCK_TILE_METRES, type RockGroundTextures } from './RockGround.ts';
+import { groundTexturePath } from './GroundTextureProfile.ts';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import { ExaltedWorld } from "./exaltedWorld.ts";
@@ -180,17 +181,17 @@ export class Terrain {
         this.detailTex.wrapV = Constants.TEXTURE_WRAP_ADDRESSMODE;
         this.detailTex.refreshRate = 0;
 
-        const roadRoot = `${import.meta.env.BASE_URL}terrain/road/asp1/asphalt_snow_`;
+        const roadRoot = 'terrain/road/asp1/asphalt_snow_';
         this.roadBaseTex = new Texture(
-            `${roadRoot}diff_2k.jpg`, scene, false, false,
+            `${import.meta.env.BASE_URL}${groundTexturePath(`${roadRoot}diff_2k.jpg`)}`, scene, false, false,
             Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
         );
         this.roadNormalTex = new Texture(
-            `${roadRoot}nor_gl_2k.jpg`, scene, false, false,
+            `${import.meta.env.BASE_URL}${groundTexturePath(`${roadRoot}nor_gl_2k.jpg`)}`, scene, false, false,
             Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
         );
         this.roadArmTex = new Texture(
-            `${roadRoot}arm_2k.jpg`, scene, false, false,
+            `${import.meta.env.BASE_URL}${groundTexturePath(`${roadRoot}arm_2k.jpg`)}`, scene, false, false,
             Constants.TEXTURE_TRILINEAR_SAMPLINGMODE,
         );
         this.biomeMapTex = exalted ? new Texture(

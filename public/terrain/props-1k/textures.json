@@ -1,0 +1,710 @@
+{
+  "format": "exalted-props-1k-v1",
+  "sources": {
+    "assets/exalted/exalted_desert.glb": "da3c4b75898ea9ac721c9194a08d8e36e1f56242720311cfc989782d1337bbae",
+    "terrain/forest/pine-pack-forestland.glb": "637e4f0fc79fddcb78eb34c55b352aa5fd585e1470690f4d17e7922f85032482",
+    "terrain/forest/coniferous-selected/boulder-plain.glb": "9c02b516249f28f1db14b6298c8d69a391decc04d702cabcf93441fc932445ec",
+    "terrain/forest/coniferous-selected/textures/plain-rock-color.png": "29f5840b9cb3e9a07a900b5df32f7151ee8ae9c4c9b4a7775e3d1c847c42ae16",
+    "terrain/forest/coniferous-selected/textures/plain-rock-normal.png": "bfdf2f08d0487e11faeaf2390d4c5b540c55587800ad97f47af7640831cf6b1e",
+    "terrain/forest/blue-spruce/impostor.json": "f82bf7682a185d1bd391cb903f9b7b42ed20233b42644a75a5484ddde49ec4cd",
+    "terrain/forest/blue-spruce/impostor-colour.png": "c83af1362db127da3cf6ce92c9efa6912744d0dbe5fdbb47e6b1a5689aef871e",
+    "terrain/forest/blue-spruce/impostor-normal.png": "b3373da25baf3d9f70e459dc61fe38593b2747dd766f80766eda11b3321d13e1"
+  },
+  "outputs": [
+    {
+      "source": "assets/exalted/exalted_desert.glb",
+      "file": "desert.glb",
+      "sourceBytes": 31673024,
+      "bytes": 26679060,
+      "sha256": "8b0997647489a222d8ebaf139494a60826219e613a66aeac412736b965328b69",
+      "images": [
+        {
+          "image": 0,
+          "kind": "normal",
+          "sourceDimensions": [
+            2048,
+            2048
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 1,
+          "kind": "colour",
+          "sourceDimensions": [
+            2048,
+            2048
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 2,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 3,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 4,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 5,
+          "kind": "normal",
+          "sourceDimensions": [
+            512,
+            512
+          ],
+          "dimensions": [
+            512,
+            512
+          ]
+        },
+        {
+          "image": 6,
+          "kind": "colour",
+          "sourceDimensions": [
+            512,
+            512
+          ],
+          "dimensions": [
+            512,
+            512
+          ]
+        },
+        {
+          "image": 7,
+          "kind": "linear",
+          "sourceDimensions": [
+            512,
+            512
+          ],
+          "dimensions": [
+            512,
+            512
+          ]
+        },
+        {
+          "image": 8,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 9,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 10,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 11,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 12,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 13,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 14,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 15,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 16,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 17,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 18,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 19,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 20,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 21,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 22,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 23,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 24,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 25,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 26,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 27,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 28,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 29,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 30,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 31,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 32,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 33,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 34,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 35,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 36,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 37,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 38,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 39,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 40,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 41,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 42,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 43,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 44,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        }
+      ]
+    },
+    {
+      "source": "terrain/forest/pine-pack-forestland.glb",
+      "file": "pines.glb",
+      "sourceBytes": 22735412,
+      "bytes": 8172400,
+      "sha256": "eb6d7c6efe4ccf79e4c3bec0eff4eb14e62027f297a436a10452dcff628a28ec",
+      "images": [
+        {
+          "image": 0,
+          "kind": "normal",
+          "sourceDimensions": [
+            1024,
+            2048
+          ],
+          "dimensions": [
+            512,
+            1024
+          ]
+        },
+        {
+          "image": 1,
+          "kind": "linear",
+          "sourceDimensions": [
+            1024,
+            2048
+          ],
+          "dimensions": [
+            512,
+            1024
+          ]
+        },
+        {
+          "image": 2,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            2048
+          ],
+          "dimensions": [
+            512,
+            1024
+          ]
+        },
+        {
+          "image": 3,
+          "kind": "normal",
+          "sourceDimensions": [
+            2048,
+            2048
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 4,
+          "kind": "linear",
+          "sourceDimensions": [
+            2048,
+            2048
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 5,
+          "kind": "colour",
+          "sourceDimensions": [
+            2048,
+            2048
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        }
+      ]
+    },
+    {
+      "source": "terrain/forest/coniferous-selected/boulder-plain.glb",
+      "file": "boulder.glb",
+      "sourceBytes": 37544,
+      "bytes": 1222236,
+      "sha256": "536f7e954a1674e58212ad835b395bc63533182dd15dced2339f15f81cf0aef5",
+      "images": [
+        {
+          "image": 0,
+          "kind": "colour",
+          "sourceDimensions": [
+            1024,
+            1024
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "image": 1,
+          "kind": "normal",
+          "sourceDimensions": [
+            2048,
+            2048
+          ],
+          "dimensions": [
+            1024,
+            1024
+          ]
+        }
+      ]
+    },
+    {
+      "source": "terrain/forest/blue-spruce/impostor-colour.png",
+      "file": "impostor-colour.png",
+      "sourceBytes": 1775033,
+      "bytes": 146476,
+      "sourceDimensions": [
+        4096,
+        1536
+      ],
+      "dimensions": [
+        1024,
+        384
+      ],
+      "storage": "premultiplied-encoded-rgba",
+      "sha256": "584d68a27a5174cdba41ebebbf7beb99fc7d02dffc1d50ef01b18a3df66ade11"
+    },
+    {
+      "source": "terrain/forest/blue-spruce/impostor-normal.png",
+      "file": "impostor-normal.png",
+      "sourceBytes": 1670810,
+      "bytes": 180265,
+      "sourceDimensions": [
+        4096,
+        1536
+      ],
+      "dimensions": [
+        1024,
+        384
+      ],
+      "storage": "premultiplied-encoded-rgba",
+      "sha256": "d7d97b2182d0f06c3daded93ce300649939c5812ec99c6588ecfbaee1602bf21"
+    }
+  ]
+}

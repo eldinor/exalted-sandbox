@@ -1,3 +1,4 @@
+import { propAssetPath } from '../core/PropTextureProfile.ts';
 /** Authored-world ridge/road accents using the attributed plain boulder; no lab imports. */
 import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader';
 import '@babylonjs/loaders/glTF';
@@ -55,7 +56,7 @@ export class IronRocks {
             const sites=placeIronRocks({ironAt:(x,z)=>maskWeightAt(iron,x,z),roadAt:(x,z)=>maskWeightAt(road,x,z),
                 heightAt:(x,z)=>surface.sample(x,z),upAt:(x,z)=>{surface.sample(x,z,normal);return normal.y;},
                 submergedAt:(x,z,y)=>(this.terrain.water?.sample(x,z)?.level??-Infinity)>y});
-            this.container=await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}terrain/forest/coniferous-selected/boulder-plain.glb`,this.scene);
+            this.container=await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}${propAssetPath('terrain/forest/coniferous-selected/boulder-plain.glb')}`,this.scene);
             const parts=this.container.meshes.filter((mesh):mesh is Mesh=>mesh instanceof Mesh&&mesh.getTotalVertices()>0);
             if(parts.length!==1||!(parts[0].material instanceof PBRMaterial))throw new Error('Plain boulder requires one PBR geometry part.');
             const source=parts[0],material=source.material as PBRMaterial;

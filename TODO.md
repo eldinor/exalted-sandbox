@@ -1,5 +1,13 @@
 # Exalted world integration
 
+## Next texture follow-up
+
+- [x] Prepare embedded prop texture derivatives for `index-1k-props.html`,
+  including DesertGround. Preserve original GLBs and placement. Fir/grass/flower
+  images already fit within 1K and remain unchanged.
+- [ ] Visually compare pine cutouts, spruce atlas branches and flowers on the 1K
+  comparison pages; measure loading/memory before changing production defaults.
+
 Legacy-page cleanup (2026-10-12): the half-world, old forest, forest-road and
 mountain viewers and their dedicated assets/code have been removed. Earlier
 completed-work entries below are historical records.

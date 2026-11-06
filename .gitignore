@@ -30,3 +30,6 @@ Thumbs.db
 *.webp
 *.mp4
 *.webm
+
+# Separate 1K ground and props deployment
+dist-1k/

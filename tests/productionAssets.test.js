@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync,mkdirSync,writeFileSync,rmSync,statSync } from 'node:fs';
+import { mkdtempSync,mkdirSync,writeFileSync,rmSync,statSync,readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename,dirname,join,resolve } from 'node:path';
 import { resolveConfig } from 'vite';
-import { PRODUCTION_ASSETS,productionAssetFiles,productionAssetOutput } from '../scripts/production-assets.mjs';
+import { PRODUCTION_ASSETS,productionAssetFiles,production1kAssetFiles,productionAssetOutput } from '../scripts/production-assets.mjs';
 import { readRockArrayResponse } from '../src/terrain/RockArrayStream.ts';
 import { gzipSync } from 'node:zlib';
 import { readAsset } from '../src/core/assetDownload.ts';
@@ -103,7 +103,7 @@ test('current production inventory retains runtime packs and boulder textures, w
 test('main build excludes lab entry points, source maps and public-directory bulk copying',async()=>{
     const app=await resolveConfig({mode:'production'},'build');
     assert.equal(app.build.outDir,'dist');assert.equal(app.build.copyPublicDir,false);assert.equal(app.build.sourcemap,false);
-    assert.deepEqual(app.build.rollupOptions.input,{main:'index.html'});
+    assert.deepEqual(app.build.rollupOptions.input,{main:'index.html',ground1k:'index-1k.html',props1k:'index-1k-props.html'});
     assert.ok(!app.plugins.some(p=>p.name==='exalted-generated-world-package'));
     const labs=await resolveConfig({mode:'labs'},'build');
     assert.equal(labs.build.outDir,'dist-labs');assert.equal(labs.build.copyPublicDir,true);assert.equal(labs.build.sourcemap,true);
@@ -111,4 +111,22 @@ test('main build excludes lab entry points, source maps and public-directory bul
     assert.ok(labs.plugins.some(p=>p.name==='exalted-generated-world-package'));
     const dev=await resolveConfig({},'serve');
     assert.equal(resolve(dev.publicDir),resolve('public'));assert.equal(dev.server.port,5173);
+});
+
+test('1K deployment excludes replaced originals and their unused external images',()=>{
+    const root=resolve('public'), files=production1kAssetFiles(root);
+    const original=productionAssetFiles(root);
+    for(const folder of ['ground-1k','props-1k']){
+        const manifest=JSON.parse(readFileSync(join(root,`terrain/${folder}/textures.json`),'utf8'));
+        for(const entry of manifest.outputs){
+            assert.ok(!files.includes(entry.source),entry.source);
+            assert.ok(files.includes(`terrain/${folder}/${entry.file}`));
+            assert.ok(original.includes(entry.source),'Regular package retains original');
+        }
+    }
+    assert.ok(!files.includes('terrain/forest/blue-spruce/impostor.json'));
+    assert.ok(files.includes('terrain/props-1k/impostor.json'));
+    for(const name of ['plain-rock-color.png','plain-rock-normal.png'])assert.ok(!files.includes(`terrain/forest/coniferous-selected/textures/${name}`));
+    for(const name of ['LICENSE.txt','THIRD_PARTY_NOTICES.md','terrain/forest/fir-pack-selected.glb','assets/exalted/alpha-map.glb','assets/textures/vis_ground_heightmap-11.png'])assert.ok(files.includes(name),name);
+    assert.ok(!files.some(name=>name.endsWith('.zip')));
 });

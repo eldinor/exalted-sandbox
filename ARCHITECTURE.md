@@ -12,6 +12,14 @@ before packing it into ARM alpha. Explicit array mip uploads and startup warm-up
 are retained. Legacy compressed arrays are preparation sources, not runtime URLs.
 
 This document describes the production world application served by `index.html`.
+`index-1k.html` is a comparison shell sharing the exact main entry point; its
+HTML data attribute selects only the standalone 1K tiled ground derivatives
+through `GroundTextureProfile.ts`. Original page defaults, tile scales,
+height/biome maps, GLB assets and rendering/simulation order are unchanged.
+`index-1k-props.html` additionally selects offline prop derivatives through
+`core/PropTextureProfile.ts`; this includes desert ground embedded in its GLB
+and reduced spruce atlases with matching tile metadata. No runtime resizing is
+performed. Original and ground-only pages retain original props.
 It covers the TypeScript code under `src`, its runtime order, major data paths,
 and extension points. The supporting grass/forest labs and asset tools are utilities and
 are described separately under [Demo boundaries](#demo-boundaries).

@@ -1,3 +1,4 @@
+import { propAssetPath } from '../core/PropTextureProfile.ts';
 import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader';
 import '@babylonjs/loaders/glTF';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
@@ -25,7 +26,7 @@ export interface PinePart { geometry: VertexData; material: Material; sideOrient
 export interface PinePrototype { name: string; near: PinePart[]; far: PinePart[]; height: number; rootSupport: Float32Array; }
 
 export async function loadPinePack(scene: Scene, pack?: {path:string;variants:readonly string[];referenceVariant:string}): Promise<{ container: AssetContainer; prototypes: PinePrototype[]; referenceHeight: number }> {
-    const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}${pack?.path ?? 'terrain/forest/pine-pack-forestland.glb'}`, scene);
+    const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}${propAssetPath(pack?.path ?? 'terrain/forest/pine-pack-forestland.glb')}`, scene);
     try {
         const prototypes: PinePrototype[] = (pack?.variants ?? TREE_VARIANTS.map(([name])=>name)).map(name => ({ name, near: [], far: [], height: 0, rootSupport: new Float32Array() }));
         for (const mesh of container.meshes) {

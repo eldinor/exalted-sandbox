@@ -1,5 +1,42 @@
 # Build packages
 
+## Build the 1K version as the main app
+
+Run `npm run build:1k` to create a standalone package in `dist-1k/`.
+The script builds only `index-1k-props.html`, then names its compiled output
+`index.html`, so the site root loads 1K ground and prop textures. Source HTML
+and the normal `npm run build` output in `dist/` are unchanged.
+Use `npm run preview:1k` to serve it locally. Upload the contents of `dist-1k/`
+for root-domain hosting. This command does not publish or push anything.
+The dedicated 1K build selects replacement assets before resolving GLB
+dependencies. Replaced original maps/GLBs and their unused external boulder
+textures are omitted. Attribution/source notes remain included; originals in
+`public/` and ordinary multi-page builds are unchanged. No ZIP is created.
+
+## 1K tiled ground comparison
+
+`index-1k.html` is a copy of the main Sandbox shell with the same `src/main.ts`
+runtime and a `data-ground-textures="1k"` selector. Open `/index-1k.html` on the
+dev server or published site. Default `index.html` keeps the original textures.
+Both the main and Pages builds include the comparison entry and its assets;
+each page downloads only its selected ground texture profile. Packaging both
+profiles increases the total static deployment size while reducing transfers
+for the comparison page.
+
+The twelve standalone meadow/forest/beach/road colour, normal and packed maps
+have separate 1024-square copies under `public/terrain/ground-1k/`. Regenerate
+with `npm run assets:ground:1k` (Python + Pillow 12+). Metadata records original
+and output checksums, sizes and processing. The meadow inputs are actually 4K;
+the other three sets are 2K. Their payload totals fall from 148.82 to 23.94 MiB.
+Normal vectors are renormalised and base colours downsampled in linear light.
+Physical tiling and material colour-space flags are unchanged.
+
+Mountain textures are already 1K. Height/biome/road/shore maps, procedural snow,
+geometry, props and GLBs remain unchanged. DesertGround is embedded inside
+`exalted_desert.glb`, so it remains at its current resolution in this pass.
+Deferred next step: resize textures embedded in GLBs, including desert ground
+and foliage/flower textures, after this comparison is approved.
+
 ## GitHub Pages package
 
 `npm run build:pages` prepares `dist-pages/` for the current repository URL,
@@ -31,7 +68,7 @@ PNG textures remain unchanged. That production output was **286.02 MiB**;
 the earlier 381.94 MiB measurements below describe the 2048-array package.
 
 `npm run build` creates the production Exalted application in `dist/`.
-It builds only `index.html`, omits JavaScript source maps, and copies runtime
+It builds `index.html` and the `index-1k.html` comparison, omits JavaScript source maps, and copies runtime
 assets through `scripts/production-assets.mjs` instead of copying all of `public/`.
 `npm run preview` serves this package. Development serving remains unchanged:
 the main app, labs and authoring assets remain available on the dev server.
@@ -230,3 +267,28 @@ compare a private browser window and another connection (for example a phone
 hotspot). If it persists, collect the browser Network panel failure details or
 a HAR privately, checking for sensitive headers before sharing. This can help
 distinguish a browser/profile problem from a connection/proxy delivery problem.
+
+## Ground and props at 1K comparison
+
+`index-1k-props.html` shares `src/main.ts` with the other two main shells.
+Its two HTML flags select the 1K ground profile and `PropTextureProfile.ts`.
+The latter remaps only the desert/pine/boulder GLBs, spruce colour/normal
+atlases and atlas metadata. The other pages retain original props. Runtime
+loaders, warm-up, passes, geometry, grounding and material parameters are retained.
+
+Run `npm run assets:props:1k` with Python/Pillow 12+ to regenerate derivatives
+in `public/terrain/props-1k/`. Images cap their longest dimension at 1024 and
+preserve aspect ratio; already smaller images are retained byte-for-byte.
+Non-image GLB buffer views are retained byte-for-byte. External boulder images
+are embedded into its derivative. Geometry is not simplified. Spruce tile size
+falls from 512 to 128 while its 8 x 3 atlas layout and views stay unchanged.
+For ordinary GLB foliage, cutout coverage is adjusted at the original threshold.
+Baked spruce atlases instead filter their already-premultiplied encoded RGBA
+directly, preserving the shader contract for both colour and object normals.
+Visual quality still
+needs manual comparison, particularly fine branches and atlas edges.
+
+The main/labs/Pages build configurations include all three comparison shells
+and their selected assets. Packaging all profiles increases the deployment
+folder; each page downloads only its chosen profile. No build was run for this
+change. See the derivative SOURCE.md and textures.json for provenance/hashes.

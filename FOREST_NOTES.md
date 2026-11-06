@@ -900,3 +900,15 @@ outside forest. A controlled native WebGPU surf capture at Forest Outlook was
 inspected: olive sides and brown blade tufts appeared; all retained forest samples
 had coverage 1 and only kind 7 particles were emitted. Warm-up/new WGSL compiled
 without GPU errors. No production build or Playwright was run.
+
+## Reduced spruce atlas contract, 6 November 2026
+
+The 1K props page uses 1024 x 384 spruce atlases with 128-pixel tile metadata.
+Both original baked atlases store encoded RGB premultiplied by alpha; normals
+are encoded object-space vectors. The impostor shader divides both by sampled
+alpha, then decodes colour and normalises normals. Offline resizing must filter
+stored RGBA directly. Ordinary straight-alpha colour filtering or tangent-normal
+renormalisation breaks this contract and caused bright cyan distant trees in
+the first 1K conversion. No forest tint, fog or lighting change is needed.
+Original assets remain unchanged. Compare the corrected 1K page manually;
+rebuild `npm run build:1k` before previewing/uploading a new static package.

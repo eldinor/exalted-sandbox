@@ -1,3 +1,4 @@
+import { propAssetPath } from '../core/PropTextureProfile.ts';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
@@ -18,9 +19,8 @@ export class ForestImpostorResources {
     readonly beauty: ShaderMaterial; readonly prepass: ShaderMaterial;
     private readonly source: PBRMaterial;
     constructor(scene: Scene, readonly atlas: SpruceAtlas, shading: ForestMaterials) {
-        const root=`${import.meta.env.BASE_URL}terrain/forest/blue-spruce/`;
-        this.colour=new Texture(`${root}impostor-colour.png`,scene,true,false,Texture.BILINEAR_SAMPLINGMODE);
-        this.normal=new Texture(`${root}impostor-normal.png`,scene,true,false,Texture.BILINEAR_SAMPLINGMODE);
+        this.colour=new Texture(`${import.meta.env.BASE_URL}${propAssetPath('terrain/forest/blue-spruce/impostor-colour.png')}`,scene,true,false,Texture.BILINEAR_SAMPLINGMODE);
+        this.normal=new Texture(`${import.meta.env.BASE_URL}${propAssetPath('terrain/forest/blue-spruce/impostor-normal.png')}`,scene,true,false,Texture.BILINEAR_SAMPLINGMODE);
         this.colour.gammaSpace=true;this.colour.hasAlpha=true;this.normal.gammaSpace=false;
         for(const texture of [this.colour,this.normal])texture.wrapU=texture.wrapV=Texture.CLAMP_ADDRESSMODE;
         this.source=new PBRMaterial('border-spruce-impostor-source',scene);

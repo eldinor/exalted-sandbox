@@ -30,7 +30,7 @@ export default defineConfig(({command,mode})=>{
     // SSR test servers use Vite's default cache. Keep their dependency scans
     // from invalidating the running app's lazy Inspector chunks.
     cacheDir: 'node_modules/.vite-exalted',
-    plugins: command==='build' ? [labs?generatedWorldPackage():productionAssetPackage()] : [],
+    plugins: command==='build' ? [labs?generatedWorldPackage():productionAssetPackage({oneK:mode==='ground-props-1k'})] : [],
     // Prepare the lazy Inspector before serving so its first use does not
     // invalidate Babylon's already loaded development chunks.
     optimizeDeps: { include: ['@babylonjs/inspector'] },
@@ -43,7 +43,7 @@ export default defineConfig(({command,mode})=>{
         outDir: labs?'dist-labs':'dist',
         copyPublicDir: labs,
         sourcemap: labs,
-        rollupOptions: { input: labs ? { main: 'index.html', heightmap: 'hm.html', forestland: 'forestland.html', spruceland: 'spruceland.html', generatedWorld: 'generator/generated-world.html', grassPerformance: 'generator/grass-performance.html', authoredGrassland: 'generator/grassland.html' } : {main:'index.html'} },
+        rollupOptions: { input: labs ? { main: 'index.html', ground1k: 'index-1k.html', props1k: 'index-1k-props.html', heightmap: 'hm.html', forestland: 'forestland.html', spruceland: 'spruceland.html', generatedWorld: 'generator/generated-world.html', grassPerformance: 'generator/grass-performance.html', authoredGrassland: 'generator/grassland.html' } : {main:'index.html', ground1k:'index-1k.html', props1k:'index-1k-props.html'} },
     },
     // .wgsl imported via ?raw
     assetsInclude: ["**/*.hdr", "**/*.env"],
