@@ -1,5 +1,10 @@
 # Exalted Current Work
 
+## Portal destination, 7 November 2026
+
+Entering the portal now opens `https://eldinor.github.io/hall/` in the same
+window. The shared main runtime applies this destination to all app pages.
+
 ## Smaller 1K deployment inventory, 6 November 2026
 
 `build:1k` now selects the ground/prop derivatives before resolving GLB
