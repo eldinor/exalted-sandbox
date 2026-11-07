@@ -1,7 +1,7 @@
 import { deflateSync } from 'node:zlib';
 
 /** Lossless, untagged numeric RGB/grayscale PNG; no gamma or alpha processing. */
-export function encodePng8(width: number, height: number, channels: 1 | 3, pixels: Uint8Array): Buffer {
+export function encodePng8(width: number, height: number, channels: 1 | 3, pixels: Uint8Array, subFilter = false): Buffer {
     if (pixels.length !== width * height * channels) throw new Error('Invalid PNG pixel count.');
     function chunk(type: string, data: Buffer): Buffer {
         const payload = Buffer.concat([Buffer.from(type), data]);
@@ -19,7 +19,11 @@ export function encodePng8(width: number, height: number, channels: 1 | 3, pixel
     header.writeUInt32BE(width); header.writeUInt32BE(height, 4);
     header[8] = 8; header[9] = channels === 1 ? 0 : 2;
     const stride = width * channels, rows = Buffer.alloc(height * (stride + 1));
-    for (let row = 0; row < height; row++) rows.set(pixels.subarray(row * stride, (row + 1) * stride), row * (stride + 1) + 1);
+    for (let row = 0; row < height; row++) {
+        const start = row * (stride + 1);
+        rows[start] = subFilter ? 1 : 0;
+        for (let x = 0; x < stride; x++) rows[start + 1 + x] = pixels[row * stride + x] - (subFilter && x >= channels ? pixels[row * stride + x - channels] : 0);
+    }
     return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]), chunk('IHDR', header),
         chunk('IDAT', deflateSync(rows, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
 }

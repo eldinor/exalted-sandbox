@@ -1,8 +1,33 @@
 # Build packages
 
-Current trial: the main app selects separate **1024 x 1024** rock arrays from
+## GitHub Pages package
+
+`npm run build:pages` prepares `dist-pages/` for the current repository URL,
+`https://eldinor.github.io/exalted-sandbox/`, using Vite base `/exalted-sandbox/`.
+It includes the same production runtime inventory and adds `.nojekyll` for a
+static branch deployment. The regular `dist/` package is left intact. Publish
+the contents of `dist-pages/` at the root of a deployment branch such as
+`gh-pages`, and select that branch's root under repository Settings -> Pages.
+The script only builds locally; it does not commit, push, or enable Pages.
+
+Do not upload a ZIP archive as site content. The source repository deliberately
+ignores PNG/JPG assets, so a source-only checkout cannot currently rebuild the
+complete app in GitHub Actions without a separate runtime asset provisioning
+step. Publishing the locally prepared static package avoids that requirement.
+If the destination repository name or domain changes, update the Pages base in
+`scripts/build-pages.mjs` before rebuilding.
+
+Current delivery (5 November 2026): mountain/rock data is packaged as 20 ordinary
+1024-square PNGs under `terrain/rock/iron-mountains-png-1024/` (30.50 MiB).
+The three compressed `.rgba.bin` runtime files are no longer packaged or loaded.
+The original arrays stay in the workspace for preparation and checksum checks.
+Run `npm run assets:rocks:png` to regenerate the PNGs; deploy the complete next
+build so the JavaScript and image inventory match. Historical binary trial and
+transfer recovery details below describe the preceding implementation.
+
+Previous binary trial: the main app selected separate **1024 x 1024** rock arrays from
 `public/terrain/rock/iron-mountains-1024/`. Original 2048 arrays and all original
-PNG textures remain unchanged. The current production output is **286.02 MiB**;
+PNG textures remain unchanged. That production output was **286.02 MiB**;
 the earlier 381.94 MiB measurements below describe the 2048-array package.
 
 `npm run build` creates the production Exalted application in `dist/`.
@@ -22,7 +47,7 @@ bake. The labs build is intentionally large and is not the release package.
 The production inventory includes both heightmap and GLB comparison modes,
 `alpha-map.glb` for prop grounding, authored desert props, prepared forest and
 flower packs, grass, spruce impostors, current biome/coverage maps, road/beach/
-meadow/forest textures, and all three packed rock arrays. The Inspector remains
+meadow/forest textures, and all 20 PNG images used to assemble rock arrays. The Inspector remains
 available, including its lazy JavaScript chunks.
 
 The packaging script validates each required file before bundling. GLB external

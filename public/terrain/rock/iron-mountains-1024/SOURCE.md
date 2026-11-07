@@ -10,5 +10,6 @@ mipmaps. The result matches the original arrays' first mip level, preserving
 layer order, texture scale, normal channels and ARM-alpha height data. This
 reduces resolution and close-range detail; it changes no terrain geometry.
 
-`textures.json` records source/output SHA-256 hashes and dimensions. Production
-copies these compressed bytes to `.rgba.bin` names in this separate folder.
+`textures.json` records source/output SHA-256 hashes and dimensions. These arrays
+are now preparation sources for `../iron-mountains-png-1024/`; production uses
+ordinary PNG image delivery rather than these compressed binary files.

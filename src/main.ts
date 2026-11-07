@@ -199,6 +199,10 @@ async function boot(): Promise<void> {
     await loading.phase("building scene", 0.12);
 
     const scene = new Scene(engine);
+    // Custom input owns mouse defaults. Cancelling Babylon pointerdown here
+    // suppresses Firefox's compatibility mousemove, including surf steering.
+    scene.preventDefaultOnPointerDown = false;
+    scene.preventDefaultOnPointerUp = false;
     scene.clearColor = new Color4(0.02, 0.03, 0.05, 1);
     scene.autoClear = true;
     // Do NOT clear depth between rendering groups. Babylon clears depth before
