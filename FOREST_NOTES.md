@@ -900,3 +900,13 @@ outside forest. A controlled native WebGPU surf capture at Forest Outlook was
 inspected: olive sides and brown blade tufts appeared; all retained forest samples
 had coverage 1 and only kind 7 particles were emitted. Warm-up/new WGSL compiled
 without GPU errors. No production build or Playwright was run.
+
+## Main-app WebP delivery, 9 November 2026
+
+The main app selects quality-80 WebP forest floor and spruce atlas derivatives,
+and derivative pine/fir GLBs whose PNG images use EXT_texture_webp. Dimensions,
+alpha cutouts, material settings and geometry are unchanged. The original spruce
+premultiplied RGBA representation and atlas tile metadata are retained; conversion
+does not unpremultiply colour or renormalise stored object-space atlas normals.
+RGB is lossy and needs manual visual comparison. Labs keep original files.
+Source assets and preparation notes remain; see public/textures-webp-80/SOURCE.md.

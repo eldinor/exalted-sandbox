@@ -316,7 +316,7 @@ async function boot(): Promise<void> {
         : null;
     if (magicalCube) {
         window.addEventListener('exalted:portal-entered', () => {
-            window.location.assign('https://hall.babylonpress.org/');
+            window.location.assign('https://eldinor.github.io/hall/');
         }, { once: true });
     }
     // Every surface a spell can light.

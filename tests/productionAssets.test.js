@@ -4,7 +4,7 @@ import { mkdtempSync,mkdirSync,writeFileSync,rmSync,statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename,dirname,join,resolve } from 'node:path';
 import { resolveConfig } from 'vite';
-import { PRODUCTION_ASSETS,productionAssetFiles,productionAssetOutput } from '../scripts/production-assets.mjs';
+import { PRODUCTION_ASSETS,productionAssetFiles,productionAssetOutput,webpProductionAssetPath } from '../scripts/production-assets.mjs';
 import { readRockArrayResponse } from '../src/terrain/RockArrayStream.ts';
 import { gzipSync } from 'node:zlib';
 import { readAsset } from '../src/core/assetDownload.ts';
@@ -85,7 +85,7 @@ test('production includes external GLB dependencies and provenance, excluding so
 test('current production inventory retains runtime packs and boulder textures, without duplicate authoring inputs',()=>{
     const root=resolve('public'),files=productionAssetFiles(root);
     for(const name of PRODUCTION_ASSETS)assert.ok(files.includes(name),name);
-    for(const name of ['plain-rock-color.png','plain-rock-normal.png'])assert.ok(files.includes(`terrain/forest/coniferous-selected/textures/${name}`));
+    for(const name of ['plain-rock-color.png','plain-rock-normal.png'])assert.ok(files.includes(webpProductionAssetPath(`terrain/forest/coniferous-selected/textures/${name}`)));
     assert.ok(files.includes('LICENSE.txt'));assert.ok(files.includes('THIRD_PARTY_NOTICES.md'));
     assert.ok(files.includes('terrain/rock/snow/SOURCE.md'),'Retain source attribution for packed textures');
     assert.ok(!files.some(p=>p.endsWith('.exr')||p.endsWith('.zip')||p.includes('generator/work/')||p.endsWith('vis_ground_heightmap-9.png')));
@@ -96,7 +96,7 @@ test('current production inventory retains runtime packs and boulder textures, w
         assert.equal(productionAssetOutput(`${ROCK_ARRAY_ROOT}/${map}.rgba.gz`),`${ROCK_ARRAY_ROOT}/${map}.rgba.bin`);
         assert.ok(!files.includes(`terrain/rock/iron-mountains/${map}.rgba.gz`),'Original high-resolution arrays stay outside the trial build');
     }
-    for(const map of ROCK_IMAGE_MAPS)for(let layer=0;layer<ROCK_ARRAY_LAYERS;layer++)assert.ok(files.includes(`${ROCK_IMAGE_ROOT}/${map}-${layer}.png`));
+    for(const map of ROCK_IMAGE_MAPS)for(let layer=0;layer<ROCK_ARRAY_LAYERS;layer++)assert.ok(files.includes(webpProductionAssetPath(`${ROCK_IMAGE_ROOT}/${map}-${layer}.png`)));
     console.log('Production runtime/provenance assets:',files.length,(files.reduce((s,p)=>s+statSync(join(root,p)).size,0)/1048576).toFixed(2),'MiB');
 });
 

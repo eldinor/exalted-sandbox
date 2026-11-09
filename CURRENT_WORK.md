@@ -1,5 +1,35 @@
 # Exalted Current Work
 
+## Main-app surface WebP conversion, 9 November 2026
+
+The main HTML selects quality-80 WebP derivatives of all 26 standalone PNG
+surface textures and 21 embedded PNG images across seven runtime GLBs. Numeric
+height/biome/coverage maps and five rock displacement images stay PNG; existing
+JPEGs and unused sources remain unchanged. Original dimensions and alpha are
+preserved. Source PNGs/GLBs are retained. Explicit EXT_texture_webp imports and
+TextureWebpProfile.ts select derivative assets without changing warm-up or pass
+order. Shared labs retain original assets. No gamma transform, resizing or
+spruce atlas unpremultiplication is performed offline.
+
+Standalone payload falls from 163.88 to 11.89 MiB; selected GLBs from 62.44 to
+38.12 MiB (external boulder maps counted with standalone files). Production
+inventory selects derivatives, omitting replaced originals. RGB quality is lossy,
+including normal and ARM data; visual comparison remains manual. Regenerate with
+`npm run assets:textures:webp`; see public/textures-webp-80/SOURCE.md.
+Typecheck and all 195 Node tests pass. Native Chrome WebGPU reaches Ready with
+all seven derivative models, 26 WebP requests and no HTTP failures. No visual
+approval, production build or publishing is claimed.
+
+## Unused EXR cleanup, 9 November 2026
+
+Removed six unused normal/roughness EXRs (33.66 MiB) from forest ground,
+Rocky Terrain and Rocky Terrain 03 source folders. PNG normal maps and packed
+ARM maps remain; app and preparation scripts do not reference the EXRs.
+
+## Portal destination, 7 November 2026
+
+Entering the portal opens `https://eldinor.github.io/hall/` in the same window.
+
 ## Firefox right-button surf, 5 November 2026
 
 Steering follow-up: cancelling pointerdown also suppressed Firefox mousemove

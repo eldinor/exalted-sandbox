@@ -1,5 +1,25 @@
 # Build packages
 
+## Main-app quality-80 WebP surfaces
+
+`npm run assets:textures:webp` regenerates `public/textures-webp-80/` from the
+explicit production source inventory, using Python/Pillow. Twenty-six standalone
+surface PNGs and 21 embedded PNGs in seven GLBs become quality-80 WebPs at the
+original dimensions with unchanged alpha. Runtime GLBs declare EXT_texture_webp;
+the main loaders register it explicitly. JPEG images and model geometry remain
+unchanged. Heightmaps, biome/coverage masks and rock displacement stay PNG.
+
+The main HTML selects derivatives; labs retain originals. The production root
+inventory maps to derivatives before dependency resolution, so replaced source
+PNGs and GLBs are not copied into main/Pages builds. Source attribution and
+metadata remain. Original assets stay in public/. No build was run for this
+change; existing dist/dist-pages folders need rebuilding before deployment.
+
+RGB compression is lossy, including normal and ARM channels. Verify visual
+quality manually before publishing. See public/textures-webp-80/SOURCE.md and
+textures.json for exact sources, hashes, dimensions and preparation settings.
+Historical packaging measurements below predate this change.
+
 ## GitHub Pages package
 
 `npm run build:pages` prepares `dist-pages/` for the current repository URL,

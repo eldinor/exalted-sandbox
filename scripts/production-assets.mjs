@@ -2,7 +2,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSyn
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 /** Runtime roots for index.html, including its GLB comparison and prop grounding. */
-export const PRODUCTION_ASSETS = [
+export const PRODUCTION_SOURCE_ASSETS = [
     'LICENSE.txt', 'THIRD_PARTY_NOTICES.md',
     'assets/branding/exalted-logo.svg',
     'assets/branding/favicon.svg',
@@ -21,6 +21,13 @@ export const PRODUCTION_ASSETS = [
     ...['diff','nor_gl','arm'].map(map=>`terrain/road/asp1/asphalt_snow_${map}_2k.jpg`),
     ...['base','normal','arm','height'].flatMap(map=>Array.from({length:5},(_,layer)=>`terrain/rock/iron-mountains-png-1024/${map}-${layer}.png`)),
 ];
+
+export function webpProductionAssetPath(name) {
+    if(name.endsWith('.glb')&&name!=='assets/exalted/alpha-map.glb')return `textures-webp-80/${name}`;
+    return name.startsWith('terrain/')&&name.endsWith('.png')&&!/\/height-\d+\.png$/.test(name)
+        ? `textures-webp-80/${name.slice(0,-4)}.webp` : name;
+}
+export const PRODUCTION_ASSETS = PRODUCTION_SOURCE_ASSETS.map(webpProductionAssetPath);
 
 function localPath(root, name) {
     const target=resolve(root,name), rel=relative(root,target);

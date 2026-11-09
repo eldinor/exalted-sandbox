@@ -11,7 +11,7 @@
     "build": "vite build",
     "build:pages": "node scripts/build-pages.mjs",
     "preview": "vite preview",
-    "test": "node --import tsx --test tests/assetRanges.test.ts tests/surfInput.test.ts tests/rockPngImages.test.ts tests/productionAssets.test.js tests/frameBenchmark.test.ts tests/authoredHeightmap.test.ts tests/ironMountains.test.ts tests/rockArrayMipmaps.test.ts tests/ironRocks.test.ts tests/snowMountains.test.ts tests/worldGrass.test.ts tests/dandelions.test.js tests/meadowFlowers.test.ts tests/magicalCube.test.ts tests/avatarRig.test.js tests/meshSurface.test.js tests/propCollisions.test.js tests/propColliderGeometry.test.js tests/flight.test.js tests/rocketJump.test.js tests/waterGeometry.test.js tests/swimming.test.js tests/particles.test.js tests/drawCapture.test.js tests/desertDensity.test.js tests/propChunks.test.ts tests/closedForest.test.ts tests/spruceImpostor.test.ts tests/screenshotCollection.test.ts generator/tests/forestland.test.ts generator/tests/worldFields.test.ts generator/tests/authoredGrass.test.ts generator/tests/grassPlacement.test.ts generator/tests/grassStreaming.test.ts generator/tests/grassBenchmark.test.ts",
+    "test": "node --import tsx --test tests/assetRanges.test.ts tests/surfInput.test.ts tests/rockPngImages.test.ts tests/surfaceWebp.test.ts tests/productionAssets.test.js tests/frameBenchmark.test.ts tests/authoredHeightmap.test.ts tests/ironMountains.test.ts tests/rockArrayMipmaps.test.ts tests/ironRocks.test.ts tests/snowMountains.test.ts tests/worldGrass.test.ts tests/dandelions.test.js tests/meadowFlowers.test.ts tests/magicalCube.test.ts tests/avatarRig.test.js tests/meshSurface.test.js tests/propCollisions.test.js tests/propColliderGeometry.test.js tests/flight.test.js tests/rocketJump.test.js tests/waterGeometry.test.js tests/swimming.test.js tests/particles.test.js tests/drawCapture.test.js tests/desertDensity.test.js tests/propChunks.test.ts tests/closedForest.test.ts tests/spruceImpostor.test.ts tests/screenshotCollection.test.ts generator/tests/forestland.test.ts generator/tests/worldFields.test.ts generator/tests/authoredGrass.test.ts generator/tests/grassPlacement.test.ts generator/tests/grassStreaming.test.ts generator/tests/grassBenchmark.test.ts",
     "test:generator": "node --import tsx --test generator/tests/forestland.test.ts generator/tests/worldFields.test.ts generator/tests/authoredGrass.test.ts generator/tests/grassPlacement.test.ts generator/tests/grassStreaming.test.ts generator/tests/grassBenchmark.test.ts",
     "generator:height": "node --import tsx generator/scripts/generate-height.mts",
     "generator:inspect-height": "node --import tsx generator/scripts/inspect-height.mts",
@@ -30,7 +30,8 @@
     "build:labs": "vite build --mode labs",
     "preview:labs": "vite preview --mode labs",
     "assets:rocks:1024": "node --import tsx scripts/prepare-rock-arrays-1024.mts",
-    "assets:rocks:png": "node --import tsx scripts/prepare-rock-pngs.mts"
+    "assets:rocks:png": "node --import tsx scripts/prepare-rock-pngs.mts",
+    "assets:textures:webp": "node scripts/prepare-texture-webp.mjs"
   },
   "keywords": [
     "webgpu",

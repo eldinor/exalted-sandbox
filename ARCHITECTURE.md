@@ -6,10 +6,15 @@ the full lab inputs/public assets/generated bake in `dist-labs/`. Development
 still serves all sources and assets. See [BUILD_PACKAGING.md](BUILD_PACKAGING.md)
 for the explicit runtime inventory and external GLB dependency handling.
 
-Rock material arrays assemble from sequential ordinary PNG downloads and browser
-image decoding (`RockPngImages.ts`); separate grayscale images preserve height
-before packing it into ARM alpha. Explicit array mip uploads and startup warm-up
-are retained. Legacy compressed arrays are preparation sources, not runtime URLs.
+Main-app surface PNGs use offline quality-80 WebP derivatives selected by
+`core/TextureWebpProfile.ts` and the main HTML data attribute. Runtime GLBs use
+explicitly registered EXT_texture_webp for embedded PNG derivatives; JPEGs and
+all geometry/material settings remain unchanged. Shared labs retain originals.
+Numeric height/biome/mask images and rock displacement remain PNG. Rock arrays
+assemble sequentially from browser-decoded WebP RGB and PNG displacement through
+`RockPngImages.ts`; separate displacement is packed into ARM alpha. Explicit
+mip uploads, loading/warm-up and rendering passes remain unchanged. Source PNGs
+and packed arrays are retained for preparation, outside runtime delivery.
 
 This document describes the production world application served by `index.html`.
 It covers the TypeScript code under `src`, its runtime order, major data paths,

@@ -1,3 +1,5 @@
+import { modelTexturePath } from '../core/TextureWebpProfile.ts';
+import '@babylonjs/loaders/glTF/2.0/Extensions/EXT_texture_webp';
 /** Flower families share streaming/rendering, but retain separate mixes and budgets. */
 import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader';
 import '@babylonjs/loaders/glTF';
@@ -62,7 +64,7 @@ export function flowerSettings(family: MeadowFlowerFamily) {
 export async function loadMeadowFlowers(scene: Scene, family: MeadowFlowerFamily): Promise<{
     prototypes: Map<string, ImportedGrassPrototype>; texture: BaseTexture;
 }> {
-    const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}${family.asset}`, scene);
+    const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}${modelTexturePath(family.asset)}`, scene);
     let texture: BaseTexture | null = null;
     try {
         const material = container.materials.find(m => m instanceof PBRMaterial);

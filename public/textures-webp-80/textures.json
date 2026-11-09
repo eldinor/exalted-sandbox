@@ -1,0 +1,628 @@
+{
+  "format": "exalted-surface-webp-v1",
+  "quality": 80,
+  "method": 6,
+  "resize": false,
+  "alphaQuality": 100,
+  "outputs": [
+    {
+      "source": "terrain/forest/blue-spruce/impostor-colour.png",
+      "file": "terrain/forest/blue-spruce/impostor-colour.webp",
+      "dimensions": [
+        4096,
+        1536
+      ],
+      "sourceBytes": 1775033,
+      "bytes": 227742,
+      "sourceSha256": "c83af1362db127da3cf6ce92c9efa6912744d0dbe5fdbb47e6b1a5689aef871e",
+      "sha256": "b2829874788065286b9d0c6307c732dae6318b349f574ba1953aa2100dcaf0b7",
+      "alpha": "unchanged"
+    },
+    {
+      "source": "terrain/forest/blue-spruce/impostor-normal.png",
+      "file": "terrain/forest/blue-spruce/impostor-normal.webp",
+      "dimensions": [
+        4096,
+        1536
+      ],
+      "sourceBytes": 1670810,
+      "bytes": 505698,
+      "sourceSha256": "b3373da25baf3d9f70e459dc61fe38593b2747dd766f80766eda11b3321d13e1",
+      "sha256": "d6ac0b5a44eef3212eb95929ffe72550c72730b3eb2ea0472cd8b7c22874966f",
+      "alpha": "unchanged"
+    },
+    {
+      "source": "terrain/forest/coniferous-selected/textures/plain-rock-color.png",
+      "file": "terrain/forest/coniferous-selected/textures/plain-rock-color.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 159277,
+      "bytes": 15030,
+      "sourceSha256": "29f5840b9cb3e9a07a900b5df32f7151ee8ae9c4c9b4a7775e3d1c847c42ae16",
+      "sha256": "88d5d251ca89abf5353b4b4351e027f40153d0d720654926416594f4e94ab6a9",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/forest/coniferous-selected/textures/plain-rock-normal.png",
+      "file": "terrain/forest/coniferous-selected/textures/plain-rock-normal.webp",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 4346569,
+      "bytes": 538748,
+      "sourceSha256": "bfdf2f08d0487e11faeaf2390d4c5b540c55587800ad97f47af7640831cf6b1e",
+      "sha256": "9091130c9f6b9818a507fd4d6686a569025f0b7f627a41bd2d5057e76e81edda",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/forest/textures/forrest_ground_01_arm_2k.png",
+      "file": "terrain/forest/textures/forrest_ground_01_arm_2k.webp",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 18233670,
+      "bytes": 840964,
+      "sourceSha256": "e58d904020d89f224a04da9b5a93774afe8c7cb91e8d37fc9f03b45db72aaffd",
+      "sha256": "63436de59d9e73832e6e331a35882477940b4b76517f140bdf3a2722b57cc9fe",
+      "alpha": "unchanged"
+    },
+    {
+      "source": "terrain/forest/textures/forrest_ground_01_diff_2k.png",
+      "file": "terrain/forest/textures/forrest_ground_01_diff_2k.webp",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 26253635,
+      "bytes": 1052980,
+      "sourceSha256": "06a7c3c4a3916fd96821c4f4d21b4a38c333e931bfc66856e19dab720a22ffa5",
+      "sha256": "eac43f22ebd0715cedbfddd01f0e78ce6fe91a4119f10065e6cef4612f80eb2b",
+      "alpha": "unchanged"
+    },
+    {
+      "source": "terrain/forest/textures/forrest_ground_01_nor_gl_2k.png",
+      "file": "terrain/forest/textures/forrest_ground_01_nor_gl_2k.webp",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 27037479,
+      "bytes": 1682694,
+      "sourceSha256": "bfc3e06ea31c3de513c9421a8fbbb4a540ebe32fada1bbb545286c1abc96e313",
+      "sha256": "970ca4ffe2612532ef6ae53adbd2bb73e55c2fd3e7f4d6b6a137670d9497a13a",
+      "alpha": "unchanged"
+    },
+    {
+      "source": "terrain/grassland/meadow/Material-326-A_ORM.png",
+      "file": "terrain/grassland/meadow/Material-326-A_ORM.webp",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "sourceBytes": 25281178,
+      "bytes": 3259062,
+      "sourceSha256": "da208e40288d07533f0ef4dc5ad92b140a616541134425e4e535550909efebb8",
+      "sha256": "a903f99e3bc094771c354c7a3a76d3514bec7f86788da105267f31fc886df9c7",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/arm-0.png",
+      "file": "terrain/rock/iron-mountains-png-1024/arm-0.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 1789906,
+      "bytes": 163242,
+      "sourceSha256": "63e5ea208724c32325cced03d9c3ad0de5b42f6a727b8bb8667452309d0d4bd3",
+      "sha256": "5d90ff061c3ca48a65e7c4339e18f610ef15e054180e8a6496bd7715730ec53d",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/arm-1.png",
+      "file": "terrain/rock/iron-mountains-png-1024/arm-1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 1335470,
+      "bytes": 58848,
+      "sourceSha256": "f7d3cafa9a7d12d9f428f38980e807069b669d3ff39ca80131a1870056312eff",
+      "sha256": "3a5a91bb6231791665632e28ff6dbdae380fbcf158b3d3b541f8a5285ab6c6c0",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/arm-2.png",
+      "file": "terrain/rock/iron-mountains-png-1024/arm-2.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 1496239,
+      "bytes": 108888,
+      "sourceSha256": "66c412f34b02446e683a5269fed231aa68123ba994c826fcc35639ef77c9e610",
+      "sha256": "c33fae018181c7bfea8d431ad1ed2b132b67c3dd2e526964a09ef7b77a6d5eba",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/arm-3.png",
+      "file": "terrain/rock/iron-mountains-png-1024/arm-3.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 1652950,
+      "bytes": 87968,
+      "sourceSha256": "733909c2ff3234d1c3dbb664a019d4a966db7db89814f7adf7b5ef66ea89969b",
+      "sha256": "80a9af89cb20ef54cbcb680bd4864fe0030a9a59c24dcda980cf007c9963a376",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/arm-4.png",
+      "file": "terrain/rock/iron-mountains-png-1024/arm-4.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 1734076,
+      "bytes": 187122,
+      "sourceSha256": "3083d1a15290b9f7a1451a5243bad06dea56f0af26e76b6925554023cfdf02e6",
+      "sha256": "d7ddbf9eb643ce6117f4097644701cc2600c3346955e6051a1a5403459f71e23",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/base-0.png",
+      "file": "terrain/rock/iron-mountains-png-1024/base-0.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 2288124,
+      "bytes": 262066,
+      "sourceSha256": "84c2a6cdd2d0569ed39e63938d64569b0c7b569da5eb6a506c5023bdca1cab53",
+      "sha256": "db0aaadc16a833565aeed993be0edd7fca5ec0d817b7888dd79521c507df0781",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/base-1.png",
+      "file": "terrain/rock/iron-mountains-png-1024/base-1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 2039373,
+      "bytes": 173498,
+      "sourceSha256": "653b60562654b1660e9bfd38a5e8aca0b8d7070b48aab507fd68659875fa9630",
+      "sha256": "347d2dd4612af03b9539c2ecee877d2c2295edab9ff704dd22f933c40f3c336e",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/base-2.png",
+      "file": "terrain/rock/iron-mountains-png-1024/base-2.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 2106630,
+      "bytes": 193042,
+      "sourceSha256": "d8129d7e0834988ac980e3094d1e274faae5a668292b7479584a63eb717f360b",
+      "sha256": "39089bc41d6199ac642d155ac14f5b2053469a6dfd9b26845cef4b4607fe210d",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/base-3.png",
+      "file": "terrain/rock/iron-mountains-png-1024/base-3.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 2089025,
+      "bytes": 188402,
+      "sourceSha256": "8441f1702b81b39d0166912c34ad62f42b5101b29d63130ec36f16dfdb328add",
+      "sha256": "19e24ccef49e9bcd8d33bb879439b03c891c31f7a5e24682147961e36d4c23fd",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/base-4.png",
+      "file": "terrain/rock/iron-mountains-png-1024/base-4.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 1927163,
+      "bytes": 190110,
+      "sourceSha256": "40c748eceaafbf8c9e7d66e6e1196fb474b32ec03d0a6a6bd8547e8795d7dd1e",
+      "sha256": "df94c0a65a3ee06bfccffbee91333aeb37933454f6630022948a38f4be196112",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/normal-0.png",
+      "file": "terrain/rock/iron-mountains-png-1024/normal-0.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 2603737,
+      "bytes": 398460,
+      "sourceSha256": "bb401053f4c666179277cb035a86874b8cee2854d7524f366f689b166d3c4e69",
+      "sha256": "7968ae493a099ac68a9d695dd9bff020f2176d757cbe2b0877680992b63cfa49",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/normal-1.png",
+      "file": "terrain/rock/iron-mountains-png-1024/normal-1.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 2236566,
+      "bytes": 228772,
+      "sourceSha256": "1b6022830b8eb1b5bcbb875a6d439e5b8b4a8f2799da696ba74f7f3c87693a0a",
+      "sha256": "e6619ab369934afde6c60b5b9e1652be01a3a29f1bdfd17af5e80e50e03bc505",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/normal-2.png",
+      "file": "terrain/rock/iron-mountains-png-1024/normal-2.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 2462861,
+      "bytes": 329984,
+      "sourceSha256": "46eda8df3b91a4c206509461e9a859923a1ae7f0c74e9456fc0d0bc13bd8741e",
+      "sha256": "22c4175c213a97574027cef0d84ee418c3ca771b8023c844f64d95f652e64b23",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/normal-3.png",
+      "file": "terrain/rock/iron-mountains-png-1024/normal-3.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 2361435,
+      "bytes": 280352,
+      "sourceSha256": "3df4533234f19a98ef62f05053fc8d17b772eda26ae5aef8577eee7e4deb2e21",
+      "sha256": "96f6feb7ba17f6afa29a6e4637da50ee326e0506feef288bac584b1c6fef7a60",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/rock/iron-mountains-png-1024/normal-4.png",
+      "file": "terrain/rock/iron-mountains-png-1024/normal-4.webp",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "sourceBytes": 2600067,
+      "bytes": 404984,
+      "sourceSha256": "11710de8b4ef139349064edce11a5acd6919fa7bfb34ea4c452fad8b7c37cae8",
+      "sha256": "e09bf65dc46eec568f98c5b9a5d85e879c428424414855f73b576aa8af8038d9",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/sand/beach/aerial_beach_01_arm_2k.png",
+      "file": "terrain/sand/beach/aerial_beach_01_arm_2k.webp",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 6116014,
+      "bytes": 428456,
+      "sourceSha256": "ddb18e31fa2b48ba06aa0ac86b03ea0f9f9b36c6c862a63d3d6e149e5472e9c1",
+      "sha256": "342e8958b7fe81d72b81bde99291434e410b5124ba400b4b4aecdff40b0885ca",
+      "alpha": "opaque"
+    },
+    {
+      "source": "terrain/sand/beach/aerial_beach_01_diff_2k.png",
+      "file": "terrain/sand/beach/aerial_beach_01_diff_2k.webp",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 23509529,
+      "bytes": 157556,
+      "sourceSha256": "3bc7228c7f80bd10af54cc228650acda9c40e39999f261f8893afcee0563a6fa",
+      "sha256": "5b49b6496063770a3c63a60ba8302fbc75a1bcdc8ea26faf50ebfbfcc2751bcb",
+      "alpha": "unchanged"
+    },
+    {
+      "source": "terrain/sand/beach/aerial_beach_01_nor_gl_2k.png",
+      "file": "terrain/sand/beach/aerial_beach_01_nor_gl_2k.webp",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "sourceBytes": 6738050,
+      "bytes": 497982,
+      "sourceSha256": "e4d4e3aae7f104c6481d1ec8ff93003a3128fb623adcb78c3b005c1e29b730bd",
+      "sha256": "c0cc356d45061fb1714cf35e4928343d7d956db114dac96e22d4a76eb423a3dc",
+      "alpha": "opaque"
+    }
+  ],
+  "models": [
+    {
+      "source": "assets/exalted/exalted_desert.glb",
+      "file": "assets/exalted/exalted_desert.glb",
+      "sourceBytes": 31673024,
+      "bytes": 28653628,
+      "sourceSha256": "da3c4b75898ea9ac721c9194a08d8e36e1f56242720311cfc989782d1337bbae",
+      "sha256": "8348e20664afe56094eb050509849ec00ec031c78b966963782d51f43f703574",
+      "images": [
+        {
+          "image": 15,
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "sourceBytes": 1236489,
+          "bytes": 82396,
+          "alpha": "opaque"
+        },
+        {
+          "image": 18,
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "sourceBytes": 1119747,
+          "bytes": 75008,
+          "alpha": "opaque"
+        },
+        {
+          "image": 23,
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "sourceBytes": 895019,
+          "bytes": 74316,
+          "alpha": "opaque"
+        }
+      ]
+    },
+    {
+      "source": "terrain/grassland/grass_medium_01_1k.glb",
+      "file": "terrain/grassland/grass_medium_01_1k.glb",
+      "sourceBytes": 3318052,
+      "bytes": 3317976,
+      "sourceSha256": "1212fd203430f43191321bfe9584e9e9b8c83140cb7b94ad66f78240413b1917",
+      "sha256": "50f24d5ac9ba2eb89614bb6e57d006f421a12245fe6d77a9aee2d7869c854c43",
+      "images": [
+        {
+          "image": 0,
+          "dimensions": [
+            1,
+            1
+          ],
+          "sourceBytes": 250,
+          "bytes": 44,
+          "alpha": "opaque"
+        }
+      ]
+    },
+    {
+      "source": "terrain/grassland/dandelions/dandelions.glb",
+      "file": "terrain/grassland/dandelions/dandelions.glb",
+      "sourceBytes": 205668,
+      "bytes": 49436,
+      "sourceSha256": "fe741fbb8d2177a0f60d77b03cb2d80abd429883f0ae5bd6a2719136f113cc6f",
+      "sha256": "68697d2d215f30ae11a5b221399af772c1351ee3f6028bc86ae5c4b5db530a94",
+      "images": [
+        {
+          "image": 0,
+          "dimensions": [
+            256,
+            256
+          ],
+          "sourceBytes": 39560,
+          "bytes": 6094,
+          "alpha": "opaque"
+        },
+        {
+          "image": 1,
+          "dimensions": [
+            256,
+            256
+          ],
+          "sourceBytes": 51475,
+          "bytes": 4086,
+          "alpha": "opaque"
+        },
+        {
+          "image": 2,
+          "dimensions": [
+            256,
+            256
+          ],
+          "sourceBytes": 85013,
+          "bytes": 9492,
+          "alpha": "unchanged"
+        }
+      ]
+    },
+    {
+      "source": "terrain/grassland/daisies/daisies.glb",
+      "file": "terrain/grassland/daisies/daisies.glb",
+      "sourceBytes": 402964,
+      "bytes": 213288,
+      "sourceSha256": "80c892f7859534ca28ef135b50316a7675d5bd4a63c644ac538f962614fa7900",
+      "sha256": "946c29f979946b67e44c4c5ac255acbb7201cb49dac6d53a03ca9591c5c280ea",
+      "images": [
+        {
+          "image": 1,
+          "dimensions": [
+            256,
+            512
+          ],
+          "sourceBytes": 187457,
+          "bytes": 35770,
+          "alpha": "unchanged"
+        },
+        {
+          "image": 2,
+          "dimensions": [
+            256,
+            512
+          ],
+          "sourceBytes": 44333,
+          "bytes": 6224,
+          "alpha": "opaque"
+        }
+      ]
+    },
+    {
+      "source": "terrain/forest/pine-pack-forestland.glb",
+      "file": "terrain/forest/pine-pack-forestland.glb",
+      "sourceBytes": 22735412,
+      "bytes": 5357580,
+      "sourceSha256": "637e4f0fc79fddcb78eb34c55b352aa5fd585e1470690f4d17e7922f85032482",
+      "sha256": "46688a122bbec44660bb82e6fd83fd6f911fc0bfde0705a0f6c6d999a1315a76",
+      "images": [
+        {
+          "image": 0,
+          "dimensions": [
+            1024,
+            2048
+          ],
+          "sourceBytes": 4922228,
+          "bytes": 696166,
+          "alpha": "opaque"
+        },
+        {
+          "image": 1,
+          "dimensions": [
+            1024,
+            2048
+          ],
+          "sourceBytes": 2630350,
+          "bytes": 356560,
+          "alpha": "opaque"
+        },
+        {
+          "image": 2,
+          "dimensions": [
+            1024,
+            2048
+          ],
+          "sourceBytes": 3631687,
+          "bytes": 236246,
+          "alpha": "opaque"
+        },
+        {
+          "image": 3,
+          "dimensions": [
+            2048,
+            2048
+          ],
+          "sourceBytes": 3566249,
+          "bytes": 935726,
+          "alpha": "opaque"
+        },
+        {
+          "image": 4,
+          "dimensions": [
+            2048,
+            2048
+          ],
+          "sourceBytes": 2208092,
+          "bytes": 297464,
+          "alpha": "opaque"
+        },
+        {
+          "image": 5,
+          "dimensions": [
+            2048,
+            2048
+          ],
+          "sourceBytes": 3637808,
+          "bytes": 696426,
+          "alpha": "unchanged"
+        }
+      ]
+    },
+    {
+      "source": "terrain/forest/fir-pack-selected.glb",
+      "file": "terrain/forest/fir-pack-selected.glb",
+      "sourceBytes": 7101576,
+      "bytes": 2345348,
+      "sourceSha256": "06558f3ef389a5ca59889d360411e9815fd3758d8ff127f7c5c17c80dbb54aec",
+      "sha256": "46f87619c48ecfb3102829d8fe894b42cbafd3152addc2bbdc99cdfa3cccca0f",
+      "images": [
+        {
+          "image": 0,
+          "dimensions": [
+            512,
+            1024
+          ],
+          "sourceBytes": 1380235,
+          "bytes": 273768,
+          "alpha": "opaque"
+        },
+        {
+          "image": 1,
+          "dimensions": [
+            512,
+            1024
+          ],
+          "sourceBytes": 774995,
+          "bytes": 53988,
+          "alpha": "opaque"
+        },
+        {
+          "image": 2,
+          "dimensions": [
+            512,
+            1024
+          ],
+          "sourceBytes": 407,
+          "bytes": 994,
+          "alpha": "opaque"
+        },
+        {
+          "image": 3,
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "sourceBytes": 1747932,
+          "bytes": 360548,
+          "alpha": "opaque"
+        },
+        {
+          "image": 4,
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "sourceBytes": 1698237,
+          "bytes": 416118,
+          "alpha": "unchanged"
+        },
+        {
+          "image": 5,
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "sourceBytes": 268151,
+          "bytes": 8040,
+          "alpha": "opaque"
+        }
+      ]
+    },
+    {
+      "source": "terrain/forest/coniferous-selected/boulder-plain.glb",
+      "file": "terrain/forest/coniferous-selected/boulder-plain.glb",
+      "sourceBytes": 37544,
+      "bytes": 37660,
+      "sourceSha256": "9c02b516249f28f1db14b6298c8d69a391decc04d702cabcf93441fc932445ec",
+      "sha256": "19ec9ea0e8a84c64ed4c6d998028a39ee6e60864cbe76455263bbcf9db3c0292",
+      "images": []
+    }
+  ]
+}

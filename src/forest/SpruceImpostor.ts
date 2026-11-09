@@ -1,3 +1,4 @@
+import { surfaceTexturePath } from '../core/TextureWebpProfile.ts';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
@@ -58,8 +59,8 @@ export class SpruceImpostor {
     scale = 1;
     readonly origin = new Vector3();
     constructor(scene: Scene, readonly atlas: SpruceAtlas, shading: ForestMaterials, private readonly depth: DepthPass) {
-        this.colour = new Texture(`${import.meta.env.BASE_URL}terrain/forest/blue-spruce/impostor-colour.png`, scene, true, false, Texture.BILINEAR_SAMPLINGMODE);
-        this.normal = new Texture(`${import.meta.env.BASE_URL}terrain/forest/blue-spruce/impostor-normal.png`, scene, true, false, Texture.BILINEAR_SAMPLINGMODE);
+        this.colour = new Texture(`${import.meta.env.BASE_URL}${surfaceTexturePath('terrain/forest/blue-spruce/impostor-colour.png')}`, scene, true, false, Texture.BILINEAR_SAMPLINGMODE);
+        this.normal = new Texture(`${import.meta.env.BASE_URL}${surfaceTexturePath('terrain/forest/blue-spruce/impostor-normal.png')}`, scene, true, false, Texture.BILINEAR_SAMPLINGMODE);
         this.colour.gammaSpace = true; this.colour.hasAlpha = true; this.normal.gammaSpace = false;
         for (const texture of [this.colour,this.normal]) texture.wrapU = texture.wrapV = Texture.CLAMP_ADDRESSMODE;
         this.source = new PBRMaterial('spruce-impostor-source', scene);

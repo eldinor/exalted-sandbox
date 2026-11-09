@@ -1,5 +1,11 @@
 # Production grassland
 
+Main-app delivery update (9 November 2026): the meadow ORM PNG and embedded
+PNG textures in grass/flower GLBs now use quality-80 WebP derivatives, at the
+same dimensions and unchanged alpha. Meadow JPG base/normal remain unchanged.
+The shared lab keeps original assets. Geometry, cutoffs, streaming and bending
+are unchanged; RGB material values are lossy. See public/textures-webp-80/SOURCE.md.
+
 The authored main world now uses the Grassland subsystem. Shared renderer,
 placement, loading, appearance and types live in `src/grass`; the generator's
 former modules re-export these implementations. The labs keep their lighting,

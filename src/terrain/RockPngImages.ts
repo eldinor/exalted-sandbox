@@ -1,4 +1,5 @@
-/** Ordinary PNG downloads and browser decoding, without custom stream/gzip handling. */
+import { surfaceTexturePath } from '../core/TextureWebpProfile.ts';
+/** Ordinary image downloads: main-app WebP surfaces and unchanged PNG displacement. */
 import { readAsset } from '../core/assetDownload.ts';
 import { ROCK_ARRAY_SIZE, ROCK_ARRAY_LAYERS, ROCK_IMAGE_ROOT } from './RockArrayProfile.ts';
 
@@ -9,7 +10,7 @@ export async function readRockPng(url: string, size = ROCK_ARRAY_SIZE): Promise<
         });
         const canvas = document.createElement('canvas');
         try {
-            if (image.width !== size || image.height !== size) throw new Error(`Expected ${size} x ${size} rock PNG.`);
+            if (image.width !== size || image.height !== size) throw new Error(`Expected ${size} x ${size} rock image.`);
             canvas.width = size; canvas.height = size;
             const context = canvas.getContext('2d', { willReadFrequently: true, colorSpace: 'srgb' });
             if (!context) throw new Error('Cannot read rock PNG pixels.');
@@ -28,7 +29,7 @@ export async function loadRockPngArray(map: 'base' | 'normal' | 'arm-height', ba
     const data = new Uint8Array(layerBytes * ROCK_ARRAY_LAYERS);
     for (let layer = 0; layer < ROCK_ARRAY_LAYERS; layer++) {
         const root = `${baseUrl}${ROCK_IMAGE_ROOT}/`;
-        const pixels = await readRockPng(`${root}${map === 'arm-height' ? 'arm' : map}-${layer}.png`);
+        const pixels = await readRockPng(`${baseUrl}${surfaceTexturePath(`${ROCK_IMAGE_ROOT}/${map === 'arm-height' ? 'arm' : map}-${layer}.png`)}`);
         if (map === 'arm-height') {
             const height = await readRockPng(`${root}height-${layer}.png`);
             for (let i = 0; i < layerBytes; i += 4) pixels[i + 3] = height[i];

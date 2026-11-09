@@ -1,3 +1,5 @@
+import { modelTexturePath } from '../core/TextureWebpProfile.ts';
+import '@babylonjs/loaders/glTF/2.0/Extensions/EXT_texture_webp';
 import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader';
 import '@babylonjs/loaders/glTF';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
@@ -38,7 +40,7 @@ function owningNodeName(mesh: AbstractMesh): string {
 
 /** Normalizes LOD1/LOD2 geometry for the shader; authoredHeight restores variant size at placement. */
 export async function loadImportedGrass(scene: Scene): Promise<Map<string, ImportedGrassPrototype>> {
-    const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}terrain/grassland/grass_medium_01_1k.glb`, scene);
+    const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}${modelTexturePath('terrain/grassland/grass_medium_01_1k.glb')}`, scene);
     const result = new Map<string, ImportedGrassPrototype>();
     for (const mesh of container.meshes) {
         if (!(mesh instanceof Mesh) || !mesh.getTotalVertices()) continue;

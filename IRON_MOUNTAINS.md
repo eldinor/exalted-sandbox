@@ -1,5 +1,12 @@
 # Iron Mountains material
 
+Current delivery update (9 November 2026): the main app loads quality-80 WebP
+base/normal/ARM layers from textures-webp-80/terrain/rock/iron-mountains-png-1024/.
+The five original grayscale PNG displacement images are unchanged. Array sizes,
+packing, explicit mip generation and shading remain unchanged. Original PNGs
+remain preparation sources; see BUILD_PACKAGING.md for the new profile. RGB
+compression is lossy, so visual equivalence is not claimed.
+
 ## Current image delivery, 5 November 2026
 
 The active 1024-square package uses 20 ordinary opaque PNGs in
@@ -71,7 +78,9 @@ Both use a trial 8 m repeat.
 Three RGBA8 texture arrays replace the three former rock textures, so terrain
 still requests **27 sampled-texture bindings**. Displacement shares ARM alpha.
 The generated arrays retain full 2K dimensions; numeric 16-bit PNG maps are
-quantized to 8-bit GPU channels. Original PNG/EXR/glTF/bin files remain unchanged.
+quantized to 8-bit GPU channels. Original PNG/glTF/bin files remain unchanged.
+Unused EXR normal/roughness source copies were removed on 9 November 2026;
+preparation and runtime use the retained PNG/packed maps.
 ARM/height and normals remain linear; base colour is stored sRGB-encoded and
 decoded in the shader. Current raw-array mip filtering averages stored values.
 

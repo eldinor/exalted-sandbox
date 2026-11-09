@@ -1,3 +1,5 @@
+import { modelTexturePath } from '../core/TextureWebpProfile.ts';
+import '@babylonjs/loaders/glTF/2.0/Extensions/EXT_texture_webp';
 /**
  * Authored placements, compacted into shared geometry/material instance batches.
  * @module world/desertProps
@@ -159,7 +161,7 @@ export class DesertProps {
         let densityRejectedPrimitives = 0;
         const started = performance.now();
         await MeshoptSimplifier.ready;
-        const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}assets/exalted/exalted_desert.glb`, this.scene);
+        const container = await LoadAssetContainerAsync(`${import.meta.env.BASE_URL}${modelTexturePath('assets/exalted/exalted_desert.glb')}`, this.scene);
         this.container = container;
         const ground=container.meshes.find(m=>m.name==='Ground');
         if(!(ground instanceof Mesh)) throw new Error('Desert GLB ground material is missing');
