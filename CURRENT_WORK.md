@@ -1,5 +1,28 @@
 # Exalted Current Work
 
+## Technical requirements, 9 November 2026
+
+[TECH_REQS.md](TECH_REQS.md) documents runtime/software constraints, provisional
+minimum/recommended hardware, development and hosting requirements, and the
+benchmark work needed to certify hardware tiers. The main world explicitly
+requires 27 sampled textures per shader stage; float32 filtering is optional.
+Hardware figures are planning targets, not measured minimums or FPS guarantees.
+
+## Sandbox user requirements, 9 November 2026
+
+[USER_SPECS_SANDBOX.md](USER_SPECS_SANDBOX.md) consolidates user-facing
+requirements and acceptance conditions for loading, exploration, movement,
+spells, UI, the Cube/portal and quality. Established and protected behaviour
+is separated from proposed gamification; no gameplay implementation is implied.
+
+## Gamification proposal, 9 November 2026
+
+[GAMIFICATION.md](GAMIFICATION.md) expands optional exploration, movement,
+spell challenges, journal progress and rewards, with a staged prototype and
+validation criteria. This is a design proposal, not implemented gameplay.
+The Cube and portal remain intact and independent; the earlier suggestion to
+activate the Cube through collectible fragments is withdrawn.
+
 ## Main-app surface WebP conversion, 9 November 2026
 
 The main HTML selects quality-80 WebP derivatives of all 26 standalone PNG
