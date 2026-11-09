@@ -5,7 +5,8 @@
 `textures/forrest_ground_01_*` were supplied by the user for the forest biome.
 The main app uses `diff_2k.png` (sRGB colour), `nor_gl_2k.png` (linear OpenGL
 normal) and `arm_2k.png` (linear AO/roughness/metallic). The separate AO PNG
-and EXR normal/roughness files remain source references. Files are unchanged;
+remains a source reference. Unused EXR normal/roughness copies were removed on
+9 November 2026; retained PNGs are unchanged.
 no external download or inferred source licence is added. Original creator,
 source URL and licence for these ground maps have not been provided.
 

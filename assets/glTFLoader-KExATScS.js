@@ -1,0 +1,1 @@
+import{r as e}from"./rolldown-runtime-CNC7AqOf.js";import{o as t,t as n}from"./glTFFileLoader.pure-IkYM-Ysk.js";import{i as r,n as i,r as a,t as o}from"./glTFLoader.pure-XgI9G04W.js";var s=e({ArrayItem:()=>o,GLTFFileLoader:()=>n,GLTFLoader:()=>i,LoadBoundingInfoFromPositionAccessor:()=>a,RegisterGLTF2Loader:()=>r});r(),t();export{s as t};
